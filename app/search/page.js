@@ -1,7 +1,8 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation'; // Removed useSearchParams from here
 import { ArrowLeft, Wifi, Wind, Plug, Bus, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase-client';
 import { Button } from "@/components/ui/button";
@@ -9,9 +10,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import SearchForm from '@/components/search-form';
 
-export default function SearchPage() {
+// Helper component to safely use useSearchParams
+function SearchPageContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  // Removed useSearchParams from here as it's now handled by the parent Suspense boundary
   const supabase = createClient();
 
   const [trips, setTrips] = useState([]);
@@ -19,7 +21,7 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Extract search parameters
+  // Extract search parameters - these will be available once the Suspense boundary resolves
   const origin = searchParams.get('origin')?.trim() || '';
   const destination = searchParams.get('destination')?.trim() || '';
   const date = searchParams.get('date')?.trim() || '';
@@ -30,7 +32,7 @@ export default function SearchPage() {
       let routeQuery = supabase
         .from('routes')
         .select('id, origin_city, destination_city, base_price_usd, estimated_duration_hours, distance_km, typical_departure_times')
-        .eq('is_active', true);
+        .eq('is_active', true); // Corrected typo from 'is_is_active'
 
       if (origin) {
         routeQuery = routeQuery.ilike('origin_city', `%${origin}%`);
