@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Wifi, Wind, Plug, Bus, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase-client';
@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import SearchForm from '@/components/search-form';
 
-export default function SearchPage() {
+function SearchResults() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
@@ -127,7 +127,7 @@ export default function SearchPage() {
     } finally {
       setLoading(false);
     }
-  }, [origin, destination, date]);
+  }, [origin, destination, date, supabase]);
 
   useEffect(() => {
     fetchTrips();
@@ -308,5 +308,13 @@ export default function SearchPage() {
         ) : null)}
       </div>
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense>
+      <SearchResults />
+    </Suspense>
   );
 }

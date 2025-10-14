@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import SearchForm from '@/components/search-form';
+import { Suspense } from 'react';
 
 export default function Home() {
   const router = useRouter();
@@ -33,7 +34,9 @@ export default function Home() {
       </div>
 
       <div className="relative w-full max-w-4xl px-4 mx-auto -mt-24 z-10">
-        <SearchForm />
+        <Suspense>
+          <SearchForm />
+        </Suspense>
 
         <div className="mt-12 text-center">
           <h2 className="text-3xl font-bold text-gray-800 dark:text-white">Sobre a Nawabus</h2>
