@@ -18,11 +18,20 @@ export default function Home() {
   return (
     <main className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="relative w-full h-[500px] shadow-lg">
+        <div className="absolute top-4 left-4 z-20 rounded-full overflow-hidden">
+          <Image
+            src="/logo.png"
+            alt="Nawabus Logo"
+            width={150}
+            height={150}
+            className="rounded-full"
+          />
+        </div>
         <Image
           src="/bus.jpg"
           alt="Bus on a scenic route"
-          layout="fill"
-          objectFit="cover"
+          fill
+          style={{ objectFit: 'cover' }}
           quality={100}
           priority
         />
