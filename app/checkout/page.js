@@ -16,6 +16,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import jsPDF from 'jspdf';
+import QRCode from 'qrcode';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -233,6 +235,91 @@ export default function CheckoutPage() {
     return <div className="text-center py-10">A carregar detalhes da reserva...</div>;
   }
 
+  const handleDownloadPdf = async () => {
+    if (!bookingDetails || !reference || !currentUser) {
+      alert("Não foi possível gerar o bilhete. Faltam detalhes.");
+      return;
+    }
+
+    const { tripDetails, selectedSeats, totalPrice } = bookingDetails;
+    const doc = new jsPDF();
+
+    // --- Ticket Information ---
+    const ticketInfo = {
+      companyName: "NawaBus",
+      nif: "5000451738",
+      address: "Kilamba bloco R18, Luanda",
+      phone: "+244 930 533 405",
+      passengerName: currentUser.user_metadata.full_name || `${currentUser.user_metadata.first_name} ${currentUser.user_metadata.last_name}`,
+      ticketNumber: reference, // Using reference as the ticket number for now
+      routeName: `${tripDetails.routes.origin_city} -> ${tripDetails.routes.destination_city}`,
+      departure: new Date(tripDetails.departure_time).toLocaleString('pt-PT'),
+      seats: selectedSeats.join(', '),
+      busPlate: tripDetails.buses.license_plate,
+      price: `${totalPrice.toFixed(2)} Kz`,
+      printDate: new Date().toLocaleString('pt-PT'),
+    };
+
+    // --- QR Code ---
+    const qrCodeData = JSON.stringify({
+      ticketNumber: ticketInfo.ticketNumber,
+      passenger: ticketInfo.passengerName,
+      route: ticketInfo.routeName,
+      departure: ticketInfo.departure,
+      seats: ticketInfo.seats,
+    });
+    const qrCodeUrl = await QRCode.toDataURL(qrCodeData);
+
+    // --- PDF Content ---
+    doc.setFontSize(22);
+    doc.text(ticketInfo.companyName, 105, 20, { align: 'center' });
+
+    doc.setFontSize(12);
+    doc.text("Bilhete de Viagem", 105, 30, { align: 'center' });
+
+    doc.line(20, 35, 190, 35); // separator
+
+    // Company Info
+    doc.setFontSize(10);
+    doc.text(`NIF: ${ticketInfo.nif}`, 20, 45);
+    doc.text(`Endereço: ${ticketInfo.address}`, 20, 50);
+    doc.text(`Telefone: ${ticketInfo.phone}`, 20, 55);
+
+    doc.line(20, 65, 190, 65); // separator
+
+    // Passenger & Trip Info
+    doc.setFontSize(12);
+    doc.text("Detalhes do Bilhete", 20, 75);
+    doc.setFontSize(10);
+    doc.text(`Passageiro: ${ticketInfo.passengerName}`, 20, 85);
+    doc.text(`Nº do Bilhete/Ref: ${ticketInfo.ticketNumber}`, 20, 90);
+    doc.text(`Rota: ${ticketInfo.routeName}`, 20, 95);
+    doc.text(`Partida: ${ticketInfo.departure}`, 20, 100);
+    doc.text(`Assentos: ${ticketInfo.seats}`, 20, 105);
+    doc.text(`Matrícula do Autocarro: ${tripDetails.buses.license_plate}`, 20, 110);
+    doc.text(`Preço: ${ticketInfo.price}`, 20, 115);
+
+    doc.line(20, 125, 190, 125); // separator
+
+    // QR Code
+    doc.addImage(qrCodeUrl, 'PNG', 75, 135, 60, 60);
+
+    // Footer
+    doc.setFontSize(8);
+    doc.text(`Data de Impressão: ${ticketInfo.printDate}`, 20, 210);
+    doc.text("Obrigado por viajar com a NawaBus!", 105, 220, { align: 'center' });
+
+
+    // --- Filename and Save ---
+    const now = new Date();
+    const formattedDate = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    const formattedTime = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+    const fileName = `nawabus-${reference}-${formattedDate}${formattedTime}.pdf`;
+
+    doc.save(fileName);
+    router.push('/');
+  };
+
   const { tripDetails, selectedSeats, totalPrice } = bookingDetails;
 
   return (
@@ -295,6 +382,9 @@ export default function CheckoutPage() {
                   <p className="font-semibold">Pague com esta referência:</p>
                   <p className="text-3xl font-bold text-green-600 tracking-widest my-2">{reference}</p>
                   <p className="text-sm text-gray-500">Dirija-se a um multicaixa ou utilize o seu home banking.</p>
+                  <Button onClick={handleDownloadPdf} className="w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white">
+                    Baixar Bilhete (PDF)
+                  </Button>
                 </div>
               ) : (
                 <Button onClick={handlePayment} className="w-full bg-orange-500 hover:bg-orange-600 text-white" disabled={isLoading}>

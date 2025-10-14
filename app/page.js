@@ -15,28 +15,29 @@ export default function Home() {
     e.preventDefault();
     router.push('/search');
   };
+  
   return (
     <main className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="relative w-full h-[500px] shadow-lg">
-        <div className="absolute top-4 left-4 z-20 rounded-full overflow-hidden">
-          <Image
+      <div 
+        className="relative w-full h-[500px] shadow-lg"
+        style={{
+          backgroundImage: 'url(https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=1920&q=80)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        <div className="absolute top-4 left-4 z-20">
+          <img
             src="/logo.png"
             alt="Nawabus Logo"
-            width={150}
-            height={150}
-            className="rounded-full"
+            className="w-32 h-32 rounded-full object-cover bg-white"
+            style={{ border: '3px solid white' }}
           />
         </div>
-        <Image
-          src="/bus.jpg"
-          alt="Bus on a scenic route"
-          fill
-          style={{ objectFit: 'cover' }}
-          quality={100}
-          priority
-        />
+        
         <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
-          <h1 className="text-5xl font-bold text-white text-center">
+          <h1 className="text-5xl font-bold text-white text-center px-4">
             Sua Próxima Viagem Começa Aqui
           </h1>
         </div>
