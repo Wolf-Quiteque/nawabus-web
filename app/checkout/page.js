@@ -365,7 +365,7 @@ export default function CheckoutPage() {
                   <span>Pagamento por Referência</span>
                 </div>
               </div>
-              <div>
+              {/* <div>
                 <Label htmlFor="email">Email para confirmação</Label>
                 <Input
                   id="email"
@@ -376,7 +376,7 @@ export default function CheckoutPage() {
                   onChange={() => {}}
                   disabled={!!currentUser?.email}
                 />
-              </div>
+              </div> */}
               {reference ? (
                 <div className="text-center p-4 border-dashed border-2 border-green-500 rounded-lg">
                   <p className="font-semibold">Pague com esta referência:</p>
