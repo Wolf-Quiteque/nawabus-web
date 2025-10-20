@@ -25,6 +25,7 @@ export default function CheckoutPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('referencia');
   const [reference, setReference] = useState(null);
+  const [ticketNumber, setTicketNumber] = useState(null);
   const supabase = createClient();
 
   // Auth-related state
@@ -104,6 +105,7 @@ export default function CheckoutPage() {
       }
 
       setReference(result.reference_number);
+      setTicketNumber(ticketData.ticket_number);
       // The UI will now show the reference number
     } catch (error) {
       console.error('Payment API error:', error);
@@ -236,7 +238,7 @@ export default function CheckoutPage() {
   }
 
   const handleDownloadPdf = async () => {
-    if (!bookingDetails || !reference || !currentUser) {
+    if (!bookingDetails || !ticketNumber || !currentUser) {
       alert("Não foi possível gerar o bilhete. Faltam detalhes.");
       return;
     }
@@ -251,7 +253,7 @@ export default function CheckoutPage() {
       address: "Kilamba bloco R18, Luanda",
       phone: "+244 930 533 405",
       passengerName: currentUser.user_metadata.full_name || `${currentUser.user_metadata.first_name} ${currentUser.user_metadata.last_name}`,
-      ticketNumber: reference, // Using reference as the ticket number for now
+      ticketNumber: ticketNumber,
       routeName: `${tripDetails.routes.origin_city} -> ${tripDetails.routes.destination_city}`,
       departure: new Date(tripDetails.departure_time).toLocaleString('pt-PT'),
       seats: selectedSeats.join(', '),
@@ -314,7 +316,7 @@ export default function CheckoutPage() {
     const now = new Date();
     const formattedDate = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
     const formattedTime = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
-    const fileName = `nawabus-${reference}-${formattedDate}${formattedTime}.pdf`;
+    const fileName = `nawabus-${ticketNumber.replace(/\s/g, '_')}-${formattedDate}${formattedTime}.pdf`;
 
     doc.save(fileName);
     router.push('/');
