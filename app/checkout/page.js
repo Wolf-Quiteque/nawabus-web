@@ -243,6 +243,8 @@ export default function CheckoutPage() {
       return;
     }
 
+    const trimmedTicketNumber = ticketNumber.length > 9 ? ticketNumber.substring(9) : ticketNumber;
+
     const { tripDetails, selectedSeats, totalPrice } = bookingDetails;
     const doc = new jsPDF();
 
@@ -253,7 +255,7 @@ export default function CheckoutPage() {
       address: "Kilamba bloco R18, Luanda",
       phone: "+244 930 533 405",
       passengerName: currentUser.user_metadata.full_name || `${currentUser.user_metadata.first_name} ${currentUser.user_metadata.last_name}`,
-      ticketNumber: ticketNumber,
+      ticketNumber: trimmedTicketNumber,
       routeName: `${tripDetails.routes.origin_city} -> ${tripDetails.routes.destination_city}`,
       departure: new Date(tripDetails.departure_time).toLocaleString('pt-PT'),
       seats: selectedSeats.join(', '),
@@ -316,7 +318,7 @@ export default function CheckoutPage() {
     const now = new Date();
     const formattedDate = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
     const formattedTime = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
-    const fileName = `nawabus-${ticketNumber.replace(/\s/g, '_')}-${formattedDate}${formattedTime}.pdf`;
+    const fileName = `nawabus-${trimmedTicketNumber.replace(/\s/g, '_')}-${formattedDate}${formattedTime}.pdf`;
 
     doc.save(fileName);
     router.push('/');
