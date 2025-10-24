@@ -31,10 +31,9 @@ export default function CheckoutPage() {
   // Auth-related state
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'signup'
-  const [authEmail, setAuthEmail] = useState('');
+  const [authPhoneNumber, setAuthPhoneNumber] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authName, setAuthName] = useState('');
-  const [authPhone, setAuthPhone] = useState('');
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
 
@@ -154,28 +153,29 @@ export default function CheckoutPage() {
     e.preventDefault();
     setAuthSubmitting(true);
     try {
+      const email = `${authPhoneNumber}@nawabus.com`;
       if (authMode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({
-          email: authEmail,
+          email,
           password: authPassword,
         });
         if (error) {
           console.error(error);
-          alert('Falha no login. Verifique o email e senha.');
+          alert('Falha no login. Verifique o telefone e senha.');
           return;
         }
       } else {
         // Signup
         const { first_name, last_name } = ensureNames(authName);
         const { data, error } = await supabase.auth.signUp({
-          email: authEmail,
+          email,
           password: authPassword,
           options: {
             data: {
               role: 'passenger',
               first_name,
               last_name,
-              phone_number: authPhone || null,
+              phone_number: authPhoneNumber,
             },
           },
         });
@@ -189,7 +189,7 @@ export default function CheckoutPage() {
         // Try to sign in immediately to continue the flow
         if (!data?.session) {
           const { error: signInErr } = await supabase.auth.signInWithPassword({
-            email: authEmail,
+            email,
             password: authPassword,
           });
           if (signInErr) {
@@ -206,7 +206,7 @@ export default function CheckoutPage() {
             .update({
               first_name,
               last_name,
-              phone_number: authPhone || null,
+              phone_number: authPhoneNumber,
               // role ideally should be controlled server-side; omit here if unsure.
             })
             .eq('id', u.user.id);
@@ -412,13 +412,13 @@ export default function CheckoutPage() {
 
           <form className="space-y-4" onSubmit={handleAuthSubmit}>
             <div className="space-y-2">
-              <Label htmlFor="auth-email">Email</Label>
+              <Label htmlFor="auth-phoneNumber">Telefone</Label>
               <Input
-                id="auth-email"
-                type="email"
-                value={authEmail}
-                onChange={(e) => setAuthEmail(e.target.value)}
-                placeholder="seu@email.com"
+                id="auth-phoneNumber"
+                type="tel"
+                value={authPhoneNumber}
+                onChange={(e) => setAuthPhoneNumber(e.target.value)}
+                placeholder="Insira o seu número de telefone"
                 required
               />
             </div>
@@ -436,29 +436,17 @@ export default function CheckoutPage() {
             </div>
 
             {authMode === 'signup' && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="auth-name">Nome</Label>
-                  <Input
-                    id="auth-name"
-                    type="text"
-                    value={authName}
-                    onChange={(e) => setAuthName(e.target.value)}
-                    placeholder="O seu nome completo"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="auth-phone">Telefone</Label>
-                  <Input
-                    id="auth-phone"
-                    type="tel"
-                    value={authPhone}
-                    onChange={(e) => setAuthPhone(e.target.value)}
-                    placeholder="Número de telefone (opcional)"
-                  />
-                </div>
-              </>
+              <div className="space-y-2">
+                <Label htmlFor="auth-name">Nome</Label>
+                <Input
+                  id="auth-name"
+                  type="text"
+                  value={authName}
+                  onChange={(e) => setAuthName(e.target.value)}
+                  placeholder="O seu nome completo"
+                  required
+                />
+              </div>
             )}
 
             <DialogFooter>
