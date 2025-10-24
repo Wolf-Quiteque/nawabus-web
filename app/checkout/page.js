@@ -237,8 +237,8 @@ export default function CheckoutPage() {
     return <div className="text-center py-10">A carregar detalhes da reserva...</div>;
   }
 
-  const handleDownloadPdf = async () => {
-    if (!bookingDetails || !ticketNumber || !currentUser) {
+ const handleDownloadPdf = async () => {
+    if (!bookingDetails || !ticketNumber || !currentUser || !reference) {
       alert("Não foi possível gerar o bilhete. Faltam detalhes.");
       return;
     }
@@ -248,6 +248,11 @@ export default function CheckoutPage() {
     const { tripDetails, selectedSeats, totalPrice } = bookingDetails;
     const doc = new jsPDF();
 
+    // Brand colors
+    const orange = [255, 140, 0]; // RGB for orange
+    const darkOrange = [230, 120, 0];
+    const lightOrange = [255, 160, 50];
+
     // --- Ticket Information ---
     const ticketInfo = {
       companyName: "NawaBus",
@@ -256,63 +261,188 @@ export default function CheckoutPage() {
       phone: "+244 930 533 405",
       passengerName: currentUser.user_metadata.full_name || `${currentUser.user_metadata.first_name} ${currentUser.user_metadata.last_name}`,
       ticketNumber: trimmedTicketNumber,
-      routeName: `${tripDetails.routes.origin_city} -> ${tripDetails.routes.destination_city}`,
+      routeName: `${tripDetails.routes.origin_city} → ${tripDetails.routes.destination_city}`,
       departure: new Date(tripDetails.departure_time).toLocaleString('pt-PT'),
       seats: selectedSeats.join(', '),
       busPlate: tripDetails.buses.license_plate,
-      price: `${totalPrice.toFixed(2)} Kz`,
+      price: `${Math.round(totalPrice * 1000)},00 Kz`,
       printDate: new Date().toLocaleString('pt-PT'),
     };
 
     // --- QR Code ---
     const qrCodeData = JSON.stringify({
+      ticketId: ticketNumber,
       ticketNumber: ticketInfo.ticketNumber,
-      passenger: ticketInfo.passengerName,
+      reference: reference,
+      passengerName: ticketInfo.passengerName,
+      phone: currentUser.email?.replace('@nawabus.com', ''),
       route: ticketInfo.routeName,
-      departure: ticketInfo.departure,
-      seats: ticketInfo.seats,
+      departureTime: tripDetails.departure_time,
+      seatNumber: selectedSeats.join(','),
+      price: totalPrice,
+      pendingPayment: true,
+      bookingTime: new Date().toISOString(),
     });
-    const qrCodeUrl = await QRCode.toDataURL(qrCodeData);
+    const qrCodeUrl = await QRCode.toDataURL(qrCodeData, { width: 300, margin: 1 });
 
-    // --- PDF Content ---
-    doc.setFontSize(22);
-    doc.text(ticketInfo.companyName, 105, 20, { align: 'center' });
+    // --- PDF Content with Modern Design ---
+    
+    // Orange header background
+    doc.setFillColor(...orange);
+    doc.rect(0, 0, 210, 50, 'F');
+    
+    // Decorative corner elements
+    doc.setFillColor(...lightOrange);
+    doc.circle(5, 5, 8, 'F');
+    doc.circle(205, 5, 8, 'F');
+    
+    // Try to load and add logo
+    try {
+      const logoImg = new Image();
+      logoImg.src = '/logo.png';
+      await new Promise((resolve, reject) => {
+        logoImg.onload = resolve;
+        logoImg.onerror = reject;
+        setTimeout(reject, 2000); // timeout after 2s
+      });
+      doc.addImage(logoImg, 'PNG', 15, 10, 30, 30);
+    } catch (e) {
+      // Logo failed to load, continue without it
+      console.warn('Logo could not be loaded');
+    }
 
+    // Company name in white
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(28);
+    doc.setFont(undefined, 'bold');
+    doc.text(ticketInfo.companyName, 105, 25, { align: 'center' });
+    
     doc.setFontSize(12);
-    doc.text("Bilhete de Viagem", 105, 30, { align: 'center' });
+    doc.setFont(undefined, 'normal');
+    doc.text("Reserva de Bilhete", 105, 35, { align: 'center' });
 
-    doc.line(20, 35, 190, 35); // separator
+    // Reset text color
+    doc.setTextColor(60, 60, 60);
 
-    // Company Info
-    doc.setFontSize(10);
-    doc.text(`NIF: ${ticketInfo.nif}`, 20, 45);
-    doc.text(`Endereço: ${ticketInfo.address}`, 20, 50);
-    doc.text(`Telefone: ${ticketInfo.phone}`, 20, 55);
+    // Company Info in a subtle box
+    doc.setFillColor(250, 250, 250);
+    doc.roundedRect(15, 55, 180, 20, 3, 3, 'F');
+    doc.setFontSize(9);
+    doc.text(`NIF: ${ticketInfo.nif}  |  ${ticketInfo.address}  |  Tel: ${ticketInfo.phone}`, 105, 67, { align: 'center' });
 
-    doc.line(20, 65, 190, 65); // separator
+    // Payment Info - Prominent Orange Box
+    doc.setFillColor(...orange);
+    doc.roundedRect(15, 85, 180, 45, 5, 5, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text("INFORMAÇÕES DE PAGAMENTO", 105, 95, { align: 'center' });
+    
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'normal');
+    doc.text("Entidade: 1219", 25, 107);
+    
+    doc.setFontSize(18);
+    doc.setFont(undefined, 'bold');
+    doc.text(`Referência: ${reference}`, 105, 115, { align: 'center' });
+    
+    doc.setFontSize(14);
+    doc.text(`Valor: ${ticketInfo.price}`, 105, 125, { align: 'center' });
 
-    // Passenger & Trip Info
+    // Passenger & Trip Details Card
+    doc.setDrawColor(...orange);
+    doc.setLineWidth(0.5);
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(15, 140, 120, 65, 3, 3, 'FD');
+    
+    doc.setTextColor(...orange);
     doc.setFontSize(12);
-    doc.text("Detalhes do Bilhete", 20, 75);
+    doc.setFont(undefined, 'bold');
+    doc.text("Detalhes da Reserva", 20, 150);
+    
+    doc.setTextColor(60, 60, 60);
     doc.setFontSize(10);
-    doc.text(`Passageiro: ${ticketInfo.passengerName}`, 20, 85);
-    doc.text(`Nº do Bilhete/Ref: ${ticketInfo.ticketNumber}`, 20, 90);
-    doc.text(`Rota: ${ticketInfo.routeName}`, 20, 95);
-    doc.text(`Partida: ${ticketInfo.departure}`, 20, 100);
-    doc.text(`Assentos: ${ticketInfo.seats}`, 20, 105);
-    doc.text(`Matrícula do Autocarro: ${tripDetails.buses.license_plate}`, 20, 110);
-    doc.text(`Preço: ${ticketInfo.price}`, 20, 115);
+    doc.setFont(undefined, 'normal');
+    
+    const detailsY = 160;
+    const lineHeight = 8;
+    doc.setFont(undefined, 'bold');
+    doc.text("Passageiro:", 20, detailsY);
+    doc.setFont(undefined, 'normal');
+    doc.text(ticketInfo.passengerName, 55, detailsY);
+    
+    doc.setFont(undefined, 'bold');
+    doc.text("Nº Bilhete:", 20, detailsY + lineHeight);
+    doc.setFont(undefined, 'normal');
+    doc.text(ticketInfo.ticketNumber, 55, detailsY + lineHeight);
+    
+    doc.setFont(undefined, 'bold');
+    doc.text("Rota:", 20, detailsY + lineHeight * 2);
+    doc.setFont(undefined, 'normal');
+    doc.text(ticketInfo.routeName, 55, detailsY + lineHeight * 2);
+    
+    doc.setFont(undefined, 'bold');
+    doc.text("Partida:", 20, detailsY + lineHeight * 3);
+    doc.setFont(undefined, 'normal');
+    doc.text(ticketInfo.departure, 55, detailsY + lineHeight * 3);
+    
+    doc.setFont(undefined, 'bold');
+    doc.text("Assentos:", 20, detailsY + lineHeight * 4);
+    doc.setFont(undefined, 'normal');
+    doc.text(ticketInfo.seats, 55, detailsY + lineHeight * 4);
+    
+    doc.setFont(undefined, 'bold');
+    doc.text("Autocarro:", 20, detailsY + lineHeight * 5);
+    doc.setFont(undefined, 'normal');
+    doc.text(tripDetails.buses.license_plate, 55, detailsY + lineHeight * 5);
 
-    doc.line(20, 125, 190, 125); // separator
-
-    // QR Code
-    doc.addImage(qrCodeUrl, 'PNG', 75, 135, 60, 60);
-
-    // Footer
+    // QR Code box with border
+    doc.setDrawColor(...orange);
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(142, 140, 53, 65, 3, 3, 'FD');
     doc.setFontSize(8);
-    doc.text(`Data de Impressão: ${ticketInfo.printDate}`, 20, 210);
-    doc.text("Obrigado por viajar com a NawaBus!", 105, 220, { align: 'center' });
+    doc.setTextColor(...orange);
+    doc.text("Escaneie aqui", 168.5, 148, { align: 'center' });
+    doc.addImage(qrCodeUrl, 'PNG', 147, 152, 43, 43);
 
+    // Payment Instructions Card
+    doc.setFillColor(255, 248, 240);
+    doc.setDrawColor(...orange);
+    doc.roundedRect(15, 215, 180, 35, 3, 3, 'FD');
+    
+    doc.setTextColor(...darkOrange);
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.text("IMPORTANTE", 20, 225);
+    
+    doc.setTextColor(60, 60, 60);
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    doc.text("• Sua reserva será confirmada após o recebimento do pagamento", 20, 233);
+    doc.text("• Dirija-se a qualquer MULTICAIXA ou use home banking", 20, 239);
+    doc.text("• Utilize os dados de pagamento acima (Entidade 1219)", 20, 245);
+
+    // Footer with decorative line
+    doc.setDrawColor(...lightOrange);
+    doc.setLineWidth(1);
+    doc.line(15, 260, 195, 260);
+    
+    doc.setFontSize(8);
+    doc.setTextColor(120, 120, 120);
+    doc.text(`Data de Impressão: ${ticketInfo.printDate}`, 20, 268);
+    
+    doc.setTextColor(...orange);
+    doc.setFont(undefined, 'bold');
+    doc.text("Reserva válida por 3 dias", 105, 275, { align: 'center' });
+    
+    doc.setFontSize(10);
+    doc.text("Obrigado por escolher NawaBus!", 105, 285, { align: 'center' });
+
+    // Decorative footer circles
+    doc.setFillColor(...lightOrange);
+    doc.circle(5, 292, 5, 'F');
+    doc.circle(205, 292, 5, 'F');
 
     // --- Filename and Save ---
     const now = new Date();
@@ -384,6 +514,7 @@ export default function CheckoutPage() {
               {reference ? (
                 <div className="text-center p-4 border-dashed border-2 border-green-500 rounded-lg">
                   <p className="font-semibold">Pague com esta referência:</p>
+                  <p>Entidade: 1219</p>
                   <p className="text-3xl font-bold text-green-600 tracking-widest my-2">{reference}</p>
                   <p className="text-sm text-gray-500">Dirija-se a um multicaixa ou utilize o seu home banking.</p>
                   <Button onClick={handleDownloadPdf} className="w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white">
