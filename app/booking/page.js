@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase-client';
-import SeatSelection from '@/components/seat-selection-roundtrip';
+import SeatSelection from '@/components/seat-selection';
 
 export default function BookingPage() {
   const router = useRouter();

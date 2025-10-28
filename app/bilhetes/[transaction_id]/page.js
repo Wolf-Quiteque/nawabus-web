@@ -122,7 +122,7 @@ if (ticketData) {
     const ticketInfo = {
       companyName: ticket.trips?.buses?.companies?.name || "NawaBus",
       nif: "5000451738",
-      address: "Kilamba bloco R18, Luanda",
+      address: "",
       phone: "+244 930 533 405",
       passengerName: ticket.profiles 
         ? `${ticket.profiles.first_name || ''} ${ticket.profiles.last_name || ''}`.trim() 
