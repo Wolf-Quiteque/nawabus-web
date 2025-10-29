@@ -25,6 +25,7 @@ export default function CheckoutPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [reference, setReference] = useState(null);
   const [ticketNumbers, setTicketNumbers] = useState({ outbound: null, return: null });
+  const [outboundTicket, setOutboundTicket] = useState(null);
   const supabase = createClient();
 
   // Auth state
@@ -75,6 +76,9 @@ export default function CheckoutPage() {
         .single();
 
       if (outboundError) throw outboundError;
+
+      // ❗️ SAVE THE FULL TICKET OBJECT TO STATE
+      setOutboundTicket(outboundTicketData);
 
       let returnTicketData = null;
       
@@ -232,7 +236,7 @@ export default function CheckoutPage() {
 // import QRCode from "qrcode";
 
 const handleDownloadPdf = async () => {
-  if (!bookingDetails || !ticketNumbers.outbound || !currentUser || !reference) {
+  if (!bookingDetails || !ticketNumbers.outbound || !currentUser || !reference || !outboundTicket) {
     alert("Não foi possível gerar o bilhete. Faltam detalhes.");
     return;
   }
@@ -511,24 +515,26 @@ const handleDownloadPdf = async () => {
     // yPos ends roughly ~230-240-ish
   }
 
-  // -------------------------
-  // QR CODE BOX (right side)
-  // -------------------------
+// -------------------------
+// QR CODE BOX (right side)
+// -------------------------
+
+  // ❗️ REPLACE your old qrCodeData with this:
   const qrCodeData = JSON.stringify({
-    outbound_ticket: ticketNumbers.outbound,
-    return_ticket: ticketNumbers.return || null,
-    reference,
-    passenger_name:
-      currentUser.user_metadata?.full_name ||
-      `${currentUser.user_metadata?.first_name || ""} ${
-        currentUser.user_metadata?.last_name || ""
-      }`.trim() ||
-      "Cliente",
-    phone:
-      currentUser.email?.replace("@nawabus.com", "") ||
-      "N/A",
-    total_amount: totalPrice,
-    trip_type: tripType,
+    ticketId: outboundTicket.id, // From state
+    ticketNumber: outboundTicket.ticket_number, // From state (e.g., "NWA 2025 1234")
+    passengerName: currentUser.user_metadata?.full_name ||
+                   `${currentUser.user_metadata?.first_name || ""} ${currentUser.user_metadata?.last_name || ""}`.trim() ||
+                   "Cliente",
+    phone: currentUser.email?.replace("@nawabus.com", "") || "N/A",
+    route: `${outboundTrip.routes?.origin_city || outboundTrip.origin} → ${outboundTrip.routes?.destination_city || outboundTrip.destination}`,
+    departureTime: outboundTrip.departure_time,
+    arrivalTime: outboundTrip.arrival_time || null, // Add this to bookingDetails if you have it
+    seatNumber: outboundTicket.seat_number, // From state
+    busPlate: outboundTrip.buses?.license_plate || outboundTrip.bus_plate || "N/A",
+    company: "Nawabus",
+    price: outboundTicket.price_paid_usd, // From state
+    bookingTime: new Date(outboundTicket.created_at).toLocaleString("pt-PT") // From state
   });
 
   const qrCodeUrl = await QRCode.toDataURL(qrCodeData, {
