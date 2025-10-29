@@ -264,30 +264,16 @@ const handleDownloadPdf = async () => {
 
   try {
     const logoImg = new Image();
-    logoImg.src = "/logo.png";
+    logoImg.src = "/nawabus_white.png";
     await new Promise((resolve, reject) => {
       logoImg.onload = resolve;
       logoImg.onerror = reject;
       setTimeout(reject, 2000);
     });
-    doc.addImage(logoImg, "PNG", 15, 10, 30, 30);
+    doc.addImage(logoImg, "PNG", 70, 10, 70, 35);
   } catch (e) {
     console.warn("Logo could not be loaded");
   }
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(28);
-  doc.setFont(undefined, "bold");
-  doc.text("NawaBus", 105, 25, { align: "center" });
-
-  doc.setFontSize(12);
-  doc.setFont(undefined, "normal");
-  doc.text(
-    tripType === "round-trip" ? "Reserva Ida e Volta" : "Reserva de Bilhete",
-    105,
-    35,
-    { align: "center" }
-  );
 
   // -------------------------
   // COMPANY INFO STRIP
