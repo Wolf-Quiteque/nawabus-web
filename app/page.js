@@ -27,19 +27,17 @@ export default function Home() {
         />
 
         {/* Logo */}
-        <div className="absolute top-4 left-4 z-20">
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
           <img
-            src="/logo.png"
+            src="/nawabus_logo_white.webp"
             alt="Nawabus Logo"
-            className="w-32 h-32 rounded-full object-cover bg-white border-4 border-white"
+            className="w-auto h-auto object-cover"
           />
         </div>
 
         {/* Dark overlay + heading */}
         <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-          <h1 className="text-5xl font-bold text-white text-center px-4">
-            Sua Próxima Viagem Começa Aqui
-          </h1>
+        
         </div>
       </div>
 
