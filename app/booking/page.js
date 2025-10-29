@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase-client';
 import SeatSelection from '@/components/seat-selection';
 
-export default function BookingPage() {
+function BookingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const [outboundTrip, setOutboundTrip] = useState(null);
   const [returnTrip, setReturnTrip] = useState(null);
   const [outboundOccupiedSeats, setOutboundOccupiedSeats] = useState([]);
@@ -22,7 +22,7 @@ export default function BookingPage() {
 
   useEffect(() => {
     console.log('Outbound Trip ID:', outboundTripId);
-console.log('Return Trip ID:', returnTripId);
+    console.log('Return Trip ID:', returnTripId);
 
     if (!outboundTripId) {
       router.push('/');
@@ -31,7 +31,7 @@ console.log('Return Trip ID:', returnTripId);
 
     const fetchTripData = async () => {
       setLoading(true);
-      
+
       try {
         // Fetch outbound trip details
         const { data: outboundData, error: outboundError } = await supabase
@@ -134,31 +134,39 @@ console.log('Return Trip ID:', returnTripId);
 
   return (
     <div className="w-full max-w-6xl mx-auto py-8 px-4">
-      <button 
-        onClick={() => router.back()} 
+      <button
+        onClick={() => router.back()}
         className="flex items-center gap-2 mb-4 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
       >
         <ArrowLeft />
         <span>Voltar à pesquisa</span>
       </button>
-      
+
       <h1 className="text-3xl font-bold text-center mb-2 text-gray-800 dark:text-white">
         Seleção de Assentos
       </h1>
-      
+
       <p className="text-center text-gray-500 mb-8">
-        {returnTrip 
+        {returnTrip
           ? `Escolha os seus lugares para a viagem de ${outboundTrip.routes.origin_city} e volta`
           : `Escolha os seus lugares para a viagem de ${outboundTrip.routes.origin_city} para ${outboundTrip.routes.destination_city}`
         }
       </p>
-      
-      <SeatSelection 
+
+      <SeatSelection
         outboundTrip={outboundTrip}
         returnTrip={returnTrip}
         outboundOccupiedSeats={outboundOccupiedSeats}
         returnOccupiedSeats={returnOccupiedSeats}
       />
     </div>
+  );
+}
+
+export default function BookingPageWrapper() {
+  return (
+    <Suspense fallback={<div className="w-full max-w-6xl mx-auto py-8 px-4"><div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-orange-500 border-r-transparent"></div></div>}>
+      <BookingPage />
+    </Suspense>
   );
 }
