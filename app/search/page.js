@@ -62,8 +62,8 @@ function SearchResults() {
         .gt('available_seats', 0)
         .order('departure_time', { ascending: true });
 
-      query = query.ilike('routes.origin_city', `%${origin}%`);
-      query = query.ilike('routes.destination_city', `%${destination}%`);
+      query = query.ilike('routes.origin_province', `%${origin}%`);
+      query = query.ilike('routes.destination_province', `%${destination}%`);
 
       const startOfDay = new Date(`${date}T00:00:00`);
       const endOfDay = new Date(`${date}T23:59:59.999`);
