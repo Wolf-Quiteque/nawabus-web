@@ -143,19 +143,7 @@ if (ticketData) {
     };
 
     // --- QR Code ---
-    const qrCodeData = JSON.stringify({
-      ticketId: ticket.id,
-      ticketNumber: ticketInfo.ticketNumber,
-      transactionId: payment.transaction_id,
-      passengerName: ticketInfo.passengerName,
-      phone: ticket.profiles?.phone_number || '',
-      route: ticketInfo.routeName,
-      departureTime: ticket.trips?.departure_time || '',
-      seatNumber: ticket.seat_number,
-      price: ticket.price_paid_usd,
-      paymentConfirmed: true,
-      bookingTime: ticket.booking_time,
-    });
+    const qrCodeData = ticket.id; // Just the ticket ID
     
     const qrCodeUrl = await QRCode.toDataURL(qrCodeData, { width: 300, margin: 1 });
 

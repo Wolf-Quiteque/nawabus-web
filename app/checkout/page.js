@@ -506,22 +506,7 @@ const handleDownloadPdf = async () => {
 // -------------------------
 
   // ❗️ REPLACE your old qrCodeData with this:
-  const qrCodeData = JSON.stringify({
-    ticketId: outboundTicket.id, // From state
-    ticketNumber: outboundTicket.ticket_number, // From state (e.g., "NWA 2025 1234")
-    passengerName: currentUser.user_metadata?.full_name ||
-                   `${currentUser.user_metadata?.first_name || ""} ${currentUser.user_metadata?.last_name || ""}`.trim() ||
-                   "Cliente",
-    phone: currentUser.email?.replace("@nawabus.com", "") || "N/A",
-    route: `${outboundTrip.routes?.origin_city || outboundTrip.origin} → ${outboundTrip.routes?.destination_city || outboundTrip.destination}`,
-    departureTime: outboundTrip.departure_time,
-    arrivalTime: outboundTrip.arrival_time || null, // Add this to bookingDetails if you have it
-    seatNumber: outboundTicket.seat_number, // From state
-    busPlate: outboundTrip.buses?.license_plate || outboundTrip.bus_plate || "N/A",
-    company: "Nawabus",
-    price: outboundTicket.price_paid_usd, // From state
-    bookingTime: new Date(outboundTicket.created_at).toLocaleString("pt-PT") // From state
-  });
+  const qrCodeData = outboundTicket.id; // Just the ticket ID
 
   const qrCodeUrl = await QRCode.toDataURL(qrCodeData, {
     width: 300,
