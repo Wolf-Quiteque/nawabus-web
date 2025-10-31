@@ -15,14 +15,15 @@ export default function Home() {
 
   return (
     <main className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="relative w-full h-[500px] shadow-lg overflow-hidden">
+      <div className="relative w-full h-[480px] shadow-lg overflow-hidden">
         {/* Background image layer */}
         <Image
-          src="/bus.jpg"
+          
+          src="/bus2.png"
           alt=""
           fill
           priority
-          sizes="100vw"
+          sizes="130vw"
           className="object-cover"
         />
 
