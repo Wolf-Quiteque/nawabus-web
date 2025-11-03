@@ -124,6 +124,28 @@ export default function CheckoutPage() {
         throw new Error(result.error || 'Falha ao criar referência de pagamento.');
       }
 
+      // Update the outbound ticket with payment reference
+      const { error: updateOutboundError } = await supabase
+        .from('tickets')
+        .update({ payment_reference: result.reference_number })
+        .eq('id', outboundTicketData.id);
+
+      if (updateOutboundError) {
+        console.error('Failed to update outbound ticket reference:', updateOutboundError);
+      }
+
+      // Update the return ticket with payment reference if exists
+      if (returnTicketData) {
+        const { error: updateReturnError } = await supabase
+          .from('tickets')
+          .update({ payment_reference: result.reference_number })
+          .eq('id', returnTicketData.id);
+
+        if (updateReturnError) {
+          console.error('Failed to update return ticket reference:', updateReturnError);
+        }
+      }
+
       setReference(result.reference_number);
       setTicketNumbers({
         outbound: outboundTicketData.ticket_number,

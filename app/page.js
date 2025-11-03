@@ -303,7 +303,7 @@ export default function Home() {
               </div>
               <div className="w-px h-16 bg-white/30"></div>
               <div className="text-center">
-                <div className="text-4xl font-bold text-white mb-2">18</div>
+                <div className="text-4xl font-bold text-white mb-2">21</div>
                 <div className="text-white/80">Províncias</div>
               </div>
               <div className="w-px h-16 bg-white/30"></div>
