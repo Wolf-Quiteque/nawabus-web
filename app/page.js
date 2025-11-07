@@ -48,8 +48,8 @@ export default function Home() {
         </Suspense>
       </div>
 
-      {/* About Section */}
-      <section className="py-20 px-4 bg-white dark:bg-gray-800">
+      {/* About Section - COMMENTED OUT */}
+      {/* <section className="py-20 px-4 bg-white dark:bg-gray-800">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
@@ -83,6 +83,152 @@ export default function Home() {
             </div>
           </div>
         </div>
+      </section> */}
+
+      {/* Anúncio Section */}
+      <section className="py-20 px-4 bg-gradient-to-br from-gray-50 via-orange-50 to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 relative overflow-hidden">
+        {/* Decorative background elements */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-orange-200/30 dark:bg-orange-900/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-orange-300/20 dark:bg-orange-800/10 rounded-full blur-3xl"></div>
+
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+              Nossos <span className="text-orange-500">Parceiros</span>
+            </h2>
+            <div className="w-24 h-1 bg-gradient-to-r from-orange-400 to-orange-600 mx-auto mb-4"></div>
+            <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+              Descubra as marcas que confiam em nós
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 items-center">
+            {/* Ad Series: masterplanangola - Left Ad */}
+            <a
+              href="https://masterplanangola.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative h-[400px] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 animate-fade-in-left cursor-pointer block"
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <Image
+                src="/ads/ad1left.jpg"
+                alt="Masterplan Angola"
+                fill
+                className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+              />
+              <div className="absolute inset-0 ring-2 ring-orange-500/0 group-hover:ring-orange-500/50 transition-all duration-300 rounded-2xl"></div>
+              {/* Hover indicator */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="bg-orange-500 text-white px-6 py-3 rounded-full font-bold shadow-2xl transform group-hover:scale-110 transition-transform duration-300">
+                  Visitar Site
+                </div>
+              </div>
+            </a>
+
+            {/* Ad Series: masterplanangola - Center Ad */}
+            <a
+              href="https://masterplanangola.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative h-[400px] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 animate-fade-in-up md:scale-105 cursor-pointer block"
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <Image
+                src="/ads/ad1center.jpg"
+                alt="Masterplan Angola - Destaque"
+                fill
+                className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+              />
+              <div className="absolute inset-0 ring-2 ring-orange-500/0 group-hover:ring-orange-500/50 transition-all duration-300 rounded-2xl"></div>
+              {/* Featured badge */}
+              <div className="absolute top-4 right-4 bg-orange-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+                Destaque
+              </div>
+              {/* Hover indicator */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="bg-orange-500 text-white px-6 py-3 rounded-full font-bold shadow-2xl transform group-hover:scale-110 transition-transform duration-300">
+                  Visitar Site
+                </div>
+              </div>
+            </a>
+
+            {/* Ad Series: masterplanangola - Right Ad */}
+            <a
+              href="https://masterplanangola.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative h-[400px] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 animate-fade-in-right cursor-pointer block"
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <Image
+                src="/ads/ad2right.jpg"
+                alt="Masterplan Angola"
+                fill
+                className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+              />
+              <div className="absolute inset-0 ring-2 ring-orange-500/0 group-hover:ring-orange-500/50 transition-all duration-300 rounded-2xl"></div>
+              {/* Hover indicator */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="bg-orange-500 text-white px-6 py-3 rounded-full font-bold shadow-2xl transform group-hover:scale-110 transition-transform duration-300">
+                  Visitar Site
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <style jsx>{`
+          @keyframes fadeInLeft {
+            from {
+              opacity: 0;
+              transform: translateX(-30px);
+            }
+            to {
+              opacity: 1;
+              transform: translateX(0);
+            }
+          }
+
+          @keyframes fadeInRight {
+            from {
+              opacity: 0;
+              transform: translateX(30px);
+            }
+            to {
+              opacity: 1;
+              transform: translateX(0);
+            }
+          }
+
+          @keyframes fadeInUp {
+            from {
+              opacity: 0;
+              transform: translateY(30px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          .animate-fade-in-left {
+            animation: fadeInLeft 0.8s ease-out forwards;
+            opacity: 0;
+          }
+
+          .animate-fade-in-right {
+            animation: fadeInRight 0.8s ease-out forwards;
+            animation-delay: 0.4s;
+            opacity: 0;
+          }
+
+          .animate-fade-in-up {
+            animation: fadeInUp 0.8s ease-out forwards;
+            animation-delay: 0.2s;
+            opacity: 0;
+          }
+        `}</style>
       </section>
 
       {/* Platform Section */}
