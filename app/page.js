@@ -120,7 +120,7 @@ export default function Home() {
                 href="https://masterplanangola.com/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group relative h-[400px] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 animate-fade-in-left cursor-pointer block"
+                className="hidden md:block group relative h-[400px] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 animate-fade-in-left cursor-pointer"
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <Image
@@ -170,7 +170,7 @@ export default function Home() {
                 href="https://masterplanangola.com/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group relative h-[400px] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 animate-fade-in-right cursor-pointer block"
+                className="hidden md:block group relative h-[400px] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 animate-fade-in-right cursor-pointer"
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <Image
@@ -196,7 +196,7 @@ export default function Home() {
                 href="https://www.nawatur.com/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group relative h-[400px] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 cursor-pointer block"
+                className="hidden md:block group relative h-[400px] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 cursor-pointer"
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <Image
@@ -246,7 +246,7 @@ export default function Home() {
                 href="https://www.nawatur.com/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group relative h-[400px] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 cursor-pointer block"
+                className="hidden md:block group relative h-[400px] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 cursor-pointer"
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <Image
@@ -266,9 +266,9 @@ export default function Home() {
             </div>
 
             {/* Spacer to maintain height */}
-            <div className="h-[400px]"></div>
-            <div className="h-[400px]"></div>
-            <div className="h-[400px]"></div>
+            <div className="h-[400px] col-span-full md:col-span-1"></div>
+            <div className="h-[400px] hidden md:block"></div>
+            <div className="h-[400px] hidden md:block"></div>
           </div>
         </div>
 
