@@ -29,7 +29,7 @@ export default function Home() {
         {/* Background image layer */}
         <Image
           
-          src="/bus2.png"
+          src="/bus22.webp"
           alt=""
           fill
           priority
@@ -47,7 +47,7 @@ export default function Home() {
         </div>
 
         {/* Dark overlay + heading */}
-        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
         
         </div>
       </div>
