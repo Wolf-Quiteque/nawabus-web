@@ -26,6 +26,7 @@ export default function CheckoutPage() {
   const [reference, setReference] = useState(null);
   const [ticketNumbers, setTicketNumbers] = useState({ outbound: null, return: null });
   const [outboundTicket, setOutboundTicket] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('referencia'); // 'cash' or 'referencia'
   const supabase = createClient();
 
   // Auth state
@@ -58,6 +59,9 @@ export default function CheckoutPage() {
     const passengerId = user.id;
 
     try {
+      // Determine payment status based on payment method
+      const paymentStatus = paymentMethod === 'cash' ? 'paid' : 'pending';
+
       // Create outbound ticket(s)
       const { data: outboundTicketData, error: outboundError } = await supabase
         .from('tickets')
@@ -67,8 +71,8 @@ export default function CheckoutPage() {
           booked_by: passengerId,
           seat_number: outboundTrip.selectedSeats.join(','),
           price_paid_usd: outboundTrip.price,
-          payment_status: 'pending',
-          payment_method: 'referencia',
+          payment_status: paymentStatus,
+          payment_method: paymentMethod,
           booking_source: 'online',
           seat_class: outboundTrip.seat_class || 'economy',
         })
@@ -81,7 +85,7 @@ export default function CheckoutPage() {
       setOutboundTicket(outboundTicketData);
 
       let returnTicketData = null;
-      
+
       // Create return ticket(s) if round-trip
       if (tripType === 'round-trip' && returnTrip) {
         const { data: retTicket, error: returnError } = await supabase
@@ -92,8 +96,8 @@ export default function CheckoutPage() {
             booked_by: passengerId,
             seat_number: returnTrip.selectedSeats.join(','),
             price_paid_usd: returnTrip.price,
-            payment_status: 'pending',
-            payment_method: 'referencia',
+            payment_status: paymentStatus,
+            payment_method: paymentMethod,
             booking_source: 'online',
             seat_class: returnTrip.seat_class || 'economy',
           })
@@ -104,53 +108,61 @@ export default function CheckoutPage() {
         returnTicketData = retTicket;
       }
 
-      // Call payment API with combined price
-      const response = await fetch('/api/create-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ticket_id: outboundTicketData.id,
-          return_ticket_id: returnTicketData?.id,
-          amount: totalPrice,
-          passenger_name: user.user_metadata.full_name || 'N/A',
-          passenger_email: user.email,
-          trip_type: tripType,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Falha ao criar referência de pagamento.');
-      }
-
-      // Update the outbound ticket with payment reference
-      const { error: updateOutboundError } = await supabase
-        .from('tickets')
-        .update({ payment_reference: result.reference_number })
-        .eq('id', outboundTicketData.id);
-
-      if (updateOutboundError) {
-        console.error('Failed to update outbound ticket reference:', updateOutboundError);
-      }
-
-      // Update the return ticket with payment reference if exists
-      if (returnTicketData) {
-        const { error: updateReturnError } = await supabase
-          .from('tickets')
-          .update({ payment_reference: result.reference_number })
-          .eq('id', returnTicketData.id);
-
-        if (updateReturnError) {
-          console.error('Failed to update return ticket reference:', updateReturnError);
-        }
-      }
-
-      setReference(result.reference_number);
+      // Store ticket numbers immediately
       setTicketNumbers({
         outbound: outboundTicketData.ticket_number,
         return: returnTicketData?.ticket_number || null
       });
+
+      // Only generate payment reference if using referencia payment method
+      if (paymentMethod === 'referencia') {
+        // Call payment API with combined price
+        const response = await fetch('/api/create-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ticket_id: outboundTicketData.id,
+            return_ticket_id: returnTicketData?.id,
+            amount: totalPrice,
+            passenger_name: user.user_metadata.full_name || 'N/A',
+            passenger_email: user.email,
+            trip_type: tripType,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Falha ao criar referência de pagamento.');
+        }
+
+        // Update the outbound ticket with payment reference
+        const { error: updateOutboundError } = await supabase
+          .from('tickets')
+          .update({ payment_reference: result.reference_number })
+          .eq('id', outboundTicketData.id);
+
+        if (updateOutboundError) {
+          console.error('Failed to update outbound ticket reference:', updateOutboundError);
+        }
+
+        // Update the return ticket with payment reference if exists
+        if (returnTicketData) {
+          const { error: updateReturnError } = await supabase
+            .from('tickets')
+            .update({ payment_reference: result.reference_number })
+            .eq('id', returnTicketData.id);
+
+          if (updateReturnError) {
+            console.error('Failed to update return ticket reference:', updateReturnError);
+          }
+        }
+
+        setReference(result.reference_number);
+      } else {
+        // For cash payment, set a flag to indicate payment is complete
+        setReference('CASH_PAYMENT');
+      }
     } catch (error) {
       console.error('Payment error:', error);
       alert(error.message);
@@ -325,19 +337,36 @@ const handleDownloadPdf = async () => {
 
   doc.setFontSize(11);
   doc.setFont(undefined, "normal");
-  doc.text("Entidade: 1219", 25, 107);
 
-  doc.setFontSize(18);
-  doc.setFont(undefined, "bold");
-  doc.text(`Referência: ${reference}`, 105, 115, { align: "center" });
+  if (paymentMethod === 'cash') {
+    // Cash payment information
+    doc.setFontSize(16);
+    doc.setFont(undefined, "bold");
+    doc.text("Método: PAGAMENTO EM CASH", 105, 110, { align: "center" });
 
-  doc.setFontSize(14);
-  doc.text(
-    `Valor Total: ${Math.round(totalPrice)},00 Kz`,
-    105,
-    125,
-    { align: "center" }
-  );
+    doc.setFontSize(14);
+    doc.text(
+      `Valor Total: ${Math.round(totalPrice)},00 Kz`,
+      105,
+      125,
+      { align: "center" }
+    );
+  } else {
+    // Referencia payment information
+    doc.text("Entidade: 1219", 25, 107);
+
+    doc.setFontSize(18);
+    doc.setFont(undefined, "bold");
+    doc.text(`Referência: ${reference}`, 105, 115, { align: "center" });
+
+    doc.setFontSize(14);
+    doc.text(
+      `Valor Total: ${Math.round(totalPrice)},00 Kz`,
+      105,
+      125,
+      { align: "center" }
+    );
+  }
 
   // -------------------------
   // VIAGEM DE IDA / VOLTA BLOCK
@@ -601,21 +630,42 @@ const handleDownloadPdf = async () => {
   doc.setTextColor(60, 60, 60);
   doc.setFontSize(9);
   doc.setFont(undefined, "normal");
-  doc.text(
-    "• Sua reserva será confirmada após o recebimento do pagamento",
-    20,
-    instructionsY + 18
-  );
-  doc.text(
-    "• Dirija-se a qualquer MULTICAIXA ou use home banking",
-    20,
-    instructionsY + 24
-  );
-  doc.text(
-    "• Utilize os dados de pagamento acima (Entidade 1219)",
-    20,
-    instructionsY + 30
-  );
+
+  if (paymentMethod === 'cash') {
+    // Cash payment instructions
+    doc.text(
+      "• Pagamento será feito em dinheiro no balcão da empresa",
+      20,
+      instructionsY + 18
+    );
+    doc.text(
+      "• Leve este bilhete impresso ou digital ao balcão",
+      20,
+      instructionsY + 24
+    );
+    doc.text(
+      "• O bilhete está confirmado, mas só será válido após pagamento",
+      20,
+      instructionsY + 30
+    );
+  } else {
+    // Referencia payment instructions
+    doc.text(
+      "• Sua reserva será confirmada após o recebimento do pagamento",
+      20,
+      instructionsY + 18
+    );
+    doc.text(
+      "• Dirija-se a qualquer MULTICAIXA ou use home banking",
+      20,
+      instructionsY + 24
+    );
+    doc.text(
+      "• Utilize os dados de pagamento acima (Entidade 1219)",
+      20,
+      instructionsY + 30
+    );
+  }
 
   // -------------------------
   // FOOTER (MAY BE ON PAGE 2) ⭐
@@ -638,12 +688,21 @@ const handleDownloadPdf = async () => {
 
   doc.setTextColor(...orange);
   doc.setFont(undefined, "bold");
-  doc.text(
-    "Reserva válida por 3 dias",
-    105,
-    footerY + 15,
-    { align: "center" }
-  );
+  if (paymentMethod === 'cash') {
+    doc.text(
+      "Bilhete confirmado - Pague no balcão",
+      105,
+      footerY + 15,
+      { align: "center" }
+    );
+  } else {
+    doc.text(
+      "Reserva válida por 3 dias",
+      105,
+      footerY + 15,
+      { align: "center" }
+    );
+  }
 
   doc.setFontSize(10);
   doc.text(
@@ -777,16 +836,71 @@ const handleDownloadPdf = async () => {
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
-                <Label>Método de Pagamento</Label>
-                <div className="flex items-center space-x-2 p-3 border rounded-md bg-gray-50 dark:bg-gray-800">
-                  <span className="font-medium">Pagamento por Referência</span>
+                <Label className="text-base font-semibold">Método de Pagamento</Label>
+                <div className="space-y-3 mt-3">
+                  {/* Cash Payment Option */}
+                  <div
+                    className={`flex items-start space-x-3 p-4 border-2 rounded-lg transition-all ${
+                      reference
+                        ? 'opacity-50 cursor-not-allowed'
+                        : 'cursor-pointer'
+                    } ${
+                      paymentMethod === 'cash'
+                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                    }`}
+                    onClick={() => !reference && setPaymentMethod('cash')}
+                  >
+                    <input
+                      type="radio"
+                      name="payment-method"
+                      value="cash"
+                      checked={paymentMethod === 'cash'}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      disabled={!!reference}
+                      className="mt-1 h-4 w-4 text-orange-600 focus:ring-orange-500"
+                    />
+                    <div className="flex-1">
+                      <div className="font-semibold text-gray-800 dark:text-white">💵 Pagamento em Cash</div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        Pague em dinheiro no balcão da empresa. O bilhete será confirmado imediatamente.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Referencia Payment Option */}
+                  <div
+                    className={`flex items-start space-x-3 p-4 border-2 rounded-lg transition-all ${
+                      reference
+                        ? 'opacity-50 cursor-not-allowed'
+                        : 'cursor-pointer'
+                    } ${
+                      paymentMethod === 'referencia'
+                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                    }`}
+                    onClick={() => !reference && setPaymentMethod('referencia')}
+                  >
+                    <input
+                      type="radio"
+                      name="payment-method"
+                      value="referencia"
+                      checked={paymentMethod === 'referencia'}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      disabled={!!reference}
+                      className="mt-1 h-4 w-4 text-orange-600 focus:ring-orange-500"
+                    />
+                    <div className="flex-1">
+                      <div className="font-semibold text-gray-800 dark:text-white">🏦 Pagamento em Referência</div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        Gere uma referência MULTICAIXA para pagar em qualquer terminal ou home banking.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-sm text-gray-500 mt-2">
-                  Gere uma referência MULTICAIXA para pagar em qualquer terminal ou home banking.
-                </p>
               </div>
 
-              {reference ? (
+              {reference && reference !== 'CASH_PAYMENT' ? (
                 <div className="text-center p-6 border-2 border-green-500 border-dashed rounded-lg bg-green-50 dark:bg-green-900/20">
                   <div className="mb-4">
                     <p className="font-semibold text-green-700 dark:text-green-300 mb-2">
@@ -810,10 +924,34 @@ const handleDownloadPdf = async () => {
                     📄 Baixar Bilhete (PDF)
                   </Button>
                 </div>
+              ) : reference === 'CASH_PAYMENT' ? (
+                <div className="text-center p-6 border-2 border-green-500 border-dashed rounded-lg bg-green-50 dark:bg-green-900/20">
+                  <div className="mb-4">
+                    <p className="text-2xl mb-3">✅</p>
+                    <p className="font-semibold text-green-700 dark:text-green-300 mb-2">
+                      Bilhete Reservado com Sucesso!
+                    </p>
+                    <p className="text-lg font-semibold text-green-700 dark:text-green-300">
+                      Pagamento: Cash
+                    </p>
+                    <p className="text-lg font-semibold text-green-700 dark:text-green-300 mt-1">
+                      Valor: {Math.round(totalPrice)},00 Kz
+                    </p>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Pague em dinheiro no balcão da empresa. Leve este bilhete impresso ou digital.
+                  </p>
+                  <Button
+                    onClick={handleDownloadPdf}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    📄 Baixar Bilhete (PDF)
+                  </Button>
+                </div>
               ) : (
-                <Button 
-                  onClick={handlePayment} 
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white" 
+                <Button
+                  onClick={handlePayment}
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white"
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -821,6 +959,8 @@ const handleDownloadPdf = async () => {
                       <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent mr-2"></div>
                       A processar...
                     </>
+                  ) : paymentMethod === 'cash' ? (
+                    '🎫 Confirmar Reserva (Pagamento em Cash)'
                   ) : (
                     '🎫 Gerar Referência de Pagamento'
                   )}
