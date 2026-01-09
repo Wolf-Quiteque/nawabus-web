@@ -62,8 +62,16 @@ function SearchResults() {
         .gt('available_seats', 0)
         .order('departure_time', { ascending: true });
 
-      query = query.ilike('routes.origin_province', `%${origin}%`);
-      query = query.ilike('routes.destination_province', `%${destination}%`);
+      query = query.or(
+  `origin_city.ilike.%${origin}%,origin_province.ilike.%${origin}%`,
+  { foreignTable: 'routes' } // sometimes this key is `referencedTable`
+);
+
+query = query.or(
+  `destination_city.ilike.%${destination}%,destination_province.ilike.%${destination}%`,
+  { foreignTable: 'routes' }
+);
+
 
       const startOfDay = new Date(`${date}T00:00:00`);
       const endOfDay = new Date(`${date}T23:59:59.999`);

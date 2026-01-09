@@ -201,10 +201,23 @@ export default function CheckoutPage() {
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthSubmitting(true);
-    
+
     try {
       const email = `${authPhoneNumber}@nawabus.com`;
-      
+
+      // Normalize phone number to include Angola country code
+      const normalizePhoneNumber = (phone) => {
+        if (!phone) return phone;
+        const cleaned = phone.replace(/\D/g, '');
+        // If it doesn't start with 244 and is 9 digits starting with 9, add 244
+        if (!cleaned.startsWith('244') && cleaned.length === 9 && cleaned.startsWith('9')) {
+          return `244${cleaned}`;
+        }
+        return cleaned;
+      };
+
+      const normalizedPhone = normalizePhoneNumber(authPhoneNumber);
+
       if (authMode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -224,7 +237,7 @@ export default function CheckoutPage() {
               role: 'passenger',
               first_name,
               last_name,
-              phone_number: authPhoneNumber,
+              phone_number: normalizedPhone,
             },
           },
         });
