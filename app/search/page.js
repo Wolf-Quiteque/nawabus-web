@@ -54,7 +54,8 @@ function SearchResults() {
             amenities,
             license_plate,
             companies!inner (
-              name
+              name,
+              logo_url
             )
           )
         `)
@@ -62,16 +63,8 @@ function SearchResults() {
         .gt('available_seats', 0)
         .order('departure_time', { ascending: true });
 
-      query = query.or(
-  `origin_city.ilike.%${origin}%,origin_province.ilike.%${origin}%`,
-  { foreignTable: 'routes' } // sometimes this key is `referencedTable`
-);
-
-query = query.or(
-  `destination_city.ilike.%${destination}%,destination_province.ilike.%${destination}%`,
-  { foreignTable: 'routes' }
-);
-
+      query = query.ilike('routes.origin_province', `%${origin}%`);
+      query = query.ilike('routes.destination_province', `%${destination}%`);
 
       const startOfDay = new Date(`${date}T00:00:00`);
       const endOfDay = new Date(`${date}T23:59:59.999`);
@@ -168,6 +161,13 @@ query = query.or(
         isSelected ? 'border-green-500 bg-green-50 dark:bg-green-900/10' : 'border-orange-500'
       }`}
     >
+      <div className="flex items-center gap-3 px-6 pt-4 pb-2 border-b border-gray-100 dark:border-gray-700">
+        {trip.buses.companies.logo_url ? (
+          <img src={trip.buses.companies.logo_url} alt={trip.buses.companies.name} className="h-auto w-auto max-h-20 max-w-[160px] object-contain" />
+        ) : (
+          <span className="text-lg font-bold text-gray-800 dark:text-white">{trip.buses.companies.name}</span>
+        )}
+      </div>
       <CardContent className="p-6 grid grid-cols-1 md:grid-cols-5 gap-6 items-center">
         <div className="md:col-span-3">
           <div className="flex justify-between items-center mb-4">
@@ -200,13 +200,6 @@ query = query.or(
 
           <div className="flex flex-col text-sm text-gray-500 dark:text-gray-400 gap-1">
             <span>
-              <span className="font-semibold">Operador:</span>{' '}
-              {trip.buses.companies.name} - {trip.buses.make} {trip.buses.model}
-            </span>
-            <span>
-              <span className="font-semibold">Distância:</span>{' '}
-              {trip.routes.distance_km ? `${trip.routes.distance_km.toFixed(0)} km` : 'N/A'}
-              {' • '}
               <span className="font-semibold">Classe:</span>{' '}
               {translateSeatClass(trip.seat_class)}
             </span>
