@@ -29,6 +29,12 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState('referencia'); // 'cash' or 'referencia'
   const supabase = createClient();
 
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null); // { code, discount_percentage }
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState('');
+
   // Auth state
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [authMode, setAuthMode] = useState('login');
@@ -52,10 +58,32 @@ export default function CheckoutPage() {
     })();
   }, [router, supabase]);
 
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponError('');
+    try {
+      const res = await fetch(`/api/validate-coupon?code=${encodeURIComponent(couponCode.trim())}`);
+      const data = await res.json();
+      if (data.valid) {
+        setAppliedCoupon({ code: data.code, discount_percentage: data.discount_percentage });
+      } else {
+        setCouponError(data.message || 'Cupom inválido');
+        setAppliedCoupon(null);
+      }
+    } catch {
+      setCouponError('Erro ao validar cupom');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
   const proceedWithPayment = async (user) => {
     if (!bookingDetails) return;
 
     const { tripType, outboundTrip, returnTrip, totalPrice } = bookingDetails;
+    const discountFactor = appliedCoupon ? (1 - appliedCoupon.discount_percentage / 100) : 1;
+    const finalPrice = parseFloat((totalPrice * discountFactor).toFixed(2));
     const passengerId = user.id;
 
     try {
@@ -70,7 +98,7 @@ export default function CheckoutPage() {
           passenger_id: passengerId,
           booked_by: passengerId,
           seat_number: outboundTrip.selectedSeats.join(','),
-          price_paid_usd: outboundTrip.price,
+          price_paid_usd: parseFloat((outboundTrip.price * discountFactor).toFixed(2)),
           payment_status: paymentStatus,
           payment_method: paymentMethod,
           booking_source: 'online',
@@ -95,7 +123,7 @@ export default function CheckoutPage() {
             passenger_id: passengerId,
             booked_by: passengerId,
             seat_number: returnTrip.selectedSeats.join(','),
-            price_paid_usd: returnTrip.price,
+            price_paid_usd: parseFloat((returnTrip.price * discountFactor).toFixed(2)),
             payment_status: paymentStatus,
             payment_method: paymentMethod,
             booking_source: 'online',
@@ -123,7 +151,7 @@ export default function CheckoutPage() {
           body: JSON.stringify({
             ticket_id: outboundTicketData.id,
             return_ticket_id: returnTicketData?.id,
-            amount: totalPrice,
+            amount: finalPrice,
             passenger_name: user.user_metadata.full_name || 'N/A',
             passenger_email: user.email,
             trip_type: tripType,
@@ -289,6 +317,8 @@ const handleDownloadPdf = async () => {
   }
 
   const { tripType, outboundTrip, returnTrip, totalPrice } = bookingDetails;
+  const pdfDiscountFactor = appliedCoupon ? (1 - appliedCoupon.discount_percentage / 100) : 1;
+  const pdfFinalPrice = parseFloat((totalPrice * pdfDiscountFactor).toFixed(2));
   const doc = new jsPDF(); // A4 portrait, unit mm by default (210 x 297)
 
   const orange = [255, 140, 0];
@@ -359,7 +389,7 @@ const handleDownloadPdf = async () => {
 
     doc.setFontSize(14);
     doc.text(
-      `Valor Total: ${Math.round(totalPrice)},00 Kz`,
+      `Valor Total: ${Math.round(pdfFinalPrice)},00 Kz`,
       105,
       125,
       { align: "center" }
@@ -374,7 +404,7 @@ const handleDownloadPdf = async () => {
 
     doc.setFontSize(14);
     doc.text(
-      `Valor Total: ${Math.round(totalPrice)},00 Kz`,
+      `Valor Total: ${Math.round(pdfFinalPrice)},00 Kz`,
       105,
       125,
       { align: "center" }
@@ -756,6 +786,8 @@ const handleDownloadPdf = async () => {
   }
 
   const { tripType, outboundTrip, returnTrip, totalPrice } = bookingDetails;
+  const discountAmount = appliedCoupon ? parseFloat((totalPrice * appliedCoupon.discount_percentage / 100).toFixed(2)) : 0;
+  const finalPrice = totalPrice - discountAmount;
 
   return (
     <div className="w-full max-w-4xl mx-auto py-8 px-4">
@@ -827,14 +859,64 @@ const handleDownloadPdf = async () => {
                 </div>
               )}
 
+              {/* Coupon */}
+              <div className="border-t pt-4">
+                {!appliedCoupon ? (
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Código de Desconto</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Inserir código..."
+                        value={couponCode}
+                        onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(''); }}
+                        onKeyDown={(e) => e.key === 'Enter' && applyCoupon()}
+                        className="flex-1 border rounded-md px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-orange-400 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                        disabled={!!reference}
+                      />
+                      <button
+                        onClick={applyCoupon}
+                        disabled={couponLoading || !couponCode.trim() || !!reference}
+                        className="px-4 py-2 text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-md disabled:opacity-50 transition-colors"
+                      >
+                        {couponLoading ? '...' : 'Aplicar'}
+                      </button>
+                    </div>
+                    {couponError && <p className="text-sm text-red-500 mt-1">{couponError}</p>}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 rounded-md px-3 py-2">
+                    <div>
+                      <span className="text-sm font-semibold text-green-700 dark:text-green-300">🏷 {appliedCoupon.code}</span>
+                      <span className="text-sm text-green-600 dark:text-green-400 ml-2">–{appliedCoupon.discount_percentage}% de desconto</span>
+                    </div>
+                    {!reference && (
+                      <button onClick={() => { setAppliedCoupon(null); setCouponCode(''); }} className="text-xs text-gray-500 hover:text-red-500 ml-2">✕</button>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Total */}
               <div className="border-t pt-4">
+                {appliedCoupon && (
+                  <p className="text-sm flex justify-between text-gray-500 line-through">
+                    <span>Subtotal:</span>
+                    <span>{totalPrice.toFixed(2)} USD</span>
+                  </p>
+                )}
+                {appliedCoupon && (
+                  <p className="text-sm flex justify-between text-green-600 mb-1">
+                    <span>Desconto ({appliedCoupon.discount_percentage}%):</span>
+                    <span>–{discountAmount.toFixed(2)} USD</span>
+                  </p>
+                )}
                 <p className="text-xl font-bold flex justify-between text-gray-800 dark:text-white">
                   <span>Total:</span>
-                  <span className="text-orange-600">{totalPrice.toFixed(2)} USD</span>
+                  <span className="text-orange-600">{finalPrice.toFixed(2)} USD</span>
                 </p>
                 <p className="text-sm text-gray-500 text-right">
-                  ≈ {Math.round(totalPrice )} Kz
+                  ≈ {Math.round(finalPrice)} Kz
                 </p>
               </div>
             </CardContent>
@@ -924,7 +1006,7 @@ const handleDownloadPdf = async () => {
                       {reference}
                     </p>
                     <p className="text-lg font-semibold text-green-700 dark:text-green-300">
-                      Valor: {Math.round(totalPrice )},00 Kz
+                      Valor: {Math.round(finalPrice)},00 Kz
                     </p>
                   </div>
                   <p className="text-sm text-gray-500 mb-4">
@@ -948,7 +1030,7 @@ const handleDownloadPdf = async () => {
                       Pagamento: Cash
                     </p>
                     <p className="text-lg font-semibold text-green-700 dark:text-green-300 mt-1">
-                      Valor: {Math.round(totalPrice)},00 Kz
+                      Valor: {Math.round(finalPrice)},00 Kz
                     </p>
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">

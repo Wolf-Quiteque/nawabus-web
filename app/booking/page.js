@@ -6,6 +6,23 @@ import { ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase-client';
 import SeatSelection from '@/components/seat-selection';
 
+function minuteWindow(isoString) {
+  const d = new Date(isoString);
+  d.setSeconds(0, 0);
+  return { start: d.toISOString(), end: new Date(d.getTime() + 60000).toISOString() };
+}
+
+async function getSiblingIds(supabase, busId, departureTime) {
+  const { start, end } = minuteWindow(departureTime);
+  const { data } = await supabase
+    .from('trips')
+    .select('id')
+    .eq('bus_id', busId)
+    .gte('departure_time', start)
+    .lt('departure_time', end);
+  return data?.map(t => t.id) ?? [];
+}
+
 function BookingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -33,11 +50,12 @@ function BookingPage() {
       setLoading(true);
 
       try {
-        // Fetch outbound trip details
+        // Fetch outbound trip details (include bus_id for sibling resolution)
         const { data: outboundData, error: outboundError } = await supabase
           .from('trips')
           .select(`
             id,
+            bus_id,
             departure_time,
             arrival_time,
             price_usd,
@@ -57,11 +75,12 @@ function BookingPage() {
         if (outboundError) throw outboundError;
         setOutboundTrip(outboundData);
 
-        // Fetch outbound occupied seats
+        // Fetch outbound occupied seats across all sibling trips (same bus + departure minute)
+        const outboundSiblingIds = await getSiblingIds(supabase, outboundData.bus_id, outboundData.departure_time);
         const { data: outboundTickets, error: outboundTicketsError } = await supabase
           .from('tickets')
           .select('seat_number')
-          .eq('trip_id', outboundTripId)
+          .in('trip_id', outboundSiblingIds)
           .in('status', ['active', 'used']);
 
         if (outboundTicketsError) throw outboundTicketsError;
@@ -73,6 +92,7 @@ function BookingPage() {
             .from('trips')
             .select(`
               id,
+              bus_id,
               departure_time,
               arrival_time,
               price_usd,
@@ -92,11 +112,12 @@ function BookingPage() {
           if (returnError) throw returnError;
           setReturnTrip(returnData);
 
-          // Fetch return occupied seats
+          // Fetch return occupied seats across all sibling trips
+          const returnSiblingIds = await getSiblingIds(supabase, returnData.bus_id, returnData.departure_time);
           const { data: returnTickets, error: returnTicketsError } = await supabase
             .from('tickets')
             .select('seat_number')
-            .eq('trip_id', returnTripId)
+            .in('trip_id', returnSiblingIds)
             .in('status', ['active', 'used']);
 
           if (returnTicketsError) throw returnTicketsError;
