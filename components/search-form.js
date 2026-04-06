@@ -76,7 +76,7 @@ export default function SearchForm() {
                 value="one-way"
                 checked={tripType === 'one-way'}
                 onChange={(e) => setTripType(e.target.value)}
-                className="w-5 h-5 text-orange-500 focus:ring-orange-400"
+                className="w-5 h-5 text-yellow-500 focus:ring-yellow-400"
               />
               <span className="text-base font-semibold">Só Ida</span>
             </Label>
@@ -86,7 +86,7 @@ export default function SearchForm() {
                 value="round-trip"
                 checked={tripType === 'round-trip'}
                 onChange={(e) => setTripType(e.target.value)}
-                className="w-5 h-5 text-orange-500 focus:ring-orange-400"
+                className="w-5 h-5 text-yellow-500 focus:ring-yellow-400"
               />
               <span className="text-base font-semibold">Ida e Volta</span>
             </Label>
@@ -104,7 +104,7 @@ export default function SearchForm() {
                 value={origin}
                 onChange={(e) => setOrigin(e.target.value)}
                 placeholder="Selecione a origem"
-                className="h-12 text-base border-gray-300 focus:border-orange-500 focus:ring-orange-500"
+                className="h-12 text-base border-gray-300 focus:border-yellow-500 focus:ring-yellow-500"
                 required
               />
               <datalist id="origin-cities">
@@ -125,7 +125,7 @@ export default function SearchForm() {
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
                 placeholder="Selecione o destino"
-                className="h-12 text-base border-gray-300 focus:border-orange-500 focus:ring-orange-500"
+                className="h-12 text-base border-gray-300 focus:border-yellow-500 focus:ring-yellow-500"
                 required
               />
               <datalist id="destination-cities">
@@ -146,7 +146,7 @@ export default function SearchForm() {
                 value={departureDate}
                 onChange={(e) => setDepartureDate(e.target.value)}
                 min={today}
-                className="h-12 text-base border-gray-300 focus:border-orange-500 focus:ring-orange-500"
+                className="h-12 text-base border-gray-300 focus:border-yellow-500 focus:ring-yellow-500"
                 required
               />
             </div>
@@ -163,7 +163,7 @@ export default function SearchForm() {
                   value={returnDate}
                   onChange={(e) => setReturnDate(e.target.value)}
                   min={departureDate || today}
-                  className="h-12 text-base border-gray-300 focus:border-orange-500 focus:ring-orange-500"
+                  className="h-12 text-base border-gray-300 focus:border-yellow-500 focus:ring-yellow-500"
                   required={tripType === 'round-trip'}
                 />
               </div>
@@ -173,7 +173,7 @@ export default function SearchForm() {
             <div className={tripType === 'round-trip' ? 'lg:col-span-2' : 'lg:col-span-3'}>
               <Button 
                 type="submit" 
-                className="w-full h-12 text-base font-semibold bg-orange-500 hover:bg-orange-600 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                className="w-full h-12 text-base font-semibold bg-yellow-500 hover:bg-yellow-600 text-white shadow-md hover:shadow-lg transition-all duration-200"
               >
                 Pesquisar
               </Button>

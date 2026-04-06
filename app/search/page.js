@@ -158,7 +158,7 @@ function SearchResults() {
     <Card 
       key={trip.id} 
       className={`shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden border-l-4 ${
-        isSelected ? 'border-green-500 bg-green-50 dark:bg-green-900/10' : 'border-orange-500'
+        isSelected ? 'border-green-500 bg-green-50 dark:bg-green-900/10' : 'border-yellow-500'
       }`}
     >
       <div className="flex items-center gap-3 px-6 pt-4 pb-2 border-b border-gray-100 dark:border-gray-700">
@@ -182,7 +182,7 @@ function SearchResults() {
             <div className="text-center flex-grow px-4">
               <div className="relative">
                 <div className="w-full border-t-2 border-dashed border-gray-300 dark:border-gray-600"></div>
-                <Bus className="w-6 h-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 text-orange-500 px-1" />
+                <Bus className="w-6 h-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 text-yellow-500 px-1" />
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                 {formatDuration(trip.departure_time, trip.arrival_time)}
@@ -217,7 +217,7 @@ function SearchResults() {
                 return (
                   <AmenityIcon 
                     key={amenity} 
-                    className="w-5 h-5 text-orange-500" 
+                    className="w-5 h-5 text-yellow-500" 
                     title={amenityConfig.label} 
                   />
                 );
@@ -230,7 +230,7 @@ function SearchResults() {
 
         <div className="md:col-span-1 text-center md:text-right">
           <p className="text-sm text-gray-500">Preço</p>
-          <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">
+          <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
             {trip.price_usd.toFixed(2)} Kz
           </p>
           <p className="text-xs text-gray-500 mb-3">
@@ -241,7 +241,7 @@ function SearchResults() {
             className={`w-full md:w-auto ${
               isSelected 
                 ? 'bg-green-500 hover:bg-green-600' 
-                : 'bg-orange-500 hover:bg-orange-600'
+                : 'bg-yellow-500 hover:bg-yellow-600'
             } text-white`}
           >
             {isSelected ? '✓ Selecionado' : 'Selecionar'}
@@ -275,7 +275,7 @@ function SearchResults() {
       <div className="space-y-8">
         {loading ? (
           <div className="text-center py-12">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-orange-500 border-r-transparent"></div>
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-yellow-500 border-r-transparent"></div>
             <p className="mt-4 text-gray-600 dark:text-gray-400">A carregar viagens...</p>
           </div>
         ) : (

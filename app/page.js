@@ -63,9 +63,9 @@ export default function Home() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
-              Sobre a <span className="text-orange-500">NAWABUS</span>
+              Sobre a <span className="text-yellow-500">NAWABUS</span>
             </h2>
-            <div className="w-24 h-1 bg-gradient-to-r from-orange-400 to-orange-600 mx-auto mb-8"></div>
+            <div className="w-24 h-1 bg-gradient-to-r from-yellow-400 to-yellow-600 mx-auto mb-8"></div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-12 items-center">
@@ -81,14 +81,14 @@ export default function Home() {
 
             <div className="space-y-6">
               <p className="text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
-                A <strong className="text-orange-500">NAWABUS, LDA</strong> é uma startup inovadora que está a revolucionar o sector de Transportes e Turismo em Angola. Desde <strong>2019</strong>, temos vindo a construir soluções digitais que melhoram significativamente a experiência de viagem dos angolanos, conectando pessoas, destinos e oportunidades através de uma plataforma moderna e acessível.
+                A <strong className="text-yellow-500">NAWABUS, LDA</strong> é uma startup inovadora que está a revolucionar o sector de Transportes e Turismo em Angola. Desde <strong>2019</strong>, temos vindo a construir soluções digitais que melhoram significativamente a experiência de viagem dos angolanos, conectando pessoas, destinos e oportunidades através de uma plataforma moderna e acessível.
               </p>
               <p className="text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
-                Com uma visão clara de transformação social, atuamos no mercado de transporte rodoviário de passageiros, oferecendo serviços abrangentes que incluem <strong className="text-orange-500">viagens interprovinciais</strong>, transporte de mercadorias, experiências turísticas memoráveis e transfers para todo o território nacional.
+                Com uma visão clara de transformação social, atuamos no mercado de transporte rodoviário de passageiros, oferecendo serviços abrangentes que incluem <strong className="text-yellow-500">viagens interprovinciais</strong>, transporte de mercadorias, experiências turísticas memoráveis e transfers para todo o território nacional.
               </p>
               <div className="flex items-center gap-4 pt-4">
-                <div className="flex-1 h-1 bg-gradient-to-r from-orange-400 to-transparent"></div>
-                <span className="text-orange-500 font-semibold">Desde 2019</span>
+                <div className="flex-1 h-1 bg-gradient-to-r from-yellow-400 to-transparent"></div>
+                <span className="text-yellow-500 font-semibold">Desde 2019</span>
               </div>
             </div>
           </div>
@@ -96,17 +96,17 @@ export default function Home() {
       </section> */}
 
       {/* Anúncio Section */}
-      <section className="py-20 px-4 bg-gradient-to-br from-gray-50 via-orange-50 to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 relative overflow-hidden">
+      <section className="py-20 px-4 bg-gradient-to-br from-gray-50 via-yellow-50 to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 relative overflow-hidden">
         {/* Decorative background elements */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-orange-200/30 dark:bg-orange-900/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-orange-300/20 dark:bg-orange-800/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-yellow-200/30 dark:bg-yellow-900/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-yellow-300/20 dark:bg-yellow-800/10 rounded-full blur-3xl"></div>
 
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
-              Nossos <span className="text-orange-500">Parceiros</span>
+              Nossos <span className="text-yellow-500">Parceiros</span>
             </h2>
-            <div className="w-24 h-1 bg-gradient-to-r from-orange-400 to-orange-600 mx-auto mb-4"></div>
+            <div className="w-24 h-1 bg-gradient-to-r from-yellow-400 to-yellow-600 mx-auto mb-4"></div>
             <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
               Descubra as marcas que confiam em nós
             </p>
@@ -129,10 +129,10 @@ export default function Home() {
                   fill
                   className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
                 />
-                <div className="absolute inset-0 ring-2 ring-orange-500/0 group-hover:ring-orange-500/50 transition-all duration-300 rounded-2xl"></div>
+                <div className="absolute inset-0 ring-2 ring-yellow-500/0 group-hover:ring-yellow-500/50 transition-all duration-300 rounded-2xl"></div>
                 {/* Hover indicator */}
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="bg-orange-500 text-white px-6 py-3 rounded-full font-bold shadow-2xl transform group-hover:scale-110 transition-transform duration-300">
+                  <div className="bg-yellow-500 text-white px-6 py-3 rounded-full font-bold shadow-2xl transform group-hover:scale-110 transition-transform duration-300">
                     Visitar Site
                   </div>
                 </div>
@@ -152,14 +152,14 @@ export default function Home() {
                   fill
                   className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
                 />
-                <div className="absolute inset-0 ring-2 ring-orange-500/0 group-hover:ring-orange-500/50 transition-all duration-300 rounded-2xl"></div>
+                <div className="absolute inset-0 ring-2 ring-yellow-500/0 group-hover:ring-yellow-500/50 transition-all duration-300 rounded-2xl"></div>
                 {/* Featured badge */}
-                <div className="absolute top-4 right-4 bg-orange-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+                <div className="absolute top-4 right-4 bg-yellow-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
                   Destaque
                 </div>
                 {/* Hover indicator */}
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="bg-orange-500 text-white px-6 py-3 rounded-full font-bold shadow-2xl transform group-hover:scale-110 transition-transform duration-300">
+                  <div className="bg-yellow-500 text-white px-6 py-3 rounded-full font-bold shadow-2xl transform group-hover:scale-110 transition-transform duration-300">
                     Visitar Site
                   </div>
                 </div>
@@ -179,10 +179,10 @@ export default function Home() {
                   fill
                   className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
                 />
-                <div className="absolute inset-0 ring-2 ring-orange-500/0 group-hover:ring-orange-500/50 transition-all duration-300 rounded-2xl"></div>
+                <div className="absolute inset-0 ring-2 ring-yellow-500/0 group-hover:ring-yellow-500/50 transition-all duration-300 rounded-2xl"></div>
                 {/* Hover indicator */}
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="bg-orange-500 text-white px-6 py-3 rounded-full font-bold shadow-2xl transform group-hover:scale-110 transition-transform duration-300">
+                  <div className="bg-yellow-500 text-white px-6 py-3 rounded-full font-bold shadow-2xl transform group-hover:scale-110 transition-transform duration-300">
                     Visitar Site
                   </div>
                 </div>
@@ -205,10 +205,10 @@ export default function Home() {
                   fill
                   className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
                 />
-                <div className="absolute inset-0 ring-2 ring-orange-500/0 group-hover:ring-orange-500/50 transition-all duration-300 rounded-2xl"></div>
+                <div className="absolute inset-0 ring-2 ring-yellow-500/0 group-hover:ring-yellow-500/50 transition-all duration-300 rounded-2xl"></div>
                 {/* Hover indicator */}
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="bg-orange-500 text-white px-6 py-3 rounded-full font-bold shadow-2xl transform group-hover:scale-110 transition-transform duration-300">
+                  <div className="bg-yellow-500 text-white px-6 py-3 rounded-full font-bold shadow-2xl transform group-hover:scale-110 transition-transform duration-300">
                     Visitar Site
                   </div>
                 </div>
@@ -228,14 +228,14 @@ export default function Home() {
                   fill
                   className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
                 />
-                <div className="absolute inset-0 ring-2 ring-orange-500/0 group-hover:ring-orange-500/50 transition-all duration-300 rounded-2xl"></div>
+                <div className="absolute inset-0 ring-2 ring-yellow-500/0 group-hover:ring-yellow-500/50 transition-all duration-300 rounded-2xl"></div>
                 {/* Featured badge */}
-                <div className="absolute top-4 right-4 bg-orange-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+                <div className="absolute top-4 right-4 bg-yellow-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
                   Destaque
                 </div>
                 {/* Hover indicator */}
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="bg-orange-500 text-white px-6 py-3 rounded-full font-bold shadow-2xl transform group-hover:scale-110 transition-transform duration-300">
+                  <div className="bg-yellow-500 text-white px-6 py-3 rounded-full font-bold shadow-2xl transform group-hover:scale-110 transition-transform duration-300">
                     Visitar Site
                   </div>
                 </div>
@@ -255,10 +255,10 @@ export default function Home() {
                   fill
                   className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
                 />
-                <div className="absolute inset-0 ring-2 ring-orange-500/0 group-hover:ring-orange-500/50 transition-all duration-300 rounded-2xl"></div>
+                <div className="absolute inset-0 ring-2 ring-yellow-500/0 group-hover:ring-yellow-500/50 transition-all duration-300 rounded-2xl"></div>
                 {/* Hover indicator */}
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="bg-orange-500 text-white px-6 py-3 rounded-full font-bold shadow-2xl transform group-hover:scale-110 transition-transform duration-300">
+                  <div className="bg-yellow-500 text-white px-6 py-3 rounded-full font-bold shadow-2xl transform group-hover:scale-110 transition-transform duration-300">
                     Visitar Site
                   </div>
                 </div>
@@ -326,20 +326,20 @@ export default function Home() {
       </section>
 
       {/* Platform Section */}
-      <section className="py-20 px-4 bg-gradient-to-br from-orange-50 to-white dark:from-gray-900 dark:to-gray-800">
+      <section className="py-20 px-4 bg-gradient-to-br from-yellow-50 to-white dark:from-gray-900 dark:to-gray-800">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
-              A Nossa <span className="text-orange-500">Plataforma Digital</span>
+              A Nossa <span className="text-yellow-500">Plataforma Digital</span>
             </h2>
-            <div className="w-24 h-1 bg-gradient-to-r from-orange-400 to-orange-600 mx-auto"></div>
+            <div className="w-24 h-1 bg-gradient-to-r from-yellow-400 to-yellow-600 mx-auto"></div>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
             {/* Card 1 */}
-            <div className="group bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-t-4 border-orange-500">
+            <div className="group bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-t-4 border-yellow-500">
               <div className="flex justify-center mb-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300">
+                <div className="w-14 h-14 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300">
                   <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -355,9 +355,9 @@ export default function Home() {
             </div>
 
             {/* Card 2 */}
-            <div className="group bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-t-4 border-orange-500">
+            <div className="group bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-t-4 border-yellow-500">
               <div className="flex justify-center mb-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300">
+                <div className="w-14 h-14 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300">
                   <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
@@ -372,9 +372,9 @@ export default function Home() {
             </div>
 
             {/* Card 3 */}
-            <div className="group bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-t-4 border-orange-500">
+            <div className="group bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-t-4 border-yellow-500">
               <div className="flex justify-center mb-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300">
+                <div className="w-14 h-14 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300">
                   <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                   </svg>
@@ -394,15 +394,15 @@ export default function Home() {
       {/* Services Section */}
       <section className="py-20 px-4 bg-white dark:bg-gray-800 relative overflow-hidden">
         {/* Background decoration */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-orange-100 dark:bg-orange-900/20 rounded-full blur-3xl -z-0 opacity-50"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-orange-100 dark:bg-orange-900/20 rounded-full blur-3xl -z-0 opacity-50"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-yellow-100 dark:bg-yellow-900/20 rounded-full blur-3xl -z-0 opacity-50"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-yellow-100 dark:bg-yellow-900/20 rounded-full blur-3xl -z-0 opacity-50"></div>
 
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
-              Os Nossos <span className="text-orange-500">Serviços Completos</span>
+              Os Nossos <span className="text-yellow-500">Serviços Completos</span>
             </h2>
-            <div className="w-24 h-1 bg-gradient-to-r from-orange-400 to-orange-600 mx-auto mb-6"></div>
+            <div className="w-24 h-1 bg-gradient-to-r from-yellow-400 to-yellow-600 mx-auto mb-6"></div>
             <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
               Soluções completas de mobilidade e turismo para todas as suas necessidades
             </p>
@@ -410,10 +410,10 @@ export default function Home() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Service 1 */}
-            <div className="group relative bg-gradient-to-br from-white to-orange-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full -mr-16 -mt-16"></div>
+            <div className="group relative bg-gradient-to-br from-white to-yellow-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full -mr-16 -mt-16"></div>
               <div className="relative">
-                <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center mb-4">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
                   </svg>
@@ -428,10 +428,10 @@ export default function Home() {
             </div>
 
             {/* Service 2 */}
-            <div className="group relative bg-gradient-to-br from-white to-orange-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full -mr-16 -mt-16"></div>
+            <div className="group relative bg-gradient-to-br from-white to-yellow-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full -mr-16 -mt-16"></div>
               <div className="relative">
-                <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center mb-4">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                   </svg>
@@ -446,10 +446,10 @@ export default function Home() {
             </div>
 
             {/* Service 3 */}
-            <div className="group relative bg-gradient-to-br from-white to-orange-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full -mr-16 -mt-16"></div>
+            <div className="group relative bg-gradient-to-br from-white to-yellow-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full -mr-16 -mt-16"></div>
               <div className="relative">
-                <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center mb-4">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
@@ -464,10 +464,10 @@ export default function Home() {
             </div>
 
             {/* Service 4 */}
-            <div className="group relative bg-gradient-to-br from-white to-orange-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full -mr-16 -mt-16"></div>
+            <div className="group relative bg-gradient-to-br from-white to-yellow-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full -mr-16 -mt-16"></div>
               <div className="relative">
-                <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center mb-4">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                   </svg>
@@ -482,10 +482,10 @@ export default function Home() {
             </div>
 
             {/* Service 5 */}
-            <div className="group relative bg-gradient-to-br from-white to-orange-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden md:col-span-2 lg:col-span-1">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full -mr-16 -mt-16"></div>
+            <div className="group relative bg-gradient-to-br from-white to-yellow-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden md:col-span-2 lg:col-span-1">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full -mr-16 -mt-16"></div>
               <div className="relative">
-                <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center mb-4">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -503,34 +503,34 @@ export default function Home() {
       </section>
 
       {/* Nawatur Travel Section */}
-      <section className="py-20 px-4 bg-gradient-to-br from-amber-50 via-white to-stone-100 dark:from-stone-900 dark:via-stone-800 dark:to-amber-950 relative overflow-hidden">
+      <section className="py-20 px-4 bg-gradient-to-br from-yellow-50 via-white to-stone-100 dark:from-stone-900 dark:via-stone-800 dark:to-yellow-950 relative overflow-hidden">
         {/* Circular/Curvy Background Patterns */}
         <div className="absolute inset-0 opacity-30">
           <div className="absolute top-0 left-0 w-full h-full" style={{backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M50 10 A 40 40 0 1 1 50 90 A 40 40 0 1 1 50 10 Z\' fill=\'none\' stroke=\'%23a16207\' stroke-width=\'0.5\' opacity=\'0.2\'/%3E%3Ccircle cx=\'20\' cy=\'30\' r=\'15\' fill=\'%23d97706\' opacity=\'0.1\'/%3E%3Ccircle cx=\'80\' cy=\'70\' r=\'20\' fill=\'%2378350f\' opacity=\'0.1\'/%3E%3Cpath d=\'M 30 0 Q 50 30 70 0\' fill=\'none\' stroke=\'%23a16207\' stroke-width=\'1\' opacity=\'0.15\'/%3E%3C/svg%3E")'}}></div>
         </div>
 
         {/* Decorative circles */}
-        <div className="absolute top-10 right-20 w-72 h-72 bg-amber-200 dark:bg-amber-900/30 rounded-full blur-3xl opacity-20"></div>
+        <div className="absolute top-10 right-20 w-72 h-72 bg-yellow-200 dark:bg-yellow-900/30 rounded-full blur-3xl opacity-20"></div>
         <div className="absolute bottom-20 left-10 w-96 h-96 bg-stone-300 dark:bg-stone-700/30 rounded-full blur-3xl opacity-20"></div>
 
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             {/* Image side */}
-            <div className="relative h-[400px] rounded-2xl overflow-hidden shadow-2xl group cursor-pointer border-4 border-amber-800 dark:border-amber-600" onClick={() => window.open('https://www.nawatur.com/', '_blank')}>
+            <div className="relative h-[400px] rounded-2xl overflow-hidden shadow-2xl group cursor-pointer border-4 border-yellow-800 dark:border-yellow-600" onClick={() => window.open('https://www.nawatur.com/', '_blank')}>
               <Image
                 src="/wallpaper.jpg"
                 alt="Nawatur Travel"
                 fill
                 className="object-cover group-hover:scale-110 transition-transform duration-500"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-amber-950/80 via-amber-900/20 to-transparent group-hover:from-amber-950/90 transition-all duration-300"></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-yellow-950/80 via-yellow-900/20 to-transparent group-hover:from-yellow-950/90 transition-all duration-300"></div>
               <div className="absolute bottom-6 left-6 right-6">
-                <div className="bg-white/95 dark:bg-stone-800/95 backdrop-blur-md rounded-xl p-4 border-2 border-amber-700 dark:border-amber-500">
+                <div className="bg-white/95 dark:bg-stone-800/95 backdrop-blur-md rounded-xl p-4 border-2 border-yellow-700 dark:border-yellow-500">
                   <div className="flex items-center justify-center gap-3">
                     <div className="w-12 h-12 bflex items-center justify-center">
                      <img src="/about-locationimage.png" alt="Nawatur Logo" className="w-12 h-12" />
                     </div>
-                    <span className="text-amber-900 dark:text-amber-100 font-bold text-lg">Nawatur </span>
+                    <span className="text-yellow-900 dark:text-yellow-100 font-bold text-lg">Nawatur </span>
                   </div>
                 </div>
               </div>
@@ -540,9 +540,9 @@ export default function Home() {
             <div className="space-y-6">
               <div>
                 <h2 className="text-4xl md:text-5xl font-bold text-stone-800 dark:text-white mb-4">
-                  Descobre Angola com a <span className="text-amber-700 dark:text-amber-500">Nawatur</span>
+                  Descobre Angola com a <span className="text-yellow-700 dark:text-yellow-500">Nawatur</span>
                 </h2>
-                <div className="w-24 h-1 bg-gradient-to-r from-amber-700 to-stone-600 mb-6"></div>
+                <div className="w-24 h-1 bg-gradient-to-r from-yellow-700 to-stone-600 mb-6"></div>
               </div>
 
               <p className="text-xl text-stone-700 dark:text-stone-200 leading-relaxed">
@@ -557,7 +557,7 @@ export default function Home() {
                 href="https://www.nawatur.com/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-3 bg-gradient-to-r from-amber-700 to-amber-900 text-white px-8 py-4 rounded-xl font-bold text-lg hover:from-amber-800 hover:to-stone-800 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 group"
+                className="inline-flex items-center gap-3 bg-gradient-to-r from-yellow-700 to-yellow-900 text-white px-8 py-4 rounded-xl font-bold text-lg hover:from-yellow-800 hover:to-stone-800 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 group"
               >
                 <span>Explora com a Nawatur</span>
                 <svg className="w-6 h-6 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -567,7 +567,7 @@ export default function Home() {
 
               <div className="flex items-center gap-6 pt-4 flex-wrap">
                 <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 bg-amber-700 dark:bg-amber-800 rounded-lg flex items-center justify-center">
+                  <div className="w-10 h-10 bg-yellow-700 dark:bg-yellow-800 rounded-lg flex items-center justify-center">
                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
@@ -575,7 +575,7 @@ export default function Home() {
                   <span className="text-stone-700 dark:text-stone-200 font-medium">Experiências Seguras</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 bg-amber-700 dark:bg-amber-800 rounded-lg flex items-center justify-center">
+                  <div className="w-10 h-10 bg-yellow-700 dark:bg-yellow-800 rounded-lg flex items-center justify-center">
                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -589,7 +589,7 @@ export default function Home() {
       </section>
 
       {/* Mission Section */}
-      <section className="py-20 px-4 bg-gradient-to-br from-orange-500 to-orange-600 relative overflow-hidden">
+      <section className="py-20 px-4 bg-gradient-to-br from-yellow-500 to-yellow-600 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-full h-full" style={{backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")'}}></div>
         </div>
@@ -683,13 +683,13 @@ export default function Home() {
       <footer className="bg-gray-900 dark:bg-black py-12 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-wrap items-center justify-between gap-8">
-            <a href="#sobre" className="text-gray-300 hover:text-orange-500 transition-colors duration-300 font-medium">
+            <a href="#sobre" className="text-gray-300 hover:text-yellow-500 transition-colors duration-300 font-medium">
               Sobre Nos
             </a>
-            <a href="#servicos" className="text-gray-300 hover:text-orange-500 transition-colors duration-300 font-medium">
+            <a href="#servicos" className="text-gray-300 hover:text-yellow-500 transition-colors duration-300 font-medium">
               Nossos Serviços
             </a>
-            <a href="#termos" className="text-gray-300 hover:text-orange-500 transition-colors duration-300 font-medium">
+            <a href="#termos" className="text-gray-300 hover:text-yellow-500 transition-colors duration-300 font-medium">
               Termos e Politicas
             </a>
           </div>
@@ -701,3 +701,4 @@ export default function Home() {
     </main>
   );
 }
+

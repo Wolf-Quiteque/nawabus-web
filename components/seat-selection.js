@@ -43,9 +43,9 @@ export default function SeatSelection({
       return 'text-gray-400 cursor-not-allowed';
     }
     if (currentSelectedSeats.includes(seatNumber)) {
-      return 'text-orange-500';
+      return 'text-yellow-500';
     }
-    return 'text-gray-600 hover:text-orange-400';
+    return 'text-gray-600 hover:text-yellow-400';
   };
 
   const renderSeats = () => {
@@ -149,7 +149,7 @@ export default function SeatSelection({
                   <span>Disponível</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <MdEventSeat size={20} className="text-orange-500" />
+                  <MdEventSeat size={20} className="text-yellow-500" />
                   <span>Selecionado</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -184,7 +184,7 @@ export default function SeatSelection({
                 <div className="mt-2">
                   <p className="text-sm font-medium text-gray-600">Lugares selecionados:</p>
                   {outboundSelectedSeats.length > 0 ? (
-                    <p className="font-mono tracking-wider text-orange-600">
+                    <p className="font-mono tracking-wider text-yellow-600">
                       {outboundSelectedSeats.sort((a, b) => a - b).join(', ')}
                     </p>
                   ) : (
@@ -214,7 +214,7 @@ export default function SeatSelection({
                   <div className="mt-2">
                     <p className="text-sm font-medium text-gray-600">Lugares selecionados:</p>
                     {returnSelectedSeats.length > 0 ? (
-                      <p className="font-mono tracking-wider text-orange-600">
+                      <p className="font-mono tracking-wider text-yellow-600">
                         {returnSelectedSeats.sort((a, b) => a - b).join(', ')}
                       </p>
                     ) : (
@@ -235,7 +235,7 @@ export default function SeatSelection({
               <div className="pt-2">
                 <p className="text-xl font-bold flex justify-between text-gray-800 dark:text-white">
                   <span>Total:</span>
-                  <span className="text-orange-600">{totalPrice.toFixed(2)} Kz</span>
+                  <span className="text-yellow-600">{totalPrice.toFixed(2)} Kz</span>
                 </p>
               </div>
 
@@ -252,7 +252,7 @@ export default function SeatSelection({
                 )}
                 <Button 
                   onClick={handleContinue} 
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white" 
+                  className="w-full bg-yellow-500 hover:bg-yellow-600 text-white" 
                   disabled={!canContinue}
                 >
                   {currentStep === 'outbound' && returnTrip 

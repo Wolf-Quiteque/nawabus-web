@@ -138,7 +138,7 @@ function BookingPage() {
     return (
       <div className="w-full max-w-6xl mx-auto py-8 px-4">
         <div className="text-center py-10">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-orange-500 border-r-transparent"></div>
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-yellow-500 border-r-transparent"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-400">A carregar detalhes da viagem...</p>
         </div>
       </div>
@@ -186,7 +186,7 @@ function BookingPage() {
 
 export default function BookingPageWrapper() {
   return (
-    <Suspense fallback={<div className="w-full max-w-6xl mx-auto py-8 px-4"><div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-orange-500 border-r-transparent"></div></div>}>
+    <Suspense fallback={<div className="w-full max-w-6xl mx-auto py-8 px-4"><div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-yellow-500 border-r-transparent"></div></div>}>
       <BookingPage />
     </Suspense>
   );

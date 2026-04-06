@@ -114,9 +114,9 @@ if (ticketData) {
     const doc = new jsPDF();
 
     // Brand colors
-    const orange = [255, 140, 0];
-    const darkOrange = [230, 120, 0];
-    const lightOrange = [255, 160, 50];
+    const orange = [245, 158, 11];
+    const darkOrange = [217, 119, 6];
+    const lightOrange = [252, 191, 73];
 
     // --- Ticket Information ---
     const ticketInfo = {
@@ -311,7 +311,7 @@ if (ticketData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
           <p>A carregar bilhete...</p>
         </div>
       </div>

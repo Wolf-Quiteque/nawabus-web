@@ -321,8 +321,8 @@ const handleDownloadPdf = async () => {
   const pdfFinalPrice = parseFloat((totalPrice * pdfDiscountFactor).toFixed(2));
   const doc = new jsPDF(); // A4 portrait, unit mm by default (210 x 297)
 
-  const orange = [255, 140, 0];
-  const lightOrange = [255, 160, 50];
+  const orange = [245, 158, 11];
+  const lightOrange = [252, 191, 73];
 
   const trimmedOutbound =
     ticketNumbers.outbound.length > 9
@@ -827,7 +827,7 @@ const handleDownloadPdf = async () => {
                 </p>
                 <div className="mt-2">
                   <p className="font-semibold text-gray-800 dark:text-white">Lugares:</p>
-                  <p className="font-mono text-orange-600">{outboundTrip.selectedSeats.join(', ')}</p>
+                  <p className="font-mono text-yellow-600">{outboundTrip.selectedSeats.join(', ')}</p>
                 </div>
                 <p className="text-sm text-gray-600 mt-1">
                   {outboundTrip.bus_make} {outboundTrip.bus_model} • {outboundTrip.seat_class}
@@ -851,7 +851,7 @@ const handleDownloadPdf = async () => {
                   </p>
                   <div className="mt-2">
                     <p className="font-semibold text-gray-800 dark:text-white">Lugares:</p>
-                    <p className="font-mono text-orange-600">{returnTrip.selectedSeats.join(', ')}</p>
+                    <p className="font-mono text-yellow-600">{returnTrip.selectedSeats.join(', ')}</p>
                   </div>
                   <p className="text-sm text-gray-600 mt-1">
                     {returnTrip.bus_make} {returnTrip.bus_model} • {returnTrip.seat_class}
@@ -871,13 +871,13 @@ const handleDownloadPdf = async () => {
                         value={couponCode}
                         onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(''); }}
                         onKeyDown={(e) => e.key === 'Enter' && applyCoupon()}
-                        className="flex-1 border rounded-md px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-orange-400 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                        className="flex-1 border rounded-md px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-yellow-400 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
                         disabled={!!reference}
                       />
                       <button
                         onClick={applyCoupon}
                         disabled={couponLoading || !couponCode.trim() || !!reference}
-                        className="px-4 py-2 text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-md disabled:opacity-50 transition-colors"
+                        className="px-4 py-2 text-sm font-medium bg-yellow-500 hover:bg-yellow-600 text-white rounded-md disabled:opacity-50 transition-colors"
                       >
                         {couponLoading ? '...' : 'Aplicar'}
                       </button>
@@ -913,7 +913,7 @@ const handleDownloadPdf = async () => {
                 )}
                 <p className="text-xl font-bold flex justify-between text-gray-800 dark:text-white">
                   <span>Total:</span>
-                  <span className="text-orange-600">{finalPrice.toFixed(2)} USD</span>
+                  <span className="text-yellow-600">{finalPrice.toFixed(2)} USD</span>
                 </p>
                 <p className="text-sm text-gray-500 text-right">
                   ≈ {Math.round(finalPrice)} Kz
@@ -941,7 +941,7 @@ const handleDownloadPdf = async () => {
                         : 'cursor-pointer'
                     } ${
                       paymentMethod === 'cash'
-                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
+                        ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20'
                         : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
                     }`}
                     onClick={() => !reference && setPaymentMethod('cash')}
@@ -953,7 +953,7 @@ const handleDownloadPdf = async () => {
                       checked={paymentMethod === 'cash'}
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       disabled={!!reference}
-                      className="mt-1 h-4 w-4 text-orange-600 focus:ring-orange-500"
+                      className="mt-1 h-4 w-4 text-yellow-600 focus:ring-yellow-500"
                     />
                     <div className="flex-1">
                       <div className="font-semibold text-gray-800 dark:text-white">💵 Pagamento em Cash</div>
@@ -971,7 +971,7 @@ const handleDownloadPdf = async () => {
                         : 'cursor-pointer'
                     } ${
                       paymentMethod === 'referencia'
-                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
+                        ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20'
                         : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
                     }`}
                     onClick={() => !reference && setPaymentMethod('referencia')}
@@ -983,7 +983,7 @@ const handleDownloadPdf = async () => {
                       checked={paymentMethod === 'referencia'}
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       disabled={!!reference}
-                      className="mt-1 h-4 w-4 text-orange-600 focus:ring-orange-500"
+                      className="mt-1 h-4 w-4 text-yellow-600 focus:ring-yellow-500"
                     />
                     <div className="flex-1">
                       <div className="font-semibold text-gray-800 dark:text-white">🏦 Pagamento em Referência</div>
@@ -1046,7 +1046,7 @@ const handleDownloadPdf = async () => {
               ) : (
                 <Button
                   onClick={handlePayment}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                  className="w-full bg-yellow-500 hover:bg-yellow-600 text-white"
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -1140,7 +1140,7 @@ const handleDownloadPdf = async () => {
                 <Button
                   type="submit"
                   disabled={authSubmitting}
-                  className="bg-orange-500 hover:bg-orange-600 text-white min-w-32"
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white min-w-32"
                 >
                   {authSubmitting ? (
                     <>
