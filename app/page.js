@@ -61,6 +61,13 @@ export default function Home() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
+                <span className="text-2xl">📍</span>
+                <div>
+                  <p className="font-semibold text-white">Ponto de recolha: <strong className="text-amber-200">Gamek - Nosso Centro (Terminal Interprovincial)</strong></p>
+                  <p className="font-semibold text-white">Ponto de desembarque: <strong className="text-amber-200">Benguela Parque de Campismo</strong></p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
                 <span className="text-2xl">🤝</span>
                 <p className="font-semibold text-white">Viagem totalmente <strong className="text-amber-200">gratuita</strong></p>
               </div>
