@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { Suspense, useState, useEffect } from 'react';
 import SearchForm from '@/components/search-form';
 
+const CAMPAIGN_OUTBOUND_TRIP_ID = '4991b2b7-bde5-4062-bade-89d924ac986a';
+
 export default function Home() {
   const router = useRouter();
   const [currentAdSeries, setCurrentAdSeries] = useState(1);
@@ -25,6 +27,66 @@ export default function Home() {
 
   return (
     <main className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* SOS Benguela Campaign Section */}
+      <section className="py-16 px-4 bg-gradient-to-br from-red-700 via-red-600 to-amber-600 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRWMGgtMnYzNGgtMzR2MmgzNHYyNGgydi0yNGgyNHYtMmgtMjR6Ii8+PC9nPjwvZz48L3N2Zz4=')] bg-repeat"></div>
+        </div>
+
+        <div className="max-w-4xl mx-auto relative z-10 text-center">
+          <img
+            src="/nawabus_logo_white.webp"
+            alt="Nawabus"
+            className="h-16 mx-auto mb-6"
+          />
+          <span className="inline-block bg-white/20 backdrop-blur-sm text-white text-sm font-semibold px-4 py-1.5 rounded-full mb-6 tracking-wide">
+            CAMPANHA SOLIDÁRIA
+          </span>
+
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+            SOS Benguela 🙏
+          </h2>
+
+          <div className="max-w-2xl mx-auto space-y-4 text-white/90 text-lg leading-relaxed mb-8">
+            <p>
+              A <strong className="text-white">Nawabus</strong> está a mobilizar uma acção solidária em apoio às famílias afectadas pelas cheias em Benguela e convida associações e organizações a fazer parte desta iniciativa.
+            </p>
+
+            <div className="bg-white/15 backdrop-blur-sm rounded-xl p-6 text-left space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🚌</span>
+                <div>
+                  <p className="font-semibold text-white">Partida: 17 de Abril <span className="text-amber-200">sexta-feira</span> — embarque 10:00</p>
+                  <p className="font-semibold text-white">Regresso: 19 de Abril <span className="text-amber-200">domingo</span> — embarque 10:00</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🤝</span>
+                <p className="font-semibold text-white">Viagem totalmente <strong className="text-amber-200">gratuita</strong></p>
+              </div>
+            </div>
+
+            <p>
+              Se a sua associação deseja colaborar, será um prazer unirmos forças nesta causa.
+            </p>
+          </div>
+
+          <p className="text-xl md:text-2xl font-bold text-amber-200 italic mb-8">
+            &ldquo;Juntos, levamos ajuda onde ela é mais necessária.&rdquo;
+          </p>
+
+          <a
+            href={`/booking?outboundTripId=${CAMPAIGN_OUTBOUND_TRIP_ID}`}
+            className="inline-flex items-center gap-2 bg-white text-red-700 font-bold text-lg px-8 py-4 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+          >
+            Reservar Lugar Gratuito
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </a>
+        </div>
+      </section>
+
       <div className="relative w-full h-[480px] shadow-lg overflow-hidden">
         {/* Background image layer */}
         <Image

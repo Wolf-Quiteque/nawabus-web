@@ -192,7 +192,7 @@ export default function SeatSelection({
                   )}
                   {outboundSelectedSeats.length > 0 && (
                     <p className="text-sm text-gray-600 mt-1">
-                      Subtotal: {outboundPrice.toFixed(2)} Kz
+                      Subtotal: {outboundPrice === 0 ? 'Gratuito' : `${outboundPrice.toFixed(2)} Kz`}
                     </p>
                   )}
                 </div>
@@ -224,7 +224,7 @@ export default function SeatSelection({
                     )}
                     {returnSelectedSeats.length > 0 && (
                       <p className="text-sm text-gray-600 mt-1">
-                        Subtotal: {returnPrice.toFixed(2)} Kz
+                        Subtotal: {returnPrice === 0 ? 'Gratuito' : `${returnPrice.toFixed(2)} Kz`}
                       </p>
                     )}
                   </div>
@@ -235,7 +235,7 @@ export default function SeatSelection({
               <div className="pt-2">
                 <p className="text-xl font-bold flex justify-between text-gray-800 dark:text-white">
                   <span>Total:</span>
-                  <span className="text-yellow-600">{totalPrice.toFixed(2)} Kz</span>
+                  <span className="text-yellow-600">{totalPrice === 0 ? 'Gratuito' : `${totalPrice.toFixed(2)} Kz`}</span>
                 </p>
               </div>
 
@@ -255,9 +255,9 @@ export default function SeatSelection({
                   className="w-full bg-yellow-500 hover:bg-yellow-600 text-white" 
                   disabled={!canContinue}
                 >
-                  {currentStep === 'outbound' && returnTrip 
-                    ? 'Continuar para Volta' 
-                    : 'Continuar para Pagamento'}
+                  {currentStep === 'outbound' && returnTrip
+                    ? 'Continuar para Volta'
+                    : totalPrice === 0 ? 'Confirmar Reserva' : 'Continuar para Pagamento'}
                 </Button>
               </div>
             </div>

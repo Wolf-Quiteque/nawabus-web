@@ -231,7 +231,7 @@ function SearchResults() {
         <div className="md:col-span-1 text-center md:text-right">
           <p className="text-sm text-gray-500">Preço</p>
           <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
-            {trip.price_usd.toFixed(2)} Kz
+            {Number(trip.price_usd) === 0 ? 'Gratuito' : `${trip.price_usd.toFixed(2)} Kz`}
           </p>
           <p className="text-xs text-gray-500 mb-3">
             {trip.available_seats} {trip.available_seats === 1 ? 'lugar disponível' : 'lugares disponíveis'}

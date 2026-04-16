@@ -86,9 +86,11 @@ export default function CheckoutPage() {
     const finalPrice = parseFloat((totalPrice * discountFactor).toFixed(2));
     const passengerId = user.id;
 
+    const isFreeTrip = finalPrice === 0;
+
     try {
-      // Determine payment status based on payment method
-      const paymentStatus = paymentMethod === 'cash' ? 'paid' : 'pending';
+      const paymentStatus = isFreeTrip ? 'paid' : (paymentMethod === 'cash' ? 'paid' : 'pending');
+      const effectivePaymentMethod = isFreeTrip ? 'cash' : paymentMethod;
 
       // Create outbound ticket(s)
       const { data: outboundTicketData, error: outboundError } = await supabase
@@ -98,9 +100,9 @@ export default function CheckoutPage() {
           passenger_id: passengerId,
           booked_by: passengerId,
           seat_number: outboundTrip.selectedSeats.join(','),
-          price_paid_usd: parseFloat((outboundTrip.price * discountFactor).toFixed(2)),
+          price_paid_usd: isFreeTrip ? 0 : parseFloat((outboundTrip.price * discountFactor).toFixed(2)),
           payment_status: paymentStatus,
-          payment_method: paymentMethod,
+          payment_method: effectivePaymentMethod,
           booking_source: 'online',
           seat_class: outboundTrip.seat_class || 'economy',
         })
@@ -109,7 +111,6 @@ export default function CheckoutPage() {
 
       if (outboundError) throw outboundError;
 
-      // ❗️ SAVE THE FULL TICKET OBJECT TO STATE
       setOutboundTicket(outboundTicketData);
 
       let returnTicketData = null;
@@ -123,9 +124,9 @@ export default function CheckoutPage() {
             passenger_id: passengerId,
             booked_by: passengerId,
             seat_number: returnTrip.selectedSeats.join(','),
-            price_paid_usd: parseFloat((returnTrip.price * discountFactor).toFixed(2)),
+            price_paid_usd: isFreeTrip ? 0 : parseFloat((returnTrip.price * discountFactor).toFixed(2)),
             payment_status: paymentStatus,
-            payment_method: paymentMethod,
+            payment_method: effectivePaymentMethod,
             booking_source: 'online',
             seat_class: returnTrip.seat_class || 'economy',
           })
@@ -141,6 +142,11 @@ export default function CheckoutPage() {
         outbound: outboundTicketData.ticket_number,
         return: returnTicketData?.ticket_number || null
       });
+
+      if (isFreeTrip) {
+        setReference('CAMPAIGN_FREE');
+        return;
+      }
 
       // Only generate payment reference if using referencia payment method
       if (paymentMethod === 'referencia') {
@@ -381,8 +387,14 @@ const handleDownloadPdf = async () => {
   doc.setFontSize(11);
   doc.setFont(undefined, "normal");
 
-  if (paymentMethod === 'cash') {
-    // Cash payment information
+  if (pdfFinalPrice === 0 || paymentMethod === 'campaign') {
+    doc.setFontSize(16);
+    doc.setFont(undefined, "bold");
+    doc.text("VIAGEM SOLIDÁRIA — GRATUITA", 105, 110, { align: "center" });
+
+    doc.setFontSize(14);
+    doc.text("Campanha SOS Benguela", 105, 125, { align: "center" });
+  } else if (paymentMethod === 'cash') {
     doc.setFontSize(16);
     doc.setFont(undefined, "bold");
     doc.text("Método: PAGAMENTO EM CASH", 105, 110, { align: "center" });
@@ -674,8 +686,23 @@ const handleDownloadPdf = async () => {
   doc.setFontSize(9);
   doc.setFont(undefined, "normal");
 
-  if (paymentMethod === 'cash') {
-    // Cash payment instructions
+  if (pdfFinalPrice === 0 || paymentMethod === 'campaign') {
+    doc.text(
+      "• Este bilhete é gratuito — Campanha Solidária SOS Benguela",
+      20,
+      instructionsY + 18
+    );
+    doc.text(
+      "• Apresente este bilhete impresso ou digital no embarque",
+      20,
+      instructionsY + 24
+    );
+    doc.text(
+      "• Obrigado pela sua solidariedade!",
+      20,
+      instructionsY + 30
+    );
+  } else if (paymentMethod === 'cash') {
     doc.text(
       "• Pagamento será feito em dinheiro no balcão da empresa",
       20,
@@ -731,7 +758,14 @@ const handleDownloadPdf = async () => {
 
   doc.setTextColor(...orange);
   doc.setFont(undefined, "bold");
-  if (paymentMethod === 'cash') {
+  if (pdfFinalPrice === 0 || paymentMethod === 'campaign') {
+    doc.text(
+      "Bilhete solidário confirmado",
+      105,
+      footerY + 15,
+      { align: "center" }
+    );
+  } else if (paymentMethod === 'cash') {
     doc.text(
       "Bilhete confirmado - Pague no balcão",
       105,
@@ -859,8 +893,8 @@ const handleDownloadPdf = async () => {
                 </div>
               )}
 
-              {/* Coupon */}
-              <div className="border-t pt-4">
+              {/* Coupon - hidden for free trips */}
+              {totalPrice > 0 && <div className="border-t pt-4">
                 {!appliedCoupon ? (
                   <div>
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Código de Desconto</p>
@@ -895,7 +929,7 @@ const handleDownloadPdf = async () => {
                     )}
                   </div>
                 )}
-              </div>
+              </div>}
 
               {/* Total */}
               <div className="border-t pt-4">
@@ -913,11 +947,15 @@ const handleDownloadPdf = async () => {
                 )}
                 <p className="text-xl font-bold flex justify-between text-gray-800 dark:text-white">
                   <span>Total:</span>
-                  <span className="text-yellow-600">{finalPrice.toFixed(2)} USD</span>
+                  <span className="text-yellow-600">
+                    {finalPrice === 0 ? 'Gratuito' : `${finalPrice.toFixed(2)} USD`}
+                  </span>
                 </p>
-                <p className="text-sm text-gray-500 text-right">
-                  ≈ {Math.round(finalPrice)} Kz
-                </p>
+                {finalPrice > 0 && (
+                  <p className="text-sm text-gray-500 text-right">
+                    ≈ {Math.round(finalPrice)} Kz
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -930,6 +968,7 @@ const handleDownloadPdf = async () => {
               <CardTitle>Pagamento</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
+              {finalPrice > 0 && (
               <div>
                 <Label className="text-base font-semibold">Método de Pagamento</Label>
                 <div className="space-y-3 mt-3">
@@ -994,8 +1033,30 @@ const handleDownloadPdf = async () => {
                   </div>
                 </div>
               </div>
+              )}
 
-              {reference && reference !== 'CASH_PAYMENT' ? (
+              {reference === 'CAMPAIGN_FREE' ? (
+                <div className="text-center p-6 border-2 border-green-500 border-dashed rounded-lg bg-green-50 dark:bg-green-900/20">
+                  <div className="mb-4">
+                    <p className="text-2xl mb-3">🙏</p>
+                    <p className="font-semibold text-green-700 dark:text-green-300 mb-2">
+                      Bilhete Solidário Confirmado!
+                    </p>
+                    <p className="text-lg font-semibold text-green-700 dark:text-green-300">
+                      Viagem gratuita — Campanha SOS Benguela
+                    </p>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Apresente este bilhete no embarque. Obrigado pela sua solidariedade!
+                  </p>
+                  <Button
+                    onClick={handleDownloadPdf}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    📄 Baixar Bilhete (PDF)
+                  </Button>
+                </div>
+              ) : reference && reference !== 'CASH_PAYMENT' ? (
                 <div className="text-center p-6 border-2 border-green-500 border-dashed rounded-lg bg-green-50 dark:bg-green-900/20">
                   <div className="mb-4">
                     <p className="font-semibold text-green-700 dark:text-green-300 mb-2">
@@ -1054,6 +1115,8 @@ const handleDownloadPdf = async () => {
                       <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent mr-2"></div>
                       A processar...
                     </>
+                  ) : finalPrice === 0 ? (
+                    '🙏 Confirmar Reserva Solidária'
                   ) : paymentMethod === 'cash' ? (
                     '🎫 Confirmar Reserva (Pagamento em Cash)'
                   ) : (
