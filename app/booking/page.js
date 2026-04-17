@@ -31,6 +31,8 @@ function BookingPage() {
   const [returnTrip, setReturnTrip] = useState(null);
   const [outboundOccupiedSeats, setOutboundOccupiedSeats] = useState([]);
   const [returnOccupiedSeats, setReturnOccupiedSeats] = useState([]);
+  const [userAlreadyBookedOutbound, setUserAlreadyBookedOutbound] = useState(false);
+  const [userAlreadyBookedReturn, setUserAlreadyBookedReturn] = useState(false);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
@@ -86,6 +88,19 @@ function BookingPage() {
         if (outboundTicketsError) throw outboundTicketsError;
         setOutboundOccupiedSeats(outboundTickets ? outboundTickets.map(t => t.seat_number) : []);
 
+        // Check if the current user already has a ticket for this trip
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData?.user) {
+          const { data: existingOutbound } = await supabase
+            .from('tickets')
+            .select('id')
+            .in('trip_id', outboundSiblingIds)
+            .eq('passenger_id', userData.user.id)
+            .in('status', ['active', 'used'])
+            .limit(1);
+          setUserAlreadyBookedOutbound(existingOutbound && existingOutbound.length > 0);
+        }
+
         // If return trip exists, fetch it too
         if (returnTripId) {
           const { data: returnData, error: returnError } = await supabase
@@ -122,6 +137,18 @@ function BookingPage() {
 
           if (returnTicketsError) throw returnTicketsError;
           setReturnOccupiedSeats(returnTickets ? returnTickets.map(t => t.seat_number) : []);
+
+          // Check if user already booked for return trip
+          if (userData?.user) {
+            const { data: existingReturn } = await supabase
+              .from('tickets')
+              .select('id')
+              .in('trip_id', returnSiblingIds)
+              .eq('passenger_id', userData.user.id)
+              .in('status', ['active', 'used'])
+              .limit(1);
+            setUserAlreadyBookedReturn(existingReturn && existingReturn.length > 0);
+          }
         }
       } catch (error) {
         console.error('Error fetching trip data:', error);
@@ -179,6 +206,8 @@ function BookingPage() {
         returnTrip={returnTrip}
         outboundOccupiedSeats={outboundOccupiedSeats}
         returnOccupiedSeats={returnOccupiedSeats}
+        userAlreadyBookedOutbound={userAlreadyBookedOutbound}
+        userAlreadyBookedReturn={userAlreadyBookedReturn}
       />
     </div>
   );

@@ -78,6 +78,94 @@ export default function CheckoutPage() {
     }
   };
 
+  // Normalize phone number to include Angola country code
+  const normalizePhoneNumber = (phone) => {
+    if (!phone) return null;
+    const cleaned = phone.replace(/\D/g, '');
+    if (!cleaned) return null;
+    if (!cleaned.startsWith('244') && cleaned.length === 9 && cleaned.startsWith('9')) {
+      return `244${cleaned}`;
+    }
+    return cleaned;
+  };
+
+  // Helper to create tickets for one trip (one ticket per seat)
+  const createTicketsForTrip = async (trip, passengerId, perSeatPrice, paymentStatus, effectivePaymentMethod) => {
+    const tickets = [];
+    for (const seatNum of trip.selectedSeats) {
+      const { data, error } = await supabase
+        .from('tickets')
+        .insert({
+          trip_id: trip.id,
+          passenger_id: passengerId,
+          booked_by: passengerId,
+          seat_number: seatNum,
+          price_paid_usd: perSeatPrice,
+          payment_status: paymentStatus,
+          payment_method: effectivePaymentMethod,
+          booking_source: 'online',
+          seat_class: trip.seat_class || 'economy',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      tickets.push(data);
+
+      // Insert companion record if this seat has companion info
+      const companions = trip.companions || {};
+      if (companions[seatNum] && companions[seatNum].name?.trim()) {
+        await supabase.from('ticket_companions').insert({
+          ticket_id: data.id,
+          name: companions[seatNum].name.trim(),
+          phone: normalizePhoneNumber(companions[seatNum].phone),
+        });
+      }
+    }
+    return tickets;
+  };
+
+  // Send SMS to companions who provided a phone number
+  const sendCompanionSms = async (allTickets, trip, user) => {
+    const companions = trip.companions || {};
+    const companionsToNotify = [];
+
+    for (const ticket of allTickets) {
+      const c = companions[ticket.seat_number];
+      if (c && c.phone?.trim()) {
+        companionsToNotify.push({
+          name: c.name,
+          phone: normalizePhoneNumber(c.phone),
+          seatNumber: ticket.seat_number,
+          ticketNumber: ticket.ticket_number,
+        });
+      }
+    }
+
+    if (companionsToNotify.length === 0) return;
+
+    const mainName = user.user_metadata?.full_name ||
+      `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() ||
+      'Cliente';
+
+    try {
+      await fetch('/api/send-companion-sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companions: companionsToNotify.map(c => ({
+            ...c,
+            route: `${trip.routes?.origin_city || trip.origin || 'Origem'} -> ${trip.routes?.destination_city || trip.destination || 'Destino'}`,
+            departureTime: trip.departure_time,
+          })),
+          bookedBy: mainName,
+        }),
+      });
+    } catch (err) {
+      console.error('Failed to send companion SMS:', err);
+    }
+  };
+
   const proceedWithPayment = async (user) => {
     if (!bookingDetails) return;
 
@@ -92,71 +180,56 @@ export default function CheckoutPage() {
       const paymentStatus = isFreeTrip ? 'paid' : (paymentMethod === 'cash' ? 'paid' : 'pending');
       const effectivePaymentMethod = isFreeTrip ? 'cash' : paymentMethod;
 
-      // Create outbound ticket(s)
-      const { data: outboundTicketData, error: outboundError } = await supabase
-        .from('tickets')
-        .insert({
-          trip_id: outboundTrip.id,
-          passenger_id: passengerId,
-          booked_by: passengerId,
-          seat_number: outboundTrip.selectedSeats.join(','),
-          price_paid_usd: isFreeTrip ? 0 : parseFloat((outboundTrip.price * discountFactor).toFixed(2)),
-          payment_status: paymentStatus,
-          payment_method: effectivePaymentMethod,
-          booking_source: 'online',
-          seat_class: outboundTrip.seat_class || 'economy',
-        })
-        .select()
-        .single();
+      // Calculate per-seat price for outbound
+      const outboundSeatCount = outboundTrip.selectedSeats.length;
+      const outboundPerSeat = isFreeTrip ? 0 : parseFloat(
+        (outboundTrip.price * discountFactor / outboundSeatCount).toFixed(2)
+      );
 
-      if (outboundError) throw outboundError;
+      // Create one ticket per seat for outbound
+      const outboundTickets = await createTicketsForTrip(
+        outboundTrip, passengerId, outboundPerSeat, paymentStatus, effectivePaymentMethod
+      );
 
-      setOutboundTicket(outboundTicketData);
+      setOutboundTicket(outboundTickets[0]);
 
-      let returnTicketData = null;
+      let returnTickets = [];
 
-      // Create return ticket(s) if round-trip
+      // Create return tickets if round-trip
       if (tripType === 'round-trip' && returnTrip) {
-        const { data: retTicket, error: returnError } = await supabase
-          .from('tickets')
-          .insert({
-            trip_id: returnTrip.id,
-            passenger_id: passengerId,
-            booked_by: passengerId,
-            seat_number: returnTrip.selectedSeats.join(','),
-            price_paid_usd: isFreeTrip ? 0 : parseFloat((returnTrip.price * discountFactor).toFixed(2)),
-            payment_status: paymentStatus,
-            payment_method: effectivePaymentMethod,
-            booking_source: 'online',
-            seat_class: returnTrip.seat_class || 'economy',
-          })
-          .select()
-          .single();
+        const returnSeatCount = returnTrip.selectedSeats.length;
+        const returnPerSeat = isFreeTrip ? 0 : parseFloat(
+          (returnTrip.price * discountFactor / returnSeatCount).toFixed(2)
+        );
 
-        if (returnError) throw returnError;
-        returnTicketData = retTicket;
+        returnTickets = await createTicketsForTrip(
+          returnTrip, passengerId, returnPerSeat, paymentStatus, effectivePaymentMethod
+        );
       }
 
-      // Store ticket numbers immediately
+      const allTickets = [...outboundTickets, ...returnTickets];
+
+      // Store ticket numbers (use first ticket as primary)
       setTicketNumbers({
-        outbound: outboundTicketData.ticket_number,
-        return: returnTicketData?.ticket_number || null
+        outbound: outboundTickets[0].ticket_number,
+        return: returnTickets[0]?.ticket_number || null
       });
 
       if (isFreeTrip) {
         setReference('CAMPAIGN_FREE');
+        // Send companion SMS for free trips too
+        sendCompanionSms(outboundTickets, outboundTrip, user);
+        if (returnTrip) sendCompanionSms(returnTickets, returnTrip, user);
         return;
       }
 
-      // Only generate payment reference if using referencia payment method
       if (paymentMethod === 'referencia') {
-        // Call payment API with combined price
+        // Call payment API with total price, using first ticket as primary
         const response = await fetch('/api/create-payment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            ticket_id: outboundTicketData.id,
-            return_ticket_id: returnTicketData?.id,
+            ticket_id: outboundTickets[0].id,
             amount: finalPrice,
             passenger_name: user.user_metadata.full_name || 'N/A',
             passenger_email: user.email,
@@ -167,34 +240,26 @@ export default function CheckoutPage() {
         const result = await response.json();
 
         if (!response.ok) {
-          throw new Error(result.error || 'Falha ao criar referência de pagamento.');
+          throw new Error(result.error || 'Falha ao criar referencia de pagamento.');
         }
 
-        // Update the outbound ticket with payment reference
-        const { error: updateOutboundError } = await supabase
-          .from('tickets')
-          .update({ payment_reference: result.reference_number })
-          .eq('id', outboundTicketData.id);
-
-        if (updateOutboundError) {
-          console.error('Failed to update outbound ticket reference:', updateOutboundError);
-        }
-
-        // Update the return ticket with payment reference if exists
-        if (returnTicketData) {
-          const { error: updateReturnError } = await supabase
+        // Update ALL tickets with the same payment reference
+        for (const ticket of allTickets) {
+          const { error: updateErr } = await supabase
             .from('tickets')
             .update({ payment_reference: result.reference_number })
-            .eq('id', returnTicketData.id);
+            .eq('id', ticket.id);
 
-          if (updateReturnError) {
-            console.error('Failed to update return ticket reference:', updateReturnError);
+          if (updateErr) {
+            console.error(`Failed to update ticket ${ticket.id} reference:`, updateErr);
           }
         }
 
         setReference(result.reference_number);
       } else {
-        // For cash payment, set a flag to indicate payment is complete
+        // Cash payment — send companion SMS immediately
+        sendCompanionSms(outboundTickets, outboundTrip, user);
+        if (returnTrip) sendCompanionSms(returnTickets, returnTrip, user);
         setReference('CASH_PAYMENT');
       }
     } catch (error) {
@@ -238,18 +303,6 @@ export default function CheckoutPage() {
 
     try {
       const email = `${authPhoneNumber}@nawabus.com`;
-
-      // Normalize phone number to include Angola country code
-      const normalizePhoneNumber = (phone) => {
-        if (!phone) return phone;
-        const cleaned = phone.replace(/\D/g, '');
-        // If it doesn't start with 244 and is 9 digits starting with 9, add 244
-        if (!cleaned.startsWith('244') && cleaned.length === 9 && cleaned.startsWith('9')) {
-          return `244${cleaned}`;
-        }
-        return cleaned;
-      };
-
       const normalizedPhone = normalizePhoneNumber(authPhoneNumber);
 
       if (authMode === 'login') {
@@ -502,18 +555,31 @@ const handleDownloadPdf = async () => {
   );
   yPos += 8;
 
-  // Assentos
+  // Passageiros por assento
   doc.setFont(undefined, "bold");
-  doc.text("Assentos:", 20, yPos);
+  doc.text("Passageiros:", 20, yPos);
   doc.setFont(undefined, "normal");
-  renderText(
-    Array.isArray(outboundTrip.selectedSeats)
-      ? outboundTrip.selectedSeats.join(", ")
-      : String(outboundTrip.selectedSeats || "N/A"),
-    55,
-    yPos
-  );
-  yPos += 8;
+  const outboundSorted = Array.isArray(outboundTrip.selectedSeats)
+    ? [...outboundTrip.selectedSeats].sort((a, b) => a - b)
+    : [];
+  const outboundCompanions = outboundTrip.companions || {};
+  if (outboundSorted.length > 0) {
+    outboundSorted.forEach((seat, idx) => {
+      const label = idx === 0
+        ? `Lugar ${seat}: ${
+            currentUser.user_metadata?.full_name ||
+            [currentUser.user_metadata?.first_name, currentUser.user_metadata?.last_name].filter(Boolean).join(' ') ||
+            'Voce'
+          }`
+        : `Lugar ${seat}: ${outboundCompanions[seat]?.name || '—'}`;
+      renderText(label, 55, yPos);
+      yPos += 6;
+    });
+  } else {
+    renderText("N/A", 55, yPos);
+    yPos += 6;
+  }
+  yPos += 2;
 
   // Autocarro
   doc.setFont(undefined, "bold");
@@ -582,16 +648,29 @@ const handleDownloadPdf = async () => {
     yPos += 8;
 
     doc.setFont(undefined, "bold");
-    doc.text("Assentos:", 20, yPos);
+    doc.text("Passageiros:", 20, yPos);
     doc.setFont(undefined, "normal");
-    renderText(
-      Array.isArray(returnTrip.selectedSeats)
-        ? returnTrip.selectedSeats.join(", ")
-        : String(returnTrip.selectedSeats || "N/A"),
-      55,
-      yPos
-    );
-    yPos += 8;
+    const returnSorted = Array.isArray(returnTrip.selectedSeats)
+      ? [...returnTrip.selectedSeats].sort((a, b) => a - b)
+      : [];
+    const returnCompanions = returnTrip.companions || {};
+    if (returnSorted.length > 0) {
+      returnSorted.forEach((seat, idx) => {
+        const label = idx === 0
+          ? `Lugar ${seat}: ${
+              currentUser.user_metadata?.full_name ||
+              [currentUser.user_metadata?.first_name, currentUser.user_metadata?.last_name].filter(Boolean).join(' ') ||
+              'Voce'
+            }`
+          : `Lugar ${seat}: ${returnCompanions[seat]?.name || '—'}`;
+        renderText(label, 55, yPos);
+        yPos += 6;
+      });
+    } else {
+      renderText("N/A", 55, yPos);
+      yPos += 6;
+    }
+    yPos += 2;
 
     doc.setFont(undefined, "bold");
     doc.text("Autocarro:", 20, yPos);
@@ -860,8 +939,19 @@ const handleDownloadPdf = async () => {
                   })}
                 </p>
                 <div className="mt-2">
-                  <p className="font-semibold text-gray-800 dark:text-white">Lugares:</p>
-                  <p className="font-mono text-yellow-600">{outboundTrip.selectedSeats.join(', ')}</p>
+                  <p className="font-semibold text-gray-800 dark:text-white">Passageiros:</p>
+                  <div className="space-y-1 mt-1">
+                    {[...outboundTrip.selectedSeats].sort((a, b) => a - b).map((seat, i) => (
+                      <p key={seat} className="text-sm text-gray-600 dark:text-gray-400">
+                        <span className="font-mono text-yellow-600">Lugar {seat}</span>
+                        {' — '}
+                        {i === 0
+                          ? <span className="font-medium">Voce</span>
+                          : <span>{outboundTrip.companions?.[seat]?.name || '—'}</span>
+                        }
+                      </p>
+                    ))}
+                  </div>
                 </div>
                 <p className="text-sm text-gray-600 mt-1">
                   {outboundTrip.bus_make} {outboundTrip.bus_model} • {outboundTrip.seat_class}
@@ -878,14 +968,25 @@ const handleDownloadPdf = async () => {
                     {returnTrip.origin} → {returnTrip.destination}
                   </p>
                   <p className="text-sm text-gray-500">
-                    {new Date(returnTrip.departure_time).toLocaleString('pt-PT', { 
-                      dateStyle: 'full', 
-                      timeStyle: 'short' 
+                    {new Date(returnTrip.departure_time).toLocaleString('pt-PT', {
+                      dateStyle: 'full',
+                      timeStyle: 'short'
                     })}
                   </p>
                   <div className="mt-2">
-                    <p className="font-semibold text-gray-800 dark:text-white">Lugares:</p>
-                    <p className="font-mono text-yellow-600">{returnTrip.selectedSeats.join(', ')}</p>
+                    <p className="font-semibold text-gray-800 dark:text-white">Passageiros:</p>
+                    <div className="space-y-1 mt-1">
+                      {[...returnTrip.selectedSeats].sort((a, b) => a - b).map((seat, i) => (
+                        <p key={seat} className="text-sm text-gray-600 dark:text-gray-400">
+                          <span className="font-mono text-yellow-600">Lugar {seat}</span>
+                          {' — '}
+                          {i === 0
+                            ? <span className="font-medium">Voce</span>
+                            : <span>{returnTrip.companions?.[seat]?.name || '—'}</span>
+                          }
+                        </p>
+                      ))}
+                    </div>
                   </div>
                   <p className="text-sm text-gray-600 mt-1">
                     {returnTrip.bus_make} {returnTrip.bus_model} • {returnTrip.seat_class}
