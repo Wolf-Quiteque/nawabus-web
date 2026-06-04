@@ -1,12 +1,26 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Suspense, useState, useEffect } from 'react';
+import { ArrowRight, CalendarDays, Leaf, MapPin, Music2, UsersRound } from 'lucide-react';
 import SearchForm from '@/components/search-form';
 
+const mangaisDates = [
+  {
+    day: '21',
+    weekday: 'Domingo',
+    label: '21 de Junho',
+    href: 'https://www.nawabus.co.ao/search?origin=Luanda&destination=Barra+do+Cuanza&date=2026-06-21&tripType=one-way',
+  },
+  {
+    day: '22',
+    weekday: 'Segunda',
+    label: '22 de Junho',
+    href: 'https://www.nawabus.co.ao/search?origin=Luanda&destination=Barra+do+Cuanza&date=2026-06-22&tripType=one-way',
+  },
+];
+
 export default function Home() {
-  const router = useRouter();
   const [currentAdSeries, setCurrentAdSeries] = useState(1);
 
   // Auto-rotate ads every 4 seconds
@@ -18,13 +32,159 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    router.push('/search');
-  };
-
   return (
     <main className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
+      <section className="relative min-h-[94svh] overflow-hidden bg-[#07180d] text-white">
+        <Image
+          src="/wallpaper.jpg"
+          alt="Grupo em viagem pela natureza"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-center opacity-45"
+        />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(202,255,112,0.18),transparent_24%),linear-gradient(115deg,rgba(4,22,10,0.94)_0%,rgba(5,43,17,0.82)_48%,rgba(3,16,7,0.88)_100%)]" />
+        <div className="absolute inset-0 opacity-35" style={{backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'88\' height=\'88\' viewBox=\'0 0 88 88\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M14 44c17-8 26-21 31-39 7 18 17 31 31 39-14 8-24 21-31 39-5-18-14-31-31-39Z\' fill=\'none\' stroke=\'%23dfff84\' stroke-width=\'0.7\' opacity=\'0.28\'/%3E%3C/svg%3E")'}} />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#07180d] to-transparent" />
+
+        <div className="relative z-10 mx-auto flex min-h-[94svh] w-full max-w-7xl flex-col justify-between px-4 py-5 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between gap-4">
+            <img
+              src="/nawabus_logo_white.webp"
+              alt="Nawabus"
+              className="h-10 w-auto sm:h-12"
+            />
+            <div className="hidden items-center gap-2 rounded-full border border-lime-200/25 bg-white/10 px-4 py-2 text-sm font-semibold text-lime-50 backdrop-blur-md sm:flex">
+              <Leaf className="h-4 w-4 text-lime-200" />
+              Lugares preparados para 21 e 22 de Junho
+            </div>
+          </div>
+
+          <div className="grid items-center gap-8 py-6 lg:grid-cols-[minmax(0,1fr)_26rem] lg:py-4">
+            <div className="relative mx-auto w-full max-w-[660px] lg:max-w-[600px]">
+              <div className="absolute -inset-3 rounded-[2.2rem] border border-lime-200/20 bg-black/15 backdrop-blur-sm" />
+              <div className="relative min-h-[560px] overflow-hidden rounded-[2rem] border border-lime-100/25 bg-[#0a4b1d] p-5 shadow-2xl shadow-black/50 sm:aspect-[4/5] sm:min-h-0 sm:p-8">
+                <Image
+                  src="/wallpaper.jpg"
+                  alt="Natureza em Angola"
+                  fill
+                  sizes="(max-width: 1024px) 92vw, 660px"
+                  className="object-cover opacity-28"
+                />
+                <div className="absolute inset-0 bg-[linear-gradient(150deg,rgba(8,72,27,0.94)_0%,rgba(15,101,38,0.86)_48%,rgba(3,24,10,0.92)_100%)]" />
+                <div className="absolute -left-16 top-12 h-56 w-72 rounded-[45%] bg-[#dfff84]" style={{clipPath: 'ellipse(48% 36% at 52% 47%)'}} />
+                <div className="absolute -right-12 bottom-8 h-44 w-64 rounded-[44%] bg-[#dfff84]/95 sm:bottom-24" style={{clipPath: 'ellipse(46% 34% at 52% 51%)'}} />
+                <div className="absolute left-8 top-36 h-48 w-[78%] rounded-[46%] bg-[#063b18]" style={{clipPath: 'ellipse(50% 43% at 48% 48%)'}} />
+                <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-black/55 to-transparent" />
+
+                <div className="relative z-10 flex h-full flex-col">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.22em] text-lime-100">
+                        Golf Resort
+                      </p>
+                      <p className="font-serif text-3xl italic leading-none text-white sm:text-4xl">
+                        Mangais
+                      </p>
+                    </div>
+                    <div className="text-right text-lime-50">
+                      <p className="text-xl font-black leading-5 sm:text-3xl sm:leading-6">DOM'21</p>
+                      <p className="text-xl font-black leading-5 sm:text-3xl sm:leading-6">SEG'22</p>
+                      <p className="mt-1 text-sm font-bold tracking-[0.18em]">JUNHO/2026</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-8 flex justify-center text-lime-50 sm:mt-16">
+                    <Music2 className="h-10 w-10 sm:h-12 sm:w-12" />
+                  </div>
+
+                  <div className="mt-6 max-w-[34rem]">
+                    <h1 className="text-3xl font-black leading-[0.98] text-[#f4ffd5] min-[380px]:text-4xl sm:text-5xl lg:text-6xl">
+                      Quem vais levar contigo para o próximo Brunch?
+                    </h1>
+                    <p className="mt-4 max-w-md text-sm font-semibold leading-6 text-lime-50/90 sm:mt-5 sm:text-lg sm:leading-7">
+                      A Nawabus leva-te de Luanda até Mangais <span className="text-xs sm:text-sm">(Barra do Cuanza)</span>. Escolhe a data e garante já o teu lugar.
+                    </p>
+                  </div>
+
+                  <div className="mt-auto flex items-end justify-between gap-5">
+                    <div className="flex items-end gap-1 text-[#dfff84]">
+                      <UsersRound className="h-16 w-16 stroke-[1.6] min-[380px]:h-20 min-[380px]:w-20 sm:h-24 sm:w-24" />
+                      <Leaf className="mb-2 h-7 w-7 sm:h-9 sm:w-9" />
+                    </div>
+                    <div className="text-right">
+                      <p className="font-serif text-3xl italic leading-none text-green-950 sm:text-5xl">
+                        Brunch
+                      </p>
+                      <p className="font-serif text-2xl italic leading-none text-green-950 sm:text-4xl">
+                        Mangais
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="rounded-[1.6rem] border border-lime-100/20 bg-[#06190d]/88 p-5 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-6">
+                <div className="mb-5">
+                  <p className="text-sm font-bold uppercase tracking-[0.22em] text-lime-200">
+                    Compra a tua viagem
+                  </p>
+                  <h2 className="mt-2 text-2xl font-black text-white">
+                    Seleciona uma data
+                  </h2>
+                  <p className="mt-3 text-sm leading-6 text-lime-50/80">
+                    Bilhetes de ida disponíveis para o evento. Depois de escolheres o dia, confirmas os horários na pesquisa.
+                  </p>
+                </div>
+
+                <div className="grid gap-3">
+                  {mangaisDates.map((date) => (
+                    <a
+                      key={date.day}
+                      href={date.href}
+                      className="group grid grid-cols-[5rem_1fr_auto] items-center gap-3 rounded-2xl border border-lime-100/15 bg-white/[0.08] p-3 text-white transition-all duration-300 hover:-translate-y-1 hover:border-lime-200/70 hover:bg-[#dfff84] hover:text-green-950 hover:shadow-2xl hover:shadow-black/30"
+                    >
+                      <span className="flex aspect-square flex-col items-center justify-center rounded-xl bg-[#dfff84] text-green-950 shadow-lg shadow-black/20">
+                        <span className="text-3xl font-black leading-none">{date.day}</span>
+                        <span className="mt-1 text-[0.62rem] font-black uppercase tracking-[0.16em]">
+                          Jun
+                        </span>
+                      </span>
+                      <span>
+                        <span className="block text-lg font-black">{date.label}</span>
+                        <span className="mt-1 block text-sm font-semibold text-lime-50/75 group-hover:text-green-900/70">
+                          {date.weekday} - Luanda para Barra do Cuanza
+                        </span>
+                      </span>
+                      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-green-950 transition-transform duration-300 group-hover:translate-x-1 group-hover:bg-green-950 group-hover:text-lime-100">
+                        <ArrowRight className="h-5 w-5" />
+                      </span>
+                    </a>
+                  ))}
+                </div>
+
+                <div className="mt-5 grid gap-3 border-t border-white/10 pt-5 text-sm font-semibold text-lime-50/90">
+                  <div className="flex items-center gap-3">
+                    <MapPin className="h-5 w-5 shrink-0 text-lime-200" />
+                    Luanda para Barra do Cuanza
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <CalendarDays className="h-5 w-5 shrink-0 text-lime-200" />
+                    21 ou 22 de Junho de 2026
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center pb-1 text-xs font-bold uppercase tracking-[0.22em] text-lime-100/75">
+            Desliza para conhecer a Nawabus
+          </div>
+        </div>
+      </section>
+
       <div className="relative w-full h-[480px] shadow-lg overflow-hidden">
         {/* Background image layer */}
         <Image

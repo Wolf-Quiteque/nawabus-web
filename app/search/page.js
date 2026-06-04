@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Wifi, Wind, Plug, Bus, AlertCircle } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowLeft, Wifi, Wind, Plug, Bus, AlertCircle, CalendarDays, Leaf, MapPin, Music2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-client';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +18,7 @@ function SearchResults() {
   const [outboundTrips, setOutboundTrips] = useState([]);
   const [returnTrips, setReturnTrips] = useState([]);
   const [selectedOutboundTrip, setSelectedOutboundTrip] = useState(null);
+  const [selectedReturnTrip, setSelectedReturnTrip] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -27,6 +29,14 @@ function SearchResults() {
   const tripType = searchParams.get('tripType') || 'one-way';
 
   const isRoundTrip = tripType === 'round-trip' && returnDate;
+  const normalizedOrigin = origin.toLowerCase();
+  const normalizedDestination = destination.toLowerCase();
+  const isMangaisCampaign =
+    ['2026-06-21', '2026-06-22'].includes(date) &&
+    normalizedOrigin.includes('luanda') &&
+    normalizedDestination.includes('barra') &&
+    normalizedDestination.includes('cuanza');
+  const campaignDateLabel = date === '2026-06-21' ? '21 de Junho' : '22 de Junho';
 
   const fetchTrips = useCallback(async (origin, destination, date, isReturn = false) => {
     if (!origin || !destination || !date) return [];
@@ -96,16 +106,22 @@ function SearchResults() {
         // Fetch outbound trips
         const outbound = await fetchTrips(origin, destination, date);
         setOutboundTrips(outbound);
+        setSelectedOutboundTrip(null);
+        setSelectedReturnTrip(null);
 
         // Fetch return trips if round-trip
         if (isRoundTrip) {
           const returns = await fetchTrips(destination, origin, returnDate, true);
           setReturnTrips(returns);
+        } else {
+          setReturnTrips([]);
         }
       } catch (err) {
         setError('Erro ao carregar viagens. Por favor, tente novamente.');
         setOutboundTrips([]);
         setReturnTrips([]);
+        setSelectedOutboundTrip(null);
+        setSelectedReturnTrip(null);
       } finally {
         setLoading(false);
       }
@@ -141,27 +157,49 @@ function SearchResults() {
   const handleSelectOutboundTrip = (trip) => {
     if (isRoundTrip) {
       setSelectedOutboundTrip(trip);
+      setSelectedReturnTrip(null);
       // Scroll to return trips section
-      document.getElementById('return-trips')?.scrollIntoView({ behavior: 'smooth' });
+      setTimeout(() => {
+        document.getElementById('return-trips')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 0);
     } else {
       router.push(`/booking?outboundTripId=${trip.id}`);
     }
   };
 
   const handleSelectReturnTrip = (returnTrip) => {
-    if (selectedOutboundTrip) {
-      router.push(`/booking?outboundTripId=${selectedOutboundTrip.id}&returnTripId=${returnTrip.id}`);
-    }
+    setSelectedReturnTrip(returnTrip);
   };
+
+  const handleContinueToBooking = () => {
+    if (!selectedOutboundTrip || !selectedReturnTrip) return;
+    router.push(`/booking?outboundTripId=${selectedOutboundTrip.id}&returnTripId=${selectedReturnTrip.id}`);
+  };
+
+  const visibleOutboundTrips = useMemo(() => {
+    if (isRoundTrip && selectedOutboundTrip) return [selectedOutboundTrip];
+    return outboundTrips;
+  }, [isRoundTrip, selectedOutboundTrip, outboundTrips]);
+
+  const visibleReturnTrips = useMemo(() => {
+    if (selectedReturnTrip) return [selectedReturnTrip];
+    return returnTrips;
+  }, [selectedReturnTrip, returnTrips]);
 
   const renderTripCard = (trip, onSelect, isSelected = false) => (
     <Card 
       key={trip.id} 
       className={`shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden border-l-4 ${
-        isSelected ? 'border-green-500 bg-green-50 dark:bg-green-900/10' : 'border-yellow-500'
+        isSelected
+          ? 'border-green-500 bg-green-50 dark:bg-green-900/10'
+          : isMangaisCampaign
+            ? 'border-lime-300 bg-white/95 dark:bg-green-950/40'
+            : 'border-yellow-500'
       }`}
     >
-      <div className="flex items-center gap-3 px-6 pt-4 pb-2 border-b border-gray-100 dark:border-gray-700">
+      <div className={`flex items-center gap-3 px-6 pt-4 pb-2 border-b ${
+        isMangaisCampaign ? 'border-green-100 bg-green-50/70 dark:border-lime-100/10 dark:bg-green-950/30' : 'border-gray-100 dark:border-gray-700'
+      }`}>
         {trip.buses.companies.logo_url ? (
           <img src={trip.buses.companies.logo_url} alt={trip.buses.companies.name} className="h-auto w-auto max-h-20 max-w-[160px] object-contain" />
         ) : (
@@ -175,14 +213,14 @@ function SearchResults() {
               <p className="text-2xl font-bold text-gray-800 dark:text-white">
                 {formatTime(trip.departure_time)}
               </p>
-              <p className="text-md text-gray-600 dark:text-gray-400">
+              <p className="text-lg md:text-xl font-extrabold text-gray-950 dark:text-white tracking-normal">
                 {trip.routes.origin_city}
               </p>
             </div>
             <div className="text-center flex-grow px-4">
               <div className="relative">
-                <div className="w-full border-t-2 border-dashed border-gray-300 dark:border-gray-600"></div>
-                <Bus className="w-6 h-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 text-yellow-500 px-1" />
+                <div className={`w-full border-t-2 border-dashed ${isMangaisCampaign ? 'border-lime-500/60 dark:border-lime-200/40' : 'border-gray-300 dark:border-gray-600'}`}></div>
+                <Bus className={`w-6 h-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 px-1 ${isMangaisCampaign ? 'text-green-700 dark:text-lime-200' : 'text-yellow-500'}`} />
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                 {formatDuration(trip.departure_time, trip.arrival_time)}
@@ -192,7 +230,7 @@ function SearchResults() {
               <p className="text-2xl font-bold text-gray-800 dark:text-white">
                 {formatTime(trip.arrival_time)}
               </p>
-              <p className="text-md text-gray-600 dark:text-gray-400">
+              <p className="text-lg md:text-xl font-extrabold text-gray-950 dark:text-white tracking-normal">
                 {trip.routes.destination_city}
               </p>
             </div>
@@ -217,7 +255,7 @@ function SearchResults() {
                 return (
                   <AmenityIcon 
                     key={amenity} 
-                    className="w-5 h-5 text-yellow-500" 
+                    className={`w-5 h-5 ${isMangaisCampaign ? 'text-green-700 dark:text-lime-200' : 'text-yellow-500'}`}
                     title={amenityConfig.label} 
                   />
                 );
@@ -230,7 +268,7 @@ function SearchResults() {
 
         <div className="md:col-span-1 text-center md:text-right">
           <p className="text-sm text-gray-500">Preço</p>
-          <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
+          <p className={`text-3xl font-bold ${isMangaisCampaign ? 'text-green-700 dark:text-lime-200' : 'text-yellow-600 dark:text-yellow-400'}`}>
             {Number(trip.price_usd) === 0 ? 'Gratuito' : `${trip.price_usd.toFixed(2)} Kz`}
           </p>
           <p className="text-xs text-gray-500 mb-3">
@@ -241,10 +279,12 @@ function SearchResults() {
             className={`w-full md:w-auto ${
               isSelected 
                 ? 'bg-green-500 hover:bg-green-600' 
-                : 'bg-yellow-500 hover:bg-yellow-600'
+                : isMangaisCampaign
+                  ? 'bg-green-700 hover:bg-green-800'
+                  : 'bg-yellow-500 hover:bg-yellow-600'
             } text-white`}
           >
-            {isSelected ? '✓ Selecionado' : 'Selecionar'}
+            {isSelected ? 'Selecionado' : 'Selecionar'}
           </Button>
         </div>
       </CardContent>
@@ -252,14 +292,60 @@ function SearchResults() {
   );
 
   return (
+    <div className={`min-h-screen ${isMangaisCampaign ? 'bg-[#07180d] bg-[radial-gradient(circle_at_15%_5%,rgba(223,255,132,0.18),transparent_24%),linear-gradient(180deg,#0d2a15_0%,#f7faf3_24%,#f8fafc_100%)] dark:bg-[linear-gradient(180deg,#07180d_0%,#07180d_100%)]' : ''}`}>
     <div className="w-full max-w-6xl mx-auto py-8 px-4">
       <button 
         onClick={() => router.back()} 
-        className="flex items-center gap-2 mb-4 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors"
+        className={`flex items-center gap-2 mb-4 transition-colors ${
+          isMangaisCampaign
+            ? 'text-lime-50/90 hover:text-white'
+            : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'
+        }`}
       >
         <ArrowLeft className="w-5 h-5" />
         <span>Voltar</span>
       </button>
+
+      {isMangaisCampaign && (
+        <section className="relative mb-6 overflow-hidden rounded-3xl border border-lime-100/20 bg-green-950 text-white shadow-2xl shadow-green-950/20">
+          <Image
+            src="/wallpaper.jpg"
+            alt=""
+            fill
+            sizes="100vw"
+            className="object-cover opacity-20"
+          />
+          <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(5,32,14,0.96),rgba(9,73,28,0.88))]" />
+          <div className="relative grid gap-5 p-5 sm:p-7 md:grid-cols-[1fr_auto] md:items-center">
+            <div>
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#dfff84] px-3 py-1.5 text-xs font-black uppercase tracking-[0.18em] text-green-950">
+                <Music2 className="h-4 w-4" />
+                Brunch Mangais
+              </div>
+              <h1 className="text-3xl font-black leading-tight sm:text-4xl">
+                Viagens para Mangais
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-lime-50/88 sm:text-base">
+                A Nawabus leva-te de Luanda até Mangais <span className="text-xs sm:text-sm">(Barra do Cuanza)</span>. Escolhe o horário ideal e continua para garantir o teu lugar.
+              </p>
+            </div>
+            <div className="grid gap-2 rounded-2xl border border-lime-100/20 bg-white/10 p-4 text-sm font-bold backdrop-blur-md">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="h-5 w-5 text-[#dfff84]" />
+                {campaignDateLabel} de 2026
+              </div>
+              <div className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-[#dfff84]" />
+                Luanda - Mangais
+              </div>
+              <div className="flex items-center gap-2">
+                <Leaf className="h-5 w-5 text-[#dfff84]" />
+                Evento especial
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       <div className="mb-8">
         <SearchForm />
@@ -275,23 +361,37 @@ function SearchResults() {
       <div className="space-y-8">
         {loading ? (
           <div className="text-center py-12">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-yellow-500 border-r-transparent"></div>
+            <div className={`inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-r-transparent ${isMangaisCampaign ? 'border-green-700' : 'border-yellow-500'}`}></div>
             <p className="mt-4 text-gray-600 dark:text-gray-400">A carregar viagens...</p>
           </div>
         ) : (
           <>
             {/* Outbound Trips Section */}
             <div>
-              <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white">
+              <h2 className={`text-2xl font-bold mb-4 ${isMangaisCampaign ? 'text-green-950 dark:text-white' : 'text-gray-800 dark:text-white'}`}>
                 {isRoundTrip ? 'Viagens de Ida' : 'Viagens Disponíveis'}
               </h2>
               {outboundTrips.length > 0 ? (
                 <div className="space-y-4">
-                  {outboundTrips.map((trip) => renderTripCard(
+                  {visibleOutboundTrips.map((trip) => renderTripCard(
                     trip, 
                     handleSelectOutboundTrip,
                     selectedOutboundTrip?.id === trip.id
                   ))}
+                  {isRoundTrip && selectedOutboundTrip && (
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedOutboundTrip(null);
+                          setSelectedReturnTrip(null);
+                        }}
+                      >
+                        Alterar viagem de ida
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <Alert>
@@ -306,7 +406,7 @@ function SearchResults() {
             {/* Return Trips Section */}
             {isRoundTrip && selectedOutboundTrip && (
               <div id="return-trips" className="pt-8 border-t-2">
-                <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white">
+                <h2 className={`text-2xl font-bold mb-4 ${isMangaisCampaign ? 'text-green-950 dark:text-white' : 'text-gray-800 dark:text-white'}`}>
                   Viagens de Volta
                 </h2>
                 <Alert className="mb-4">
@@ -317,7 +417,29 @@ function SearchResults() {
                 </Alert>
                 {returnTrips.length > 0 ? (
                   <div className="space-y-4">
-                    {returnTrips.map((trip) => renderTripCard(trip, handleSelectReturnTrip))}
+                    {visibleReturnTrips.map((trip) => renderTripCard(
+                      trip,
+                      handleSelectReturnTrip,
+                      selectedReturnTrip?.id === trip.id
+                    ))}
+                    {selectedReturnTrip && (
+                      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setSelectedReturnTrip(null)}
+                        >
+                          Alterar viagem de volta
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={handleContinueToBooking}
+                          className={isMangaisCampaign ? 'bg-green-700 hover:bg-green-800 text-white' : 'bg-yellow-500 hover:bg-yellow-600 text-white'}
+                        >
+                          Continuar para escolher lugares
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <Alert>
@@ -332,6 +454,7 @@ function SearchResults() {
           </>
         )}
       </div>
+    </div>
     </div>
   );
 }
