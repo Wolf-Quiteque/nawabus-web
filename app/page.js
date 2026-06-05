@@ -7,16 +7,16 @@ import SearchForm from '@/components/search-form';
 
 const mangaisDates = [
   {
+    day: '20',
+    weekday: 'Sábado',
+    label: '20 de Junho',
+    href: 'https://www.nawabus.co.ao/search?origin=Luanda&destination=Barra+do+Cuanza&date=2026-06-20&tripType=one-way',
+  },
+  {
     day: '21',
     weekday: 'Domingo',
     label: '21 de Junho',
     href: 'https://www.nawabus.co.ao/search?origin=Luanda&destination=Barra+do+Cuanza&date=2026-06-21&tripType=one-way',
-  },
-  {
-    day: '22',
-    weekday: 'Segunda',
-    label: '22 de Junho',
-    href: 'https://www.nawabus.co.ao/search?origin=Luanda&destination=Barra+do+Cuanza&date=2026-06-22&tripType=one-way',
   },
 ];
 
@@ -56,7 +56,7 @@ export default function Home() {
             />
             <div className="hidden items-center gap-2 rounded-full border border-lime-200/25 bg-white/10 px-4 py-2 text-sm font-semibold text-lime-50 backdrop-blur-md sm:flex">
               <Leaf className="h-4 w-4 text-lime-200" />
-              Lugares preparados para 21 e 22 de Junho
+              Lugares preparados para 20 e 21 de Junho
             </div>
           </div>
 
@@ -88,8 +88,8 @@ export default function Home() {
                       </p>
                     </div>
                     <div className="text-right text-lime-50">
+                      <p className="text-xl font-black leading-5 sm:text-3xl sm:leading-6">SAB'20</p>
                       <p className="text-xl font-black leading-5 sm:text-3xl sm:leading-6">DOM'21</p>
-                      <p className="text-xl font-black leading-5 sm:text-3xl sm:leading-6">SEG'22</p>
                       <p className="mt-1 text-sm font-bold tracking-[0.18em]">JUNHO/2026</p>
                     </div>
                   </div>
@@ -172,7 +172,7 @@ export default function Home() {
                   </div>
                   <div className="flex items-center gap-3">
                     <CalendarDays className="h-5 w-5 shrink-0 text-lime-200" />
-                    21 ou 22 de Junho de 2026
+                    20 ou 21 de Junho de 2026
                   </div>
                 </div>
               </div>

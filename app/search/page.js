@@ -32,11 +32,11 @@ function SearchResults() {
   const normalizedOrigin = origin.toLowerCase();
   const normalizedDestination = destination.toLowerCase();
   const isMangaisCampaign =
-    ['2026-06-21', '2026-06-22'].includes(date) &&
+    ['2026-06-20', '2026-06-21'].includes(date) &&
     normalizedOrigin.includes('luanda') &&
     normalizedDestination.includes('barra') &&
     normalizedDestination.includes('cuanza');
-  const campaignDateLabel = date === '2026-06-21' ? '21 de Junho' : '22 de Junho';
+  const campaignDateLabel = date === '2026-06-20' ? '20 de Junho' : '21 de Junho';
 
   const fetchTrips = useCallback(async (origin, destination, date, isReturn = false) => {
     if (!origin || !destination || !date) return [];
