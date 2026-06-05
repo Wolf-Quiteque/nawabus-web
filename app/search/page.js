@@ -186,7 +186,32 @@ function SearchResults() {
     return returnTrips;
   }, [selectedReturnTrip, returnTrips]);
 
-  const renderTripCard = (trip, onSelect, isSelected = false) => (
+  const getCampaignBoardingPoint = (originCity = '') => {
+    const normalizedCity = originCity.toLowerCase();
+
+    if (normalizedCity.includes('gamek')) {
+      return {
+        title: 'Gamek - Nosso centro',
+        detail: '(Terminal Interprovincial)',
+      };
+    }
+
+    if (normalizedCity.includes('kilamba')) {
+      return {
+        title: 'Kilamba - Próximo das Autarquias',
+        detail: null,
+      };
+    }
+
+    return null;
+  };
+
+  const renderTripCard = (trip, onSelect, isSelected = false) => {
+    const campaignBoardingPoint = isMangaisCampaign
+      ? getCampaignBoardingPoint(trip.routes.origin_city)
+      : null;
+
+    return (
     <Card 
       key={trip.id} 
       className={`shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden border-l-4 ${
@@ -213,9 +238,22 @@ function SearchResults() {
               <p className="text-2xl font-bold text-gray-800 dark:text-white">
                 {formatTime(trip.departure_time)}
               </p>
-              <p className="text-lg md:text-xl font-extrabold text-gray-950 dark:text-white tracking-normal">
-                {trip.routes.origin_city}
-              </p>
+              {campaignBoardingPoint ? (
+                <div className="max-w-[8.5rem] md:max-w-[13rem]">
+                  <p className="text-base font-extrabold leading-tight text-gray-950 dark:text-white md:text-xl">
+                    {campaignBoardingPoint.title}
+                  </p>
+                  {campaignBoardingPoint.detail && (
+                    <p className="mt-0.5 text-[0.68rem] font-bold leading-snug text-green-700 dark:text-lime-200 md:text-xs">
+                      {campaignBoardingPoint.detail}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-lg md:text-xl font-extrabold text-gray-950 dark:text-white tracking-normal">
+                  {trip.routes.origin_city}
+                </p>
+              )}
             </div>
             <div className="text-center flex-grow px-4">
               <div className="relative">
@@ -289,7 +327,8 @@ function SearchResults() {
         </div>
       </CardContent>
     </Card>
-  );
+    );
+  };
 
   return (
     <div className={`min-h-screen ${isMangaisCampaign ? 'bg-[#07180d] bg-[radial-gradient(circle_at_15%_5%,rgba(223,255,132,0.18),transparent_24%),linear-gradient(180deg,#0d2a15_0%,#f7faf3_24%,#f8fafc_100%)] dark:bg-[linear-gradient(180deg,#07180d_0%,#07180d_100%)]' : ''}`}>
@@ -337,6 +376,13 @@ function SearchResults() {
               <div className="flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-[#dfff84]" />
                 Luanda - Mangais
+              </div>
+              <div className="flex items-start gap-2">
+                <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-[#dfff84]" />
+                <span className="leading-5">
+                  Gamek - Nosso centro <span className="text-xs">(Terminal Interprovincial)</span><br />
+                  Kilamba - Próximo das Autarquias
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <Leaf className="h-5 w-5 text-[#dfff84]" />

@@ -170,6 +170,13 @@ export default function Home() {
                     <MapPin className="h-5 w-5 shrink-0 text-lime-200" />
                     Luanda para Barra do Cuanza
                   </div>
+                  <div className="flex items-start gap-3">
+                    <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-lime-200" />
+                    <div className="leading-6">
+                      <span className="block">Gamek - Nosso centro <span className="text-xs text-lime-100/75">(Terminal Interprovincial)</span></span>
+                      <span className="block">Kilamba - Próximo das Autarquias</span>
+                    </div>
+                  </div>
                   <div className="flex items-center gap-3">
                     <CalendarDays className="h-5 w-5 shrink-0 text-lime-200" />
                     20 ou 21 de Junho de 2026
