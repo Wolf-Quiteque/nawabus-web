@@ -1073,7 +1073,7 @@ const handleDownloadPdf = async () => {
               <div>
                 <Label className="text-base font-semibold">Método de Pagamento</Label>
                 <div className="space-y-3 mt-3">
-                  {/* Cash Payment Option */}
+                  {/* Cash Payment Option
                   <div
                     className={`flex items-start space-x-3 p-4 border-2 rounded-lg transition-all ${
                       reference
@@ -1102,6 +1102,7 @@ const handleDownloadPdf = async () => {
                       </p>
                     </div>
                   </div>
+                  */}
 
                   {/* Referencia Payment Option */}
                   <div
