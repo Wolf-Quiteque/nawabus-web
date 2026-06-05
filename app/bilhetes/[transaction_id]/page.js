@@ -341,6 +341,13 @@ if (ticketData) {
       <div className="text-center max-w-md mx-auto p-6 bg-green-50 border border-green-200 rounded-lg">
         <div className="text-green-600 text-6xl mb-4">✅</div>
         <h2 className="text-xl font-bold text-green-800 mb-2">Bilhete Encontrado</h2>
+        <button
+          type="button"
+          onClick={() => handleDownloadPdf(ticketData, paymentData)}
+          className="mb-4 rounded-lg bg-green-700 px-5 py-3 font-semibold text-white transition-colors hover:bg-green-800"
+        >
+          Baixar bilhete novamente
+        </button>
         <p className="text-green-700 mb-4">O download do seu bilhete começará automaticamente.</p>
         <p className="text-sm text-gray-600">Se o download não iniciar, verifique as permissões do seu navegador.</p>
       </div>
