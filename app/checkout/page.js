@@ -263,8 +263,6 @@ export default function CheckoutPage() {
         );
       }
 
-      const allTickets = [...outboundTickets, ...returnTickets];
-
       // Store ticket numbers (use first ticket as primary)
       setTicketNumbers({
         outbound: outboundTickets[0].ticket_number,
@@ -279,45 +277,9 @@ export default function CheckoutPage() {
         return;
       }
 
-      if (paymentMethod === 'referencia') {
-        // Call payment API with total price, using first ticket as primary
-        const response = await fetch('/api/create-payment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ticket_id: outboundTickets[0].id,
-            amount: finalPrice,
-            passenger_name: user.user_metadata.full_name || 'N/A',
-            passenger_email: user.email,
-            trip_type: tripType,
-          }),
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || 'Falha ao criar referencia de pagamento.');
-        }
-
-        // Update ALL tickets with the same payment reference
-        for (const ticket of allTickets) {
-          const { error: updateErr } = await supabase
-            .from('tickets')
-            .update({ payment_reference: result.reference_number })
-            .eq('id', ticket.id);
-
-          if (updateErr) {
-            console.error(`Failed to update ticket ${ticket.id} reference:`, updateErr);
-          }
-        }
-
-        setReference(result.reference_number);
-      } else {
-        // Cash payment — send companion SMS immediately
-        sendCompanionSms(outboundTickets, outboundTrip, user);
-        if (returnTrip) sendCompanionSms(returnTickets, returnTrip, user);
-        setReference('CASH_PAYMENT');
-      }
+      sendCompanionSms(outboundTickets, outboundTrip, user);
+      if (returnTrip) sendCompanionSms(returnTickets, returnTrip, user);
+      setReference('CASH_PAYMENT');
     } catch (error) {
       console.error('Payment error:', error);
       alert(error.message);

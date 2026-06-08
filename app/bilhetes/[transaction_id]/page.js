@@ -48,6 +48,10 @@ export default function DownloadTicketPage() {
           .from('tickets')
           .select(`
             *,
+            ticket_companions (
+              name,
+              phone
+            ),
             trips: trip_id (
               *,
               routes: route_id (*),
@@ -103,9 +107,104 @@ export default function DownloadTicketPage() {
     }
 
     if (Array.isArray(ticket)) {
-      for (const singleTicket of ticket) {
-        await handleDownloadPdf(singleTicket, payment);
+      const doc = new jsPDF();
+      const orange = [245, 158, 11];
+      const lightOrange = [252, 191, 73];
+
+      for (let index = 0; index < ticket.length; index += 1) {
+        const singleTicket = ticket[index];
+        if (index > 0) doc.addPage();
+
+        const passengerName = singleTicket.ticket_companions?.[0]?.name ||
+          (singleTicket.profiles
+            ? `${singleTicket.profiles.first_name || ''} ${singleTicket.profiles.last_name || ''}`.trim()
+            : '') ||
+          'Passageiro';
+        const ticketNumber = singleTicket.ticket_number && singleTicket.ticket_number.length > 9
+          ? singleTicket.ticket_number.substring(9)
+          : singleTicket.ticket_number || 'N/A';
+        const routeName = singleTicket.trips?.routes
+          ? `${singleTicket.trips.routes.origin_city || 'Origem'} -> ${singleTicket.trips.routes.destination_city || 'Destino'}`
+          : 'Rota nao especificada';
+        const departure = singleTicket.trips?.departure_time
+          ? new Date(singleTicket.trips.departure_time).toLocaleString('pt-PT')
+          : 'Data nao especificada';
+        const price = singleTicket.price_paid_usd
+          ? `${Math.round(singleTicket.price_paid_usd * 1000)},00 Kz`
+          : 'Preco nao disponivel';
+        const qrCodeUrl = await QRCode.toDataURL(singleTicket.id, { width: 300, margin: 1 });
+
+        doc.setFillColor(...orange);
+        doc.rect(0, 0, 210, 45, 'F');
+        doc.setFillColor(...lightOrange);
+        doc.circle(5, 5, 8, 'F');
+        doc.circle(205, 5, 8, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(24);
+        doc.setFont(undefined, 'bold');
+        doc.text(singleTicket.trips?.buses?.companies?.name || 'NawaBus', 105, 22, { align: 'center' });
+        doc.setFontSize(12);
+        doc.text('Bilhete Confirmado', 105, 34, { align: 'center' });
+
+        doc.setTextColor(60, 60, 60);
+        doc.setFillColor(250, 250, 250);
+        doc.roundedRect(15, 55, 180, 20, 3, 3, 'F');
+        doc.setFontSize(9);
+        doc.text('NIF: 5000451738 | Tel: +244 930 533 405', 105, 67, { align: 'center' });
+
+        doc.setFillColor(200, 255, 200);
+        doc.roundedRect(15, 85, 180, 25, 5, 5, 'F');
+        doc.setTextColor(0, 128, 0);
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text('PAGAMENTO CONFIRMADO', 105, 95, { align: 'center' });
+        doc.setFontSize(11);
+        doc.text(`Referencia: ${payment.transaction_id}`, 105, 105, { align: 'center' });
+
+        doc.setDrawColor(...orange);
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(15, 120, 120, 78, 3, 3, 'FD');
+        doc.setTextColor(...orange);
+        doc.setFontSize(12);
+        doc.text(`Bilhete ${index + 1} de ${ticket.length}`, 20, 130);
+
+        const rows = [
+          ['Passageiro:', passengerName],
+          ['No. Bilhete:', ticketNumber],
+          ['Rota:', routeName],
+          ['Partida:', departure],
+          ['Assento:', String(singleTicket.seat_number || 'N/A')],
+          ['Autocarro:', singleTicket.trips?.buses?.license_plate || 'N/A'],
+          ['Valor:', price],
+        ];
+
+        doc.setFontSize(10);
+        rows.forEach(([label, value], rowIndex) => {
+          const y = 142 + rowIndex * 8;
+          doc.setTextColor(60, 60, 60);
+          doc.setFont(undefined, 'bold');
+          doc.text(label, 20, y);
+          doc.setFont(undefined, 'normal');
+          doc.text(String(value), 55, y, { maxWidth: 75 });
+        });
+
+        doc.setDrawColor(...orange);
+        doc.roundedRect(142, 120, 53, 78, 3, 3, 'FD');
+        doc.setFontSize(8);
+        doc.setTextColor(...orange);
+        doc.text('Escaneie aqui', 168.5, 128, { align: 'center' });
+        doc.addImage(qrCodeUrl, 'PNG', 147, 135, 43, 43);
+
+        doc.setFillColor(255, 248, 240);
+        doc.setDrawColor(...orange);
+        doc.roundedRect(15, 210, 180, 30, 3, 3, 'FD');
+        doc.setTextColor(60, 60, 60);
+        doc.setFontSize(9);
+        doc.text('- Apresente este bilhete no embarque', 20, 224);
+        doc.text('- Guarde este documento ate ao final da viagem', 20, 232);
       }
+
+      doc.save(`nawabus-confirmed-${payment.transaction_id}.pdf`);
       return;
     }
 
@@ -126,9 +225,11 @@ export default function DownloadTicketPage() {
       nif: "5000451738",
       address: "",
       phone: "+244 930 533 405",
-      passengerName: ticket.profiles 
-        ? `${ticket.profiles.first_name || ''} ${ticket.profiles.last_name || ''}`.trim() 
-        : 'Passageiro',
+      passengerName: ticket.ticket_companions?.[0]?.name ||
+        (ticket.profiles
+          ? `${ticket.profiles.first_name || ''} ${ticket.profiles.last_name || ''}`.trim()
+          : '') ||
+        'Passageiro',
       ticketNumber: trimmedTicketNumber,
       routeName: ticket.trips?.routes 
         ? `${ticket.trips.routes.origin_city || 'Origem'} → ${ticket.trips.routes.destination_city || 'Destino'}`
