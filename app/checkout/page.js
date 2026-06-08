@@ -125,6 +125,22 @@ export default function CheckoutPage() {
     return tickets;
   };
 
+  const buildDeferredTrip = (trip, perSeatPrice) => ({
+    trip_id: trip.id,
+    selected_seats: [...trip.selectedSeats].sort((a, b) => a - b),
+    seat_class: trip.seat_class || 'economy',
+    per_seat_price: perSeatPrice,
+    companions: Object.fromEntries(
+      Object.entries(trip.companions || {}).map(([seat, companion]) => [
+        seat,
+        {
+          name: companion.name?.trim() || '',
+          phone: normalizePhoneNumber(companion.phone),
+        },
+      ])
+    ),
+  });
+
   // Send SMS to companions who provided a phone number
   const sendCompanionSms = async (allTickets, trip, user) => {
     const companions = trip.companions || {};
@@ -185,6 +201,46 @@ export default function CheckoutPage() {
       const outboundPerSeat = isFreeTrip ? 0 : parseFloat(
         (outboundTrip.price * discountFactor / outboundSeatCount).toFixed(2)
       );
+
+      if (!isFreeTrip && paymentMethod === 'referencia') {
+        let returnPerSeat = 0;
+        if (tripType === 'round-trip' && returnTrip) {
+          const returnSeatCount = returnTrip.selectedSeats.length;
+          returnPerSeat = parseFloat(
+            (returnTrip.price * discountFactor / returnSeatCount).toFixed(2)
+          );
+        }
+
+        const response = await fetch('/api/create-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: finalPrice,
+            passenger_name: user.user_metadata.full_name || 'N/A',
+            passenger_email: user.email,
+            booking_details: {
+              passenger_id: passengerId,
+              booking_source: 'online',
+              payment_method: 'referencia',
+              coupon_code: appliedCoupon?.code || null,
+              trip_type: tripType,
+              outbound_trip: buildDeferredTrip(outboundTrip, outboundPerSeat),
+              return_trip: tripType === 'round-trip' && returnTrip
+                ? buildDeferredTrip(returnTrip, returnPerSeat)
+                : null,
+            },
+          }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Falha ao criar referencia de pagamento.');
+        }
+
+        setReference(result.reference_number);
+        return;
+      }
 
       // Create one ticket per seat for outbound
       const outboundTickets = await createTicketsForTrip(
@@ -1175,12 +1231,9 @@ const handleDownloadPdf = async () => {
                   <p className="text-sm text-gray-500 mb-4">
                     Dirija-se a um multicaixa ou utilize o seu home banking.
                   </p>
-                  <Button 
-                    onClick={handleDownloadPdf} 
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    📄 Baixar Bilhete (PDF)
-                  </Button>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    O bilhete sera emitido automaticamente apos a confirmacao do pagamento.
+                  </p>
                 </div>
               ) : reference === 'CASH_PAYMENT' ? (
                 <div className="text-center p-6 border-2 border-green-500 border-dashed rounded-lg bg-green-50 dark:bg-green-900/20">

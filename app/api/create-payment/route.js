@@ -3,11 +3,11 @@ import { NextResponse } from 'next/server';
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { ticket_id, amount, passenger_name, passenger_email } = body;
+    const { ticket_id, amount, passenger_name, passenger_email, booking_details } = body;
 
-    if (!ticket_id || !amount || amount <= 0) {
+    if ((!ticket_id && !booking_details) || !amount || amount <= 0) {
       return NextResponse.json({ 
-        error: 'Missing or invalid fields: ticket_id and amount are required' 
+        error: 'Missing or invalid fields: amount and ticket_id or booking_details are required' 
       }, { status: 400 });
     }
 
@@ -24,6 +24,7 @@ export async function POST(request) {
         amount,
         passenger_name,
         passenger_email,
+        booking_details,
       }),
     });
 
