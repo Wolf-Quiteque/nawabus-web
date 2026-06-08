@@ -394,7 +394,7 @@ export default function CheckoutPage() {
       doc.setFont(undefined, 'normal');
       doc.text(`Partida: ${tripDate(trip)}`, 24, y);
       y += 6;
-      doc.text(`Autocarro: ${trip.buses?.license_plate || trip.bus_plate || 'N/A'}    Classe: ${trip.seat_class || 'economy'}`, 24, y);
+      doc.text(`Classe: ${trip.seat_class || 'economy'}`, 24, y);
       y += 9;
 
       doc.setTextColor(...brandDark);
@@ -895,19 +895,6 @@ const handleDownloadPdf = async () => {
   }
   yPos += 2;
 
-  // Autocarro
-  doc.setFont(undefined, "bold");
-  doc.text("Autocarro:", 20, yPos);
-  doc.setFont(undefined, "normal");
-  renderText(
-    outboundTrip.buses?.license_plate ||
-      outboundTrip.bus_plate ||
-      "N/A",
-    55,
-    yPos
-  );
-  yPos += 8;
-
   // If round-trip, add "VIAGEM DE VOLTA"
   if (tripType === "round-trip" && returnTrip) {
     yPos += 5; // spacing before divider
@@ -985,17 +972,6 @@ const handleDownloadPdf = async () => {
       yPos += 6;
     }
     yPos += 2;
-
-    doc.setFont(undefined, "bold");
-    doc.text("Autocarro:", 20, yPos);
-    doc.setFont(undefined, "normal");
-    renderText(
-      returnTrip.buses?.license_plate ||
-        returnTrip.bus_plate ||
-        "N/A",
-      55,
-      yPos
-    );
 
     // yPos ends roughly ~230-240-ish
   }

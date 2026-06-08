@@ -62,7 +62,6 @@ function SearchResults() {
             make,
             model,
             amenities,
-            license_plate,
             companies!inner (
               name,
               logo_url

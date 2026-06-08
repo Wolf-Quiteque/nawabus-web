@@ -67,8 +67,7 @@ function BookingPage() {
               destination_city
             ),
             buses (
-              capacity,
-              license_plate
+              capacity
             )
           `)
           .eq('id', outboundTripId)
@@ -117,8 +116,7 @@ function BookingPage() {
                 destination_city
               ),
               buses (
-                capacity,
-                license_plate
+                capacity
               )
             `)
             .eq('id', returnTripId)

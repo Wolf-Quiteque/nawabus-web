@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import {
   ArrowRight,
   CheckCircle2,
@@ -101,7 +100,7 @@ function getPendingSeatText(booking) {
 function groupPaidTickets(tickets) {
   const groups = new Map();
   tickets.forEach((ticket) => {
-    const key = ticket.payment_reference || ticket.id;
+    const key = ticket.payment_reference || ticket.trip_id || ticket.id;
     const existing = groups.get(key) || {
       reference: ticket.payment_reference,
       firstTicket: ticket,
@@ -115,16 +114,112 @@ function groupPaidTickets(tickets) {
   return Array.from(groups.values());
 }
 
+function getUpcomingRideCount(tickets) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const upcomingRideKeys = new Set();
+  tickets.forEach((ticket) => {
+    const departureTime = ticket?.trips?.departure_time;
+    if (!departureTime) return;
+
+    const departureDate = new Date(departureTime);
+    if (Number.isNaN(departureDate.getTime())) return;
+
+    const departureDay = new Date(departureDate);
+    departureDay.setHours(0, 0, 0, 0);
+    if (departureDay < today) return;
+
+    upcomingRideKeys.add(ticket.trip_id || `${departureTime}-${getRoute(ticket)}`);
+  });
+
+  return upcomingRideKeys.size;
+}
+
 async function downloadPaidTicketGroup(group, user) {
   const doc = new jsPDF();
   const orange = [255, 140, 0];
   const dark = [24, 24, 27];
   const muted = [82, 82, 91];
   const green = [22, 101, 52];
+  const hasManifest = group.tickets.length > 1;
+
+  if (hasManifest) {
+    const firstTicket = group.firstTicket;
+
+    doc.setFillColor(...dark);
+    doc.rect(0, 0, 210, 46, "F");
+    doc.setFillColor(...orange);
+    doc.rect(0, 41, 210, 5, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont(undefined, "bold");
+    doc.setFontSize(24);
+    doc.text("NAWABUS", 18, 20);
+    doc.setFontSize(11);
+    doc.text("Manifesto de passageiros", 18, 31);
+
+    doc.setTextColor(...dark);
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(229, 231, 235);
+    doc.roundedRect(16, 58, 178, 58, 5, 5, "FD");
+    doc.setFont(undefined, "bold");
+    doc.setFontSize(16);
+    doc.text(getRoute(firstTicket), 24, 75, { maxWidth: 150 });
+    doc.setFont(undefined, "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(...muted);
+    doc.text(`Partida: ${formatDate(firstTicket.trips?.departure_time)}`, 24, 90);
+    doc.text(`Empresa: ${firstTicket.trips?.buses?.companies?.name || "NawaBus"}`, 24, 101);
+    doc.text(`Total de passageiros: ${group.tickets.length}`, 24, 111);
+
+    doc.setFillColor(255, 249, 235);
+    doc.setDrawColor(...orange);
+    doc.roundedRect(16, 128, 178, 106, 5, 5, "FD");
+    doc.setTextColor(...dark);
+    doc.setFont(undefined, "bold");
+    doc.setFontSize(11);
+    doc.text("Passageiros neste bilhete", 24, 142);
+
+    let y = 154;
+    group.tickets.forEach((ticket, index) => {
+      if (y > 224) {
+        doc.addPage();
+        doc.setFillColor(...dark);
+        doc.rect(0, 0, 210, 32, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFont(undefined, "bold");
+        doc.setFontSize(16);
+        doc.text("NAWABUS - Manifesto", 18, 20);
+        y = 48;
+      }
+
+      const ticketCode = ticket.ticket_number?.length > 9
+        ? ticket.ticket_number.substring(9)
+        : ticket.ticket_number || ticket.id.substring(0, 8);
+
+      doc.setTextColor(...orange);
+      doc.setFont(undefined, "bold");
+      doc.text(`${index + 1}. Lugar ${ticket.seat_number || "N/A"}`, 24, y);
+      doc.setTextColor(...dark);
+      doc.setFont(undefined, "normal");
+      doc.text(getPassengerName(ticket, user), 68, y, { maxWidth: 72 });
+      doc.setTextColor(...muted);
+      doc.text(ticketCode, 150, y, { maxWidth: 36 });
+      y += 9;
+    });
+
+    doc.setFillColor(220, 252, 231);
+    doc.setDrawColor(...green);
+    doc.roundedRect(16, 248, 178, 22, 4, 4, "FD");
+    doc.setTextColor(...green);
+    doc.setFont(undefined, "bold");
+    doc.setFontSize(10);
+    doc.text("Pagamento confirmado. Este manifesto e valido junto com os QR codes das paginas seguintes.", 24, 262, { maxWidth: 160 });
+  }
 
   for (let index = 0; index < group.tickets.length; index += 1) {
     const ticket = group.tickets[index];
-    if (index > 0) doc.addPage();
+    if (index > 0 || hasManifest) doc.addPage();
 
     const qrDataUrl = await QRCode.toDataURL(ticket.id, { width: 220, margin: 1 });
     const passengerName = getPassengerName(ticket, user);
@@ -177,7 +272,6 @@ async function downloadPaidTicketGroup(group, user) {
       ["Codigo", ticketCode],
       ["Lugar", String(ticket.seat_number || "N/A")],
       ["Classe", ticket.seat_class || "economy"],
-      ["Autocarro", ticket.trips?.buses?.license_plate || "N/A"],
       ["Valor", formatMoney(ticket.price_paid_usd)],
     ];
 
@@ -235,6 +329,7 @@ export function UserTicketHub() {
   const [qrDataUrl, setQrDataUrl] = useState("");
 
   const paidGroups = useMemo(() => groupPaidTickets(tickets), [tickets]);
+  const upcomingRideCount = useMemo(() => getUpcomingRideCount(tickets), [tickets]);
 
   useEffect(() => {
     let mounted = true;
@@ -265,6 +360,12 @@ export function UserTicketHub() {
   }, [isOpen, user]);
 
   useEffect(() => {
+    if (user) {
+      fetchUserData(user.id);
+    }
+  }, [user]);
+
+  useEffect(() => {
     if (!selectedTicket) {
       setQrDataUrl("");
       return;
@@ -285,6 +386,7 @@ export function UserTicketHub() {
         .from("tickets")
         .select(`
           id,
+          trip_id,
           ticket_number,
           seat_number,
           seat_class,
@@ -310,7 +412,6 @@ export function UserTicketHub() {
               destination_province
             ),
             buses:bus_id (
-              license_plate,
               make,
               model,
               companies:company_id (name)
@@ -480,14 +581,21 @@ export function UserTicketHub() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={openPanel}
-        aria-label="Abrir area do cliente"
-        className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-white/20 bg-[#FF8C00] text-white shadow-[0_18px_45px_rgba(0,0,0,0.28)] transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-orange-300 md:bottom-7 md:right-7 md:h-16 md:w-16"
-      >
-        <User className="h-7 w-7" strokeWidth={2.6} />
-      </button>
+      <div className="fixed bottom-5 right-5 z-40 md:bottom-7 md:right-7">
+        {user && upcomingRideCount > 0 && (
+          <div className="absolute -right-1 -top-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-full border border-black/10 bg-white px-1.5 text-xs font-bold text-black shadow-lg md:h-7 md:min-w-7 md:text-sm">
+            {upcomingRideCount > 99 ? "99+" : upcomingRideCount}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={openPanel}
+          aria-label="Abrir area do cliente"
+          className="flex h-14 w-14 items-center justify-center rounded-full border border-white/20 bg-[#FF8C00] text-white shadow-[0_18px_45px_rgba(0,0,0,0.28)] transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-orange-300 md:h-16 md:w-16"
+        >
+          <User className="h-7 w-7" strokeWidth={2.6} />
+        </button>
+      </div>
 
       {isOpen && (
         <div className="fixed inset-0 z-50">
@@ -667,7 +775,7 @@ export function UserTicketHub() {
                         )}
                         {paidGroups.map((group) => (
                           <PaidGroupCard
-                            key={group.reference || group.firstTicket.id}
+                            key={group.reference || group.firstTicket.trip_id || group.firstTicket.id}
                             group={group}
                             user={user}
                             onShowQr={setSelectedTicket}
@@ -734,6 +842,22 @@ export function UserTicketHub() {
 function PaidGroupCard({ group, user, onShowQr }) {
   const ticket = group.firstTicket;
   const seats = group.tickets.map((item) => item.seat_number).join(", ");
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  async function handleDownload() {
+    if (isDownloading) return;
+
+    setIsDownloading(true);
+    try {
+      await downloadPaidTicketGroup(group, user);
+    } catch (err) {
+      console.error("Paid ticket PDF failed:", err);
+      alert("Nao foi possivel gerar o PDF dos bilhetes. Tente novamente.");
+    } finally {
+      setIsDownloading(false);
+    }
+  }
+
   return (
     <article className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.07]">
       <div className="border-b border-white/10 bg-white/[0.04] p-4">
@@ -777,24 +901,15 @@ function PaidGroupCard({ group, user, onShowQr }) {
         </div>
 
         <div className="flex gap-2">
-          {group.reference ? (
-            <Link
-              href={`/bilhetes/${encodeURIComponent(group.reference)}`}
-              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[#FF8C00] px-4 py-3 text-sm font-semibold text-black transition hover:bg-orange-400"
-            >
-              <Download className="h-4 w-4" />
-              Baixar PDF
-            </Link>
-          ) : (
-            <button
-              type="button"
-              onClick={() => downloadPaidTicketGroup(group, user)}
-              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[#FF8C00] px-4 py-3 text-sm font-semibold text-black transition hover:bg-orange-400"
-            >
-              <Download className="h-4 w-4" />
-              Baixar bilhete
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={isDownloading}
+            className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[#FF8C00] px-4 py-3 text-sm font-semibold text-black transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Download className="h-4 w-4" />
+            {isDownloading ? "A gerar..." : group.tickets.length > 1 ? "Baixar todos" : "Baixar bilhete"}
+          </button>
           <button
             type="button"
             onClick={() => onShowQr(ticket)}

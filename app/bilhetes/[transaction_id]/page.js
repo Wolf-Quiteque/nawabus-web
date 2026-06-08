@@ -57,7 +57,9 @@ export default function DownloadTicketPage() {
               *,
               routes: route_id (*),
               buses: bus_id (
-                *,
+                id,
+                make,
+                model,
                 companies: company_id (name)
               )
             )
@@ -179,7 +181,6 @@ export default function DownloadTicketPage() {
           ['Rota:', routeName],
           ['Partida:', departure],
           ['Assento:', String(singleTicket.seat_number || 'N/A')],
-          ['Autocarro:', singleTicket.trips?.buses?.license_plate || 'N/A'],
           ['Valor:', price],
         ];
 
@@ -243,7 +244,6 @@ export default function DownloadTicketPage() {
         ? new Date(ticket.trips.departure_time).toLocaleString('pt-PT')
         : 'Data não especificada',
       seats: ticket.seat_number || 'N/A',
-      busPlate: ticket.trips?.buses?.license_plate || 'N/A',
       price: ticket.price_paid_usd 
         ? `${Math.round(ticket.price_paid_usd * 1000)},00 Kz`
         : 'Preço não disponível',
@@ -354,14 +354,9 @@ export default function DownloadTicketPage() {
     doc.text(ticketInfo.seats.toString(), 55, detailsY + lineHeight * 4);
 
     doc.setFont(undefined, 'bold');
-    doc.text("Autocarro:", 20, detailsY + lineHeight * 5);
+    doc.text("Valor:", 20, detailsY + lineHeight * 5);
     doc.setFont(undefined, 'normal');
-    doc.text(ticketInfo.busPlate, 55, detailsY + lineHeight * 5);
-
-    doc.setFont(undefined, 'bold');
-    doc.text("Valor:", 20, detailsY + lineHeight * 6);
-    doc.setFont(undefined, 'normal');
-    doc.text(ticketInfo.price, 55, detailsY + lineHeight * 6);
+    doc.text(ticketInfo.price, 55, detailsY + lineHeight * 5);
 
     // QR Code box with border
     doc.setDrawColor(...orange);
