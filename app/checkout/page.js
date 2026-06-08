@@ -142,6 +142,12 @@ export default function CheckoutPage() {
     ),
   });
 
+  const getSeatPassengerName = (seat, index, companions, passengerName) => {
+    const companionName = companions?.[seat]?.name?.trim();
+    if (companionName) return companionName;
+    return index === 0 ? passengerName : 'Passageiro adicional';
+  };
+
   // Send SMS to companions who provided a phone number
   const sendCompanionSms = async (allTickets, trip, user) => {
     const companions = trip.companions || {};
@@ -404,7 +410,7 @@ export default function CheckoutPage() {
       y += 7;
 
       sortedSeats.forEach((seat, index) => {
-        const name = index === 0 ? passengerName : (companions[seat]?.name || 'Passageiro adicional');
+        const name = getSeatPassengerName(seat, index, companions, passengerName);
         if (y > 265) {
           doc.addPage();
           drawPageChrome();
@@ -877,6 +883,9 @@ const handleDownloadPdf = async () => {
     ? [...outboundTrip.selectedSeats].sort((a, b) => a - b)
     : [];
   const outboundCompanions = outboundTrip.companions || {};
+  const buyerName = currentUser.user_metadata?.full_name ||
+    [currentUser.user_metadata?.first_name, currentUser.user_metadata?.last_name].filter(Boolean).join(' ') ||
+    'Voce';
   if (outboundSorted.length > 0) {
     outboundSorted.forEach((seat, idx) => {
       const label = idx === 0
@@ -886,7 +895,7 @@ const handleDownloadPdf = async () => {
             'Voce'
           }`
         : `Lugar ${seat}: ${outboundCompanions[seat]?.name || '—'}`;
-      renderText(label, 55, yPos);
+      renderText(`Lugar ${seat}: ${getSeatPassengerName(seat, idx, outboundCompanions, buyerName)}`, 55, yPos);
       yPos += 6;
     });
   } else {
@@ -964,7 +973,7 @@ const handleDownloadPdf = async () => {
               'Voce'
             }`
           : `Lugar ${seat}: ${returnCompanions[seat]?.name || '—'}`;
-        renderText(label, 55, yPos);
+        renderText(`Lugar ${seat}: ${getSeatPassengerName(seat, idx, returnCompanions, buyerName)}`, 55, yPos);
         yPos += 6;
       });
     } else {
@@ -1236,7 +1245,7 @@ const handleDownloadPdf = async () => {
                         <span className="font-mono text-yellow-600">Lugar {seat}</span>
                         {' — '}
                         {i === 0
-                          ? <span className="font-medium">Voce</span>
+                          ? <span className="font-medium">{getSeatPassengerName(seat, i, outboundTrip.companions || {}, 'Voce')}</span>
                           : <span>{outboundTrip.companions?.[seat]?.name || '—'}</span>
                         }
                       </p>
@@ -1271,7 +1280,7 @@ const handleDownloadPdf = async () => {
                           <span className="font-mono text-yellow-600">Lugar {seat}</span>
                           {' — '}
                           {i === 0
-                            ? <span className="font-medium">Voce</span>
+                            ? <span className="font-medium">{getSeatPassengerName(seat, i, returnTrip.companions || {}, 'Voce')}</span>
                             : <span>{returnTrip.companions?.[seat]?.name || '—'}</span>
                           }
                         </p>

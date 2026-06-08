@@ -6,6 +6,17 @@ import { createClient } from '@/lib/supabase-client';
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 
+function getTicketPassengerName(ticket) {
+  const companionName = ticket?.ticket_companions?.[0]?.name?.trim();
+  if (companionName) return companionName;
+
+  const profileName = ticket?.profiles
+    ? `${ticket.profiles.first_name || ''} ${ticket.profiles.last_name || ''}`.trim()
+    : '';
+
+  return profileName || 'Passageiro';
+}
+
 export default function DownloadTicketPage() {
   const params = useParams();
   const transactionId = params.transaction_id;
@@ -122,11 +133,7 @@ export default function DownloadTicketPage() {
         const singleTicket = ticket[index];
         if (index > 0) doc.addPage();
 
-        const passengerName = singleTicket.ticket_companions?.[0]?.name ||
-          (singleTicket.profiles
-            ? `${singleTicket.profiles.first_name || ''} ${singleTicket.profiles.last_name || ''}`.trim()
-            : '') ||
-          'Passageiro';
+        const passengerName = getTicketPassengerName(singleTicket);
         const ticketNumber = singleTicket.ticket_number && singleTicket.ticket_number.length > 9
           ? singleTicket.ticket_number.substring(9)
           : singleTicket.ticket_number || 'N/A';
@@ -231,11 +238,7 @@ export default function DownloadTicketPage() {
       nif: "5000451738",
       address: "",
       phone: "+244 930 533 405",
-      passengerName: ticket.ticket_companions?.[0]?.name ||
-        (ticket.profiles
-          ? `${ticket.profiles.first_name || ''} ${ticket.profiles.last_name || ''}`.trim()
-          : '') ||
-        'Passageiro',
+      passengerName: getTicketPassengerName(ticket),
       ticketNumber: trimmedTicketNumber,
       routeName: ticket.trips?.routes 
         ? `${ticket.trips.routes.origin_city || 'Origem'} → ${ticket.trips.routes.destination_city || 'Destino'}`

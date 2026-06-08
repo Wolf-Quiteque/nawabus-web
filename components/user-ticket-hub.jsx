@@ -67,11 +67,13 @@ function getPassengerName(ticket, user) {
   const companionName = ticket?.ticket_companions?.[0]?.name?.trim();
   if (companionName) return companionName;
 
-  return (
+  const userName = (
     user?.user_metadata?.full_name ||
     `${user?.user_metadata?.first_name || ""} ${user?.user_metadata?.last_name || ""}`.trim() ||
-    "Cliente"
+    ""
   );
+
+  return userName.trim() || "Cliente";
 }
 
 function getPendingBooking(transaction) {
