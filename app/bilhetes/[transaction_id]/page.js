@@ -44,52 +44,47 @@ export default function DownloadTicketPage() {
           return;
         }
 
-        if (!paymentData.ticket_id) {
-          setError('ID do bilhete não encontrado na transação');
-          setIsLoading(false);
-          return;
-        }
+        const { data: ticketsData, error: ticketError } = await supabase
+          .from('tickets')
+          .select(`
+            *,
+            trips: trip_id (
+              *,
+              routes: route_id (*),
+              buses: bus_id (
+                *,
+                companies: company_id (name)
+              )
+            )
+          `)
+          .eq('payment_reference', transactionId)
+          .order('created_at', { ascending: true });
 
-   const { data: ticketData, error: ticketError } = await supabase
-  .from('tickets')
-  .select(`
-    *,
-    trips: trip_id (
-      *,
-      routes: route_id (*),
-      buses: bus_id (
-        *,
-        companies: company_id (name)
-      )
-    )
-  `)
-  .eq('id', paymentData.ticket_id)
-  .single();
-
-// Then fetch the profile separately
-if (ticketData) {
-  const { data: profileData } = await supabase
-    .from('profiles')
-    .select('first_name, last_name, phone_number')
-    .eq('id', ticketData.passenger_id)
-    .single();
-  
-  ticketData.profiles = profileData;
-}
-
-        if (ticketError) {
+        if (ticketError || !ticketsData || ticketsData.length === 0) {
           console.error('Ticket error:', ticketError);
           setError('Dados do bilhete não encontrados');
           setIsLoading(false);
           return;
         }
 
-        setTicketData(ticketData);
+        const passengerIds = [...new Set(ticketsData.map(ticket => ticket.passenger_id).filter(Boolean))];
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, phone_number')
+          .in('id', passengerIds);
+
+        const profilesById = Object.fromEntries((profilesData || []).map(profile => [profile.id, profile]));
+        const ticketsWithProfiles = ticketsData.map(ticket => ({
+          ...ticket,
+          profiles: profilesById[ticket.passenger_id] || null,
+        }));
+
+        setTicketData(ticketsWithProfiles);
         setPaymentData(paymentData); // Store payment data separately
         setIsLoading(false);
 
         // Auto-generate PDF after loading data
-        setTimeout(() => handleDownloadPdf(ticketData, paymentData), 500);
+        setTimeout(() => handleDownloadPdf(ticketsWithProfiles, paymentData), 500);
       } catch (err) {
         console.error('Fetch error:', err);
         setError('Erro ao carregar dados do bilhete');
@@ -104,6 +99,13 @@ if (ticketData) {
     if (!ticket || !payment) {
       console.log('Ticket or payment data missing:', { ticket, payment });
       alert("Não foi possível gerar o bilhete. Faltam detalhes.");
+      return;
+    }
+
+    if (Array.isArray(ticket)) {
+      for (const singleTicket of ticket) {
+        await handleDownloadPdf(singleTicket, payment);
+      }
       return;
     }
 
