@@ -114,6 +114,36 @@ function groupPaidTickets(tickets) {
   return Array.from(groups.values());
 }
 
+function groupTicketsByTrip(tickets) {
+  const groups = new Map();
+  tickets.forEach((ticket) => {
+    const key = ticket.trip_id || `${ticket.trips?.departure_time || ""}-${getRoute(ticket)}`;
+    const existing = groups.get(key) || {
+      tripId: ticket.trip_id,
+      firstTicket: ticket,
+      tickets: [],
+      total: 0,
+    };
+    existing.tickets.push(ticket);
+    existing.total += Number(ticket.price_paid_usd) || 0;
+    groups.set(key, existing);
+  });
+
+  return Array.from(groups.values()).sort((a, b) => {
+    const aTime = new Date(a.firstTicket.trips?.departure_time || 0).getTime();
+    const bTime = new Date(b.firstTicket.trips?.departure_time || 0).getTime();
+    return aTime - bTime;
+  });
+}
+
+function getGroupRouteSummary(group) {
+  const tripGroups = groupTicketsByTrip(group.tickets);
+  if (tripGroups.length <= 1) {
+    return getRoute(group.firstTicket);
+  }
+  return tripGroups.map((tripGroup, index) => `Viagem ${index + 1}: ${getRoute(tripGroup.firstTicket)}`).join(" | ");
+}
+
 function getUpcomingRideCount(tickets) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -143,6 +173,7 @@ async function downloadPaidTicketGroup(group, user) {
   const muted = [82, 82, 91];
   const green = [22, 101, 52];
   const hasManifest = group.tickets.length > 1;
+  const tripGroups = groupTicketsByTrip(group.tickets);
 
   if (hasManifest) {
     const firstTicket = group.firstTicket;
@@ -163,14 +194,19 @@ async function downloadPaidTicketGroup(group, user) {
     doc.setDrawColor(229, 231, 235);
     doc.roundedRect(16, 58, 178, 58, 5, 5, "FD");
     doc.setFont(undefined, "bold");
-    doc.setFontSize(16);
-    doc.text(getRoute(firstTicket), 24, 75, { maxWidth: 150 });
+    doc.setFontSize(14);
+    doc.text(tripGroups.length > 1 ? "Compra ida e volta / multi-viagem" : getRoute(firstTicket), 24, 75, { maxWidth: 150 });
     doc.setFont(undefined, "normal");
     doc.setFontSize(10);
     doc.setTextColor(...muted);
-    doc.text(`Partida: ${formatDate(firstTicket.trips?.departure_time)}`, 24, 90);
-    doc.text(`Empresa: ${firstTicket.trips?.buses?.companies?.name || "NawaBus"}`, 24, 101);
-    doc.text(`Total de passageiros: ${group.tickets.length}`, 24, 111);
+    if (tripGroups.length === 1) {
+      doc.text(`Partida: ${formatDate(firstTicket.trips?.departure_time)}`, 24, 90);
+      doc.text(`Empresa: ${firstTicket.trips?.buses?.companies?.name || "NawaBus"}`, 24, 101);
+    } else {
+      doc.text(`${tripGroups.length} viagens nesta compra`, 24, 90);
+      doc.text(`Empresa: ${firstTicket.trips?.buses?.companies?.name || "NawaBus"}`, 24, 101);
+    }
+    doc.text(`Total de bilhetes: ${group.tickets.length}`, 24, 111);
 
     doc.setFillColor(255, 249, 235);
     doc.setDrawColor(...orange);
@@ -181,8 +217,8 @@ async function downloadPaidTicketGroup(group, user) {
     doc.text("Passageiros neste bilhete", 24, 142);
 
     let y = 154;
-    group.tickets.forEach((ticket, index) => {
-      if (y > 224) {
+    tripGroups.forEach((tripGroup, tripIndex) => {
+      if (y > 218) {
         doc.addPage();
         doc.setFillColor(...dark);
         doc.rect(0, 0, 210, 32, "F");
@@ -193,19 +229,46 @@ async function downloadPaidTicketGroup(group, user) {
         y = 48;
       }
 
-      const ticketCode = ticket.ticket_number?.length > 9
-        ? ticket.ticket_number.substring(9)
-        : ticket.ticket_number || ticket.id.substring(0, 8);
-
-      doc.setTextColor(...orange);
-      doc.setFont(undefined, "bold");
-      doc.text(`${index + 1}. Lugar ${ticket.seat_number || "N/A"}`, 24, y);
       doc.setTextColor(...dark);
-      doc.setFont(undefined, "normal");
-      doc.text(getPassengerName(ticket, user), 68, y, { maxWidth: 72 });
+      doc.setFont(undefined, "bold");
+      doc.setFontSize(10);
+      doc.text(`Viagem ${tripIndex + 1}: ${getRoute(tripGroup.firstTicket)}`, 24, y, { maxWidth: 160 });
+      y += 6;
       doc.setTextColor(...muted);
-      doc.text(ticketCode, 150, y, { maxWidth: 36 });
-      y += 9;
+      doc.setFont(undefined, "normal");
+      doc.setFontSize(9);
+      doc.text(`Partida: ${formatDate(tripGroup.firstTicket.trips?.departure_time)}`, 24, y);
+      y += 8;
+
+      tripGroup.tickets.forEach((ticket, ticketIndex) => {
+        if (y > 224) {
+          doc.addPage();
+          doc.setFillColor(...dark);
+          doc.rect(0, 0, 210, 32, "F");
+          doc.setTextColor(255, 255, 255);
+          doc.setFont(undefined, "bold");
+          doc.setFontSize(16);
+          doc.text("NAWABUS - Manifesto", 18, 20);
+          y = 48;
+        }
+
+        const ticketCode = ticket.ticket_number?.length > 9
+          ? ticket.ticket_number.substring(9)
+          : ticket.ticket_number || ticket.id.substring(0, 8);
+
+        doc.setTextColor(...orange);
+        doc.setFont(undefined, "bold");
+        doc.setFontSize(9);
+        doc.text(`${ticketIndex + 1}. Lugar ${ticket.seat_number || "N/A"}`, 28, y);
+        doc.setTextColor(...dark);
+        doc.setFont(undefined, "normal");
+        doc.text(getPassengerName(ticket, user), 72, y, { maxWidth: 70 });
+        doc.setTextColor(...muted);
+        doc.text(ticketCode, 150, y, { maxWidth: 36 });
+        y += 8;
+      });
+
+      y += 3;
     });
 
     doc.setFillColor(220, 252, 231);
@@ -841,7 +904,11 @@ export function UserTicketHub() {
 
 function PaidGroupCard({ group, user, onShowQr }) {
   const ticket = group.firstTicket;
-  const seats = group.tickets.map((item) => item.seat_number).join(", ");
+  const tripGroups = groupTicketsByTrip(group.tickets);
+  const routeSummary = getGroupRouteSummary(group);
+  const seats = tripGroups
+    .map((tripGroup, index) => `V${index + 1}: ${tripGroup.tickets.map((item) => item.seat_number).join(", ")}`)
+    .join(" | ");
   const [isDownloading, setIsDownloading] = useState(false);
 
   async function handleDownload() {
@@ -867,12 +934,16 @@ function PaidGroupCard({ group, user, onShowQr }) {
               <CheckCircle2 className="h-4 w-4" />
               Pago
             </div>
-            <h3 className="mt-2 truncate text-lg font-semibold">{getRoute(ticket)}</h3>
-            <p className="mt-1 text-sm text-neutral-400">{formatDate(ticket.trips?.departure_time)}</p>
+            <h3 className="mt-2 line-clamp-2 text-lg font-semibold">{routeSummary}</h3>
+            <p className="mt-1 text-sm text-neutral-400">
+              {tripGroups.length > 1
+                ? `${tripGroups.length} viagens nesta compra`
+                : formatDate(ticket.trips?.departure_time)}
+            </p>
           </div>
           <div className="rounded-2xl bg-[#FF8C00] px-3 py-2 text-center text-black">
             <p className="text-[10px] font-semibold uppercase">Lugares</p>
-            <p className="text-sm font-bold">{seats}</p>
+            <p className="max-w-24 text-xs font-bold leading-tight">{seats}</p>
           </div>
         </div>
       </div>
