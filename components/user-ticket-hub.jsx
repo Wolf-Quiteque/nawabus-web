@@ -18,6 +18,7 @@ import {
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase-client";
+import { isRestrictedInAppBrowser, openExternalBrowser } from "@/lib/in-app-browser";
 
 const BRAND_ORANGE = "#FF8C00";
 const ENTITY = "1219";
@@ -63,9 +64,18 @@ function getRoute(ticket) {
   return `${route.origin_city || "Origem"} -> ${route.destination_city || "Destino"}`;
 }
 
-function getPassengerName(ticket, user) {
+function getPassengerName(ticket, user, payment) {
   const companionName = ticket?.ticket_companions?.[0]?.name?.trim();
   if (companionName) return companionName;
+
+  const bookingDetails = payment?.gateway_response?.booking_details;
+  const bookingTrip = [bookingDetails?.outbound_trip, bookingDetails?.return_trip]
+    .filter(Boolean)
+    .find((trip) => trip.trip_id === ticket?.trip_id);
+  const bookingCompanion = bookingTrip?.companions?.[String(ticket?.seat_number)] ||
+    bookingTrip?.companions?.[Number(ticket?.seat_number)];
+  const bookingCompanionName = bookingCompanion?.name?.trim();
+  if (bookingCompanionName) return bookingCompanionName;
 
   const userName = (
     user?.user_metadata?.full_name ||
@@ -168,7 +178,7 @@ function getUpcomingRideCount(tickets) {
   return upcomingRideKeys.size;
 }
 
-async function downloadPaidTicketGroup(group, user) {
+async function downloadPaidTicketGroup(group, user, payment) {
   const doc = new jsPDF();
   const orange = [255, 140, 0];
   const dark = [24, 24, 27];
@@ -264,7 +274,7 @@ async function downloadPaidTicketGroup(group, user) {
         doc.text(`${ticketIndex + 1}. Lugar ${ticket.seat_number || "N/A"}`, 28, y);
         doc.setTextColor(...dark);
         doc.setFont(undefined, "normal");
-        doc.text(getPassengerName(ticket, user), 72, y, { maxWidth: 70 });
+        doc.text(getPassengerName(ticket, user, payment), 72, y, { maxWidth: 70 });
         doc.setTextColor(...muted);
         doc.text(ticketCode, 150, y, { maxWidth: 36 });
         y += 8;
@@ -287,7 +297,7 @@ async function downloadPaidTicketGroup(group, user) {
     if (index > 0 || hasManifest) doc.addPage();
 
     const qrDataUrl = await QRCode.toDataURL(ticket.id, { width: 220, margin: 1 });
-    const passengerName = getPassengerName(ticket, user);
+    const passengerName = getPassengerName(ticket, user, payment);
     const ticketCode = ticket.ticket_number?.length > 9
       ? ticket.ticket_number.substring(9)
       : ticket.ticket_number || ticket.id.substring(0, 8);
@@ -388,6 +398,7 @@ export function UserTicketHub() {
   const [authError, setAuthError] = useState("");
   const [activeTab, setActiveTab] = useState("paid");
   const [tickets, setTickets] = useState([]);
+  const [paymentsByReference, setPaymentsByReference] = useState({});
   const [pendingTransactions, setPendingTransactions] = useState([]);
   const [dataLoading, setDataLoading] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
@@ -407,6 +418,7 @@ export function UserTicketHub() {
       setUser(session?.user || null);
       if (!session?.user) {
         setTickets([]);
+        setPaymentsByReference({});
         setPendingTransactions([]);
         setSelectedTicket(null);
       }
@@ -490,6 +502,27 @@ export function UserTicketHub() {
 
       if (ticketsError) throw ticketsError;
       setTickets(paidTickets || []);
+
+      const paidReferences = [
+        ...new Set((paidTickets || []).map((ticket) => ticket.payment_reference).filter(Boolean)),
+      ];
+      if (paidReferences.length > 0) {
+        const { data: completedPayments, error: completedPaymentsError } = await supabase
+          .from("payment_transactions")
+          .select("transaction_id, gateway_response")
+          .in("transaction_id", paidReferences);
+
+        if (completedPaymentsError) {
+          console.warn("Completed payment lookup failed:", completedPaymentsError.message);
+          setPaymentsByReference({});
+        } else {
+          setPaymentsByReference(
+            Object.fromEntries((completedPayments || []).map((payment) => [payment.transaction_id, payment]))
+          );
+        }
+      } else {
+        setPaymentsByReference({});
+      }
 
       const { data: pending, error: pendingError } = await supabase
         .from("payment_transactions")
@@ -843,6 +876,7 @@ export function UserTicketHub() {
                             key={group.reference || group.firstTicket.trip_id || group.firstTicket.id}
                             group={group}
                             user={user}
+                            payment={paymentsByReference[group.reference]}
                             onShowQr={setSelectedTicket}
                           />
                         ))}
@@ -904,7 +938,7 @@ export function UserTicketHub() {
   );
 }
 
-function PaidGroupCard({ group, user, onShowQr }) {
+function PaidGroupCard({ group, user, payment, onShowQr }) {
   const ticket = group.firstTicket;
   const tripGroups = groupTicketsByTrip(group.tickets);
   const routeSummary = getGroupRouteSummary(group);
@@ -916,9 +950,17 @@ function PaidGroupCard({ group, user, onShowQr }) {
   async function handleDownload() {
     if (isDownloading) return;
 
+    if (isRestrictedInAppBrowser()) {
+      const publicTicketUrl = group.reference
+        ? `${window.location.origin}/bilhetes/${encodeURIComponent(group.reference)}`
+        : window.location.href;
+      openExternalBrowser(publicTicketUrl);
+      return;
+    }
+
     setIsDownloading(true);
     try {
-      await downloadPaidTicketGroup(group, user);
+      await downloadPaidTicketGroup(group, user, payment);
     } catch (err) {
       console.error("Paid ticket PDF failed:", err);
       alert("Nao foi possivel gerar o PDF dos bilhetes. Tente novamente.");
@@ -965,7 +1007,7 @@ function PaidGroupCard({ group, user, onShowQr }) {
               className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-left transition hover:bg-white/10"
             >
               <span className="min-w-0">
-                <span className="block truncate text-sm font-medium">{getPassengerName(ticket, user)}</span>
+                <span className="block truncate text-sm font-medium">{getPassengerName(ticket, user, payment)}</span>
                 <span className="text-xs text-neutral-500">Lugar {ticket.seat_number}</span>
               </span>
               <QrCode className="h-5 w-5 text-orange-300" />

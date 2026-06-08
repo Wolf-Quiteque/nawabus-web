@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { UserTicketHub } from "@/components/user-ticket-hub";
+import { ExternalBrowserNotice } from "@/components/external-browser-notice";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,6 +29,7 @@ export default function RootLayout({ children }) {
       >
         {children}
         <UserTicketHub />
+        <ExternalBrowserNotice />
       </body>
     </html>
   );

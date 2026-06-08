@@ -5,10 +5,20 @@ import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase-client';
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
+import { isRestrictedInAppBrowser, openExternalBrowser } from '@/lib/in-app-browser';
 
-function getTicketPassengerName(ticket) {
+function getTicketPassengerName(ticket, payment) {
   const companionName = ticket?.ticket_companions?.[0]?.name?.trim();
   if (companionName) return companionName;
+
+  const bookingDetails = payment?.gateway_response?.booking_details;
+  const bookingTrip = [bookingDetails?.outbound_trip, bookingDetails?.return_trip]
+    .filter(Boolean)
+    .find((trip) => trip.trip_id === ticket?.trip_id);
+  const bookingCompanion = bookingTrip?.companions?.[String(ticket?.seat_number)] ||
+    bookingTrip?.companions?.[Number(ticket?.seat_number)];
+  const bookingCompanionName = bookingCompanion?.name?.trim();
+  if (bookingCompanionName) return bookingCompanionName;
 
   const profileName = ticket?.profiles
     ? `${ticket.profiles.first_name || ''} ${ticket.profiles.last_name || ''}`.trim()
@@ -101,12 +111,14 @@ export default function DownloadTicketPage() {
         setPaymentData(paymentData); // Store payment data separately
         setIsLoading(false);
 
-        // Auto-generate PDF after loading data. Some mobile browsers block this,
-        // so the page also shows a manual download button below.
-        setTimeout(() => {
-          handleDownloadPdf(ticketsWithProfiles, paymentData)
-            .catch((err) => console.error('Auto ticket PDF error:', err));
-        }, 500);
+        // Auto-generate PDF after loading data. In-app browsers like Instagram
+        // often block downloads, so those users should open the real browser.
+        if (!isRestrictedInAppBrowser()) {
+          setTimeout(() => {
+            handleDownloadPdf(ticketsWithProfiles, paymentData)
+              .catch((err) => console.error('Auto ticket PDF error:', err));
+          }, 500);
+        }
       } catch (err) {
         console.error('Fetch error:', err);
         setError('Erro ao carregar dados do bilhete');
@@ -133,7 +145,7 @@ export default function DownloadTicketPage() {
         const singleTicket = ticket[index];
         if (index > 0) doc.addPage();
 
-        const passengerName = getTicketPassengerName(singleTicket);
+        const passengerName = getTicketPassengerName(singleTicket, payment);
         const ticketNumber = singleTicket.ticket_number && singleTicket.ticket_number.length > 9
           ? singleTicket.ticket_number.substring(9)
           : singleTicket.ticket_number || 'N/A';
@@ -238,7 +250,7 @@ export default function DownloadTicketPage() {
       nif: "5000451738",
       address: "",
       phone: "+244 930 533 405",
-      passengerName: getTicketPassengerName(ticket),
+      passengerName: getTicketPassengerName(ticket, payment),
       ticketNumber: trimmedTicketNumber,
       routeName: ticket.trips?.routes 
         ? `${ticket.trips.routes.origin_city || 'Origem'} → ${ticket.trips.routes.destination_city || 'Destino'}`
@@ -415,6 +427,11 @@ export default function DownloadTicketPage() {
 
   const handleManualPdfDownload = async () => {
     if (isDownloadingPdf) return;
+
+    if (isRestrictedInAppBrowser()) {
+      openExternalBrowser(window.location.href);
+      return;
+    }
 
     setIsDownloadingPdf(true);
     try {
