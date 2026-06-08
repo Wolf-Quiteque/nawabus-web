@@ -188,41 +188,215 @@ export default function CheckoutPage() {
     'Cliente'
   );
 
-  const downloadPaymentReferencePdf = (paymentReference, finalPrice, user) => {
+  const downloadPaymentReferencePdf = async (paymentReference, finalPrice, user) => {
     if (!bookingDetails || !paymentReference) return;
 
     const { tripType, outboundTrip, returnTrip } = bookingDetails;
     const doc = new jsPDF();
-    const orange = [245, 158, 11];
-    const darkGray = [45, 45, 45];
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const brand = [180, 128, 20];
+    const brandDark = [38, 38, 38];
+    const brandSoft = [255, 249, 235];
+    const muted = [98, 105, 118];
+    const border = [229, 231, 235];
     const warningRed = [185, 28, 28];
-
+    const warningFill = [254, 242, 242];
+    const paidGreen = [22, 101, 52];
     const passengerName = getUserDisplayName(user);
     const now = new Date();
+    const formattedAmount = `${Math.round(finalPrice).toLocaleString('pt-PT')},00 Kz`;
+    const paymentDeadline = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+    const routeName = (trip) =>
+      `${trip.routes?.origin_city || trip.origin || 'Origem'} -> ${trip.routes?.destination_city || trip.destination || 'Destino'}`;
+
+    const tripDate = (trip) =>
+      trip.departure_time
+        ? new Date(trip.departure_time).toLocaleString('pt-PT', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+        : 'Data nao definida';
+
+    const drawPageChrome = () => {
+      doc.setFillColor(250, 250, 249);
+      doc.rect(0, 0, pageWidth, pageHeight, 'F');
+
+      doc.setFillColor(...brandDark);
+      doc.rect(0, 0, pageWidth, 42, 'F');
+      doc.setFillColor(...brand);
+      doc.rect(0, 38, pageWidth, 4, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont(undefined, 'bold');
+      doc.setFontSize(24);
+      doc.text('NAWABUS', 18, 18);
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text('Referencia MULTICAIXA', 18, 29);
+
+      doc.setDrawColor(...brand);
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(150, 10, 42, 22, 3, 3, 'FD');
+      doc.setTextColor(...brandDark);
+      doc.setFont(undefined, 'bold');
+      doc.setFontSize(8);
+      doc.text('ESTADO', 171, 17, { align: 'center' });
+      doc.setTextColor(...warningRed);
+      doc.setFontSize(11);
+      doc.text('POR PAGAR', 171, 25, { align: 'center' });
+    };
+
+    const drawFooter = () => {
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let page = 1; page <= pageCount; page += 1) {
+        doc.setPage(page);
+        doc.setDrawColor(...border);
+        doc.line(16, 280, 194, 280);
+        doc.setTextColor(...muted);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(8);
+        doc.text('NawaBus - Documento de referencia. O bilhete valido sera emitido somente apos pagamento confirmado.', 16, 286);
+        doc.text(`Pagina ${page}/${pageCount}`, 194, 286, { align: 'right' });
+      }
+    };
+
+    const drawWrappedText = (text, x, y, maxWidth, lineHeight = 5) => {
+      const lines = doc.splitTextToSize(text, maxWidth);
+      doc.text(lines, x, y);
+      return y + (lines.length * lineHeight);
+    };
+
+    const drawNotice = () => {
+      doc.setFillColor(...warningFill);
+      doc.setDrawColor(...warningRed);
+      doc.roundedRect(16, 50, 178, 24, 4, 4, 'FD');
+      doc.setTextColor(...warningRed);
+      doc.setFont(undefined, 'bold');
+      doc.setFontSize(12);
+      doc.text('ESTE DOCUMENTO NAO E BILHETE', 105, 59, { align: 'center' });
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(9);
+      doc.text('A viagem, os lugares e os bilhetes so ficam validos depois da confirmacao do pagamento.', 105, 67, { align: 'center' });
+    };
+
+    const drawPaymentCard = async () => {
+      let qrDataUrl = null;
+      try {
+        qrDataUrl = await QRCode.toDataURL(JSON.stringify({
+          type: 'nawabus_payment_reference',
+          entidade: '1219',
+          referencia: paymentReference,
+          valor: Math.round(finalPrice),
+          cliente: passengerName,
+        }), { width: 180, margin: 1 });
+      } catch (err) {
+        console.error('Could not generate reference QR code:', err);
+      }
+
+      doc.setFillColor(255, 255, 255);
+      doc.setDrawColor(...border);
+      doc.roundedRect(16, 82, 178, 60, 5, 5, 'FD');
+
+      doc.setFillColor(...brandSoft);
+      doc.roundedRect(22, 90, 106, 43, 4, 4, 'F');
+      doc.setTextColor(...muted);
+      doc.setFont(undefined, 'bold');
+      doc.setFontSize(9);
+      doc.text('PAGAMENTO MULTICAIXA', 28, 99);
+
+      doc.setTextColor(...brandDark);
+      doc.setFontSize(10);
+      doc.text('Entidade', 28, 110);
+      doc.text('Referencia', 28, 122);
+      doc.text('Valor', 28, 134);
+
+      doc.setFont(undefined, 'bold');
+      doc.setFontSize(13);
+      doc.text('1219', 70, 110);
+      doc.setFontSize(16);
+      doc.text(String(paymentReference), 70, 122);
+      doc.setTextColor(...paidGreen);
+      doc.setFontSize(13);
+      doc.text(formattedAmount, 70, 134);
+
+      if (qrDataUrl) {
+        doc.addImage(qrDataUrl, 'PNG', 142, 91, 34, 34);
+      } else {
+        doc.setDrawColor(...border);
+        doc.roundedRect(142, 91, 34, 34, 3, 3);
+      }
+      doc.setTextColor(...muted);
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(8);
+      doc.text('Guardar referencia', 159, 131, { align: 'center' });
+      doc.text('para pagamento', 159, 136, { align: 'center' });
+    };
+
+    const drawSummary = () => {
+      doc.setFillColor(255, 255, 255);
+      doc.setDrawColor(...border);
+      doc.roundedRect(16, 150, 178, 28, 4, 4, 'FD');
+      doc.setTextColor(...muted);
+      doc.setFont(undefined, 'bold');
+      doc.setFontSize(8);
+      doc.text('CLIENTE', 24, 160);
+      doc.text('EMITIDO EM', 88, 160);
+      doc.text('PAGAR ATE', 150, 160);
+
+      doc.setTextColor(...brandDark);
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'normal');
+      doc.text(doc.splitTextToSize(passengerName, 55), 24, 168);
+      doc.text(now.toLocaleString('pt-PT'), 88, 168);
+      doc.text(paymentDeadline.toLocaleString('pt-PT'), 150, 168);
+    };
 
     const renderTrip = (title, trip, startY) => {
       let y = startY;
       const sortedSeats = [...(trip.selectedSeats || [])].sort((a, b) => a - b);
       const companions = trip.companions || {};
 
-      doc.setTextColor(...orange);
-      doc.setFontSize(12);
-      doc.setFont(undefined, 'bold');
-      doc.text(title, 20, y);
-      y += 8;
+      if (y > 220) {
+        doc.addPage();
+        drawPageChrome();
+        y = 52;
+      }
 
-      doc.setTextColor(...darkGray);
+      const estimatedHeight = 38 + (sortedSeats.length * 7);
+      doc.setFillColor(255, 255, 255);
+      doc.setDrawColor(...border);
+      doc.roundedRect(16, y, 178, Math.min(estimatedHeight, 96), 4, 4, 'FD');
+
+      doc.setFillColor(...brandDark);
+      doc.roundedRect(16, y, 178, 14, 4, 4, 'F');
+      doc.setTextColor(255, 255, 255);
       doc.setFontSize(10);
-      doc.setFont(undefined, 'normal');
-      doc.text(`Rota: ${trip.routes?.origin_city || 'Origem'} -> ${trip.routes?.destination_city || 'Destino'}`, 20, y);
-      y += 7;
-      doc.text(`Partida: ${trip.departure_time ? new Date(trip.departure_time).toLocaleString('pt-PT') : 'Data nao definida'}`, 20, y);
-      y += 7;
-      doc.text(`Autocarro: ${trip.buses?.license_plate || trip.bus_plate || 'N/A'}`, 20, y);
+      doc.setFont(undefined, 'bold');
+      doc.text(title, 24, y + 9);
+
+      y += 23;
+      doc.setTextColor(...brandDark);
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'bold');
+      doc.text(routeName(trip), 24, y);
       y += 7;
 
+      doc.setTextColor(...muted);
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Partida: ${tripDate(trip)}`, 24, y);
+      y += 6;
+      doc.text(`Autocarro: ${trip.buses?.license_plate || trip.bus_plate || 'N/A'}    Classe: ${trip.seat_class || 'economy'}`, 24, y);
+      y += 9;
+
+      doc.setTextColor(...brandDark);
       doc.setFont(undefined, 'bold');
-      doc.text('Passageiros / lugares selecionados:', 20, y);
+      doc.text('Passageiros e lugares selecionados', 24, y);
       doc.setFont(undefined, 'normal');
       y += 7;
 
@@ -230,76 +404,55 @@ export default function CheckoutPage() {
         const name = index === 0 ? passengerName : (companions[seat]?.name || 'Passageiro adicional');
         if (y > 265) {
           doc.addPage();
-          y = 20;
+          drawPageChrome();
+          y = 52;
         }
-        doc.text(`Lugar ${seat}: ${name}`, 25, y);
-        y += 6;
+        doc.setFillColor(250, 250, 249);
+        doc.setDrawColor(...border);
+        doc.roundedRect(24, y - 4.5, 162, 7, 2, 2, 'FD');
+        doc.setTextColor(...brand);
+        doc.setFont(undefined, 'bold');
+        doc.text(`Lugar ${seat}`, 29, y);
+        doc.setTextColor(...brandDark);
+        doc.setFont(undefined, 'normal');
+        doc.text(doc.splitTextToSize(name, 115), 62, y);
+        y += 8;
       });
 
-      return y + 5;
+      return y + 9;
     };
 
-    doc.setFillColor(...orange);
-    doc.rect(0, 0, 210, 42, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(24);
-    doc.setFont(undefined, 'bold');
-    doc.text('NAWABUS', 105, 20, { align: 'center' });
-    doc.setFontSize(12);
-    doc.text('Referencia de pagamento', 105, 31, { align: 'center' });
+    drawPageChrome();
+    drawNotice();
+    await drawPaymentCard();
+    drawSummary();
 
-    doc.setTextColor(...warningRed);
-    doc.setFontSize(13);
-    doc.setFont(undefined, 'bold');
-    doc.text('ESTE DOCUMENTO NAO E BILHETE', 105, 55, { align: 'center' });
-
-    doc.setTextColor(...darkGray);
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'normal');
-    doc.text('O bilhete so sera emitido e valido depois da confirmacao do pagamento.', 105, 63, { align: 'center' });
-
-    doc.setDrawColor(...orange);
-    doc.setFillColor(255, 248, 240);
-    doc.roundedRect(15, 75, 180, 48, 4, 4, 'FD');
-    doc.setTextColor(...darkGray);
-    doc.setFontSize(11);
-    doc.setFont(undefined, 'bold');
-    doc.text('Dados para pagamento MULTICAIXA', 20, 87);
-    doc.setFont(undefined, 'normal');
-    doc.text('Entidade: 1219', 20, 99);
-    doc.setFontSize(18);
-    doc.setFont(undefined, 'bold');
-    doc.text(`Referencia: ${paymentReference}`, 105, 108, { align: 'center' });
-    doc.setFontSize(12);
-    doc.text(`Valor: ${Math.round(finalPrice)},00 Kz`, 105, 118, { align: 'center' });
-
-    doc.setTextColor(...darkGray);
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'normal');
-    doc.text(`Cliente: ${passengerName}`, 20, 137);
-    doc.text(`Emitido em: ${now.toLocaleString('pt-PT')}`, 20, 145);
-
-    let y = renderTrip('VIAGEM DE IDA', outboundTrip, 160);
+    let y = renderTrip('VIAGEM DE IDA', outboundTrip, 188);
     if (tripType === 'round-trip' && returnTrip) {
       y = renderTrip('VIAGEM DE VOLTA', returnTrip, y);
     }
 
     if (y > 230) {
       doc.addPage();
-      y = 25;
+      drawPageChrome();
+      y = 52;
     }
 
-    doc.setFillColor(254, 242, 242);
+    doc.setFillColor(...warningFill);
     doc.setDrawColor(...warningRed);
-    doc.roundedRect(15, y, 180, 40, 4, 4, 'FD');
+    doc.roundedRect(16, y, 178, 36, 4, 4, 'FD');
     doc.setTextColor(...warningRed);
     doc.setFont(undefined, 'bold');
-    doc.text('IMPORTANTE', 20, y + 10);
+    doc.setFontSize(10);
+    doc.text('IMPORTANTE', 24, y + 10);
     doc.setFont(undefined, 'normal');
     doc.setFontSize(9);
-    doc.text('- Esta referencia nao confirma a viagem.', 20, y + 18);
-    doc.text('- Os lugares e bilhetes so ficam validos depois do pagamento confirmado.', 20, y + 25);
-    doc.text('- Apos o pagamento, recebera o link para baixar o(s) bilhete(s).', 20, y + 32);
+    let noticeY = y + 18;
+    noticeY = drawWrappedText('- Esta referencia nao confirma a viagem nem reserva definitivamente os lugares.', 24, noticeY, 162, 5);
+    noticeY = drawWrappedText('- Depois do pagamento confirmado, a NawaBus emite automaticamente o(s) bilhete(s) valido(s).', 24, noticeY + 1, 162, 5);
+    drawWrappedText('- Apresente apenas o PDF final do bilhete ou o SMS de confirmacao no embarque.', 24, noticeY + 1, 162, 5);
+
+    drawFooter();
 
     doc.save(`nawabus-referencia-${paymentReference}.pdf`);
   };
