@@ -12,6 +12,7 @@ export default function DownloadTicketPage() {
   const [ticketData, setTicketData] = useState(null);
   const [paymentData, setPaymentData] = useState(null); // Added state for payment data
   const [isLoading, setIsLoading] = useState(true);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [error, setError] = useState(null);
   const supabase = createClient();
 
@@ -87,8 +88,12 @@ export default function DownloadTicketPage() {
         setPaymentData(paymentData); // Store payment data separately
         setIsLoading(false);
 
-        // Auto-generate PDF after loading data
-        setTimeout(() => handleDownloadPdf(ticketsWithProfiles, paymentData), 500);
+        // Auto-generate PDF after loading data. Some mobile browsers block this,
+        // so the page also shows a manual download button below.
+        setTimeout(() => {
+          handleDownloadPdf(ticketsWithProfiles, paymentData)
+            .catch((err) => console.error('Auto ticket PDF error:', err));
+        }, 500);
       } catch (err) {
         console.error('Fetch error:', err);
         setError('Erro ao carregar dados do bilhete');
@@ -410,6 +415,20 @@ export default function DownloadTicketPage() {
     doc.save(fileName);
   };
 
+  const handleManualPdfDownload = async () => {
+    if (isDownloadingPdf) return;
+
+    setIsDownloadingPdf(true);
+    try {
+      await handleDownloadPdf(ticketData, paymentData);
+    } catch (err) {
+      console.error('Manual ticket PDF error:', err);
+      alert('Nao foi possivel gerar o PDF. Tente novamente.');
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -446,10 +465,11 @@ export default function DownloadTicketPage() {
         <h2 className="text-xl font-bold text-green-800 mb-2">Bilhete Encontrado</h2>
         <button
           type="button"
-          onClick={() => handleDownloadPdf(ticketData, paymentData)}
-          className="mb-4 rounded-lg bg-green-700 px-5 py-3 font-semibold text-white transition-colors hover:bg-green-800"
+          onClick={handleManualPdfDownload}
+          disabled={isDownloadingPdf}
+          className="mb-4 w-full rounded-lg bg-green-700 px-5 py-3 font-semibold text-white transition-colors hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Baixar bilhete novamente
+          {isDownloadingPdf ? 'A gerar PDF...' : 'Baixar bilhete / factura (PDF)'}
         </button>
         <p className="text-green-700 mb-4">O download do seu bilhete começará automaticamente.</p>
         <p className="text-sm text-gray-600">Se o download não iniciar, verifique as permissões do seu navegador.</p>

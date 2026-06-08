@@ -23,6 +23,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const [bookingDetails, setBookingDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [referencePdfLoading, setReferencePdfLoading] = useState(false);
   const [reference, setReference] = useState(null);
   const [ticketNumbers, setTicketNumbers] = useState({ outbound: null, return: null });
   const [outboundTicket, setOutboundTicket] = useState(null);
@@ -189,7 +190,9 @@ export default function CheckoutPage() {
   );
 
   const downloadPaymentReferencePdf = async (paymentReference, finalPrice, user) => {
-    if (!bookingDetails || !paymentReference) return;
+    if (!bookingDetails || !paymentReference) {
+      throw new Error('Faltam dados para gerar a referencia de pagamento.');
+    }
 
     const { tripType, outboundTrip, returnTrip } = bookingDetails;
     const doc = new jsPDF();
@@ -457,6 +460,20 @@ export default function CheckoutPage() {
     doc.save(`nawabus-referencia-${paymentReference}.pdf`);
   };
 
+  const handleReferencePdfDownload = async (paymentReference, finalPrice, user) => {
+    if (referencePdfLoading) return;
+
+    setReferencePdfLoading(true);
+    try {
+      await downloadPaymentReferencePdf(paymentReference, finalPrice, user);
+    } catch (err) {
+      console.error('Reference PDF error:', err);
+      alert(err.message || 'Nao foi possivel gerar o PDF da referencia. Tente novamente.');
+    } finally {
+      setReferencePdfLoading(false);
+    }
+  };
+
   const proceedWithPayment = async (user) => {
     if (!bookingDetails) return;
 
@@ -514,7 +531,10 @@ export default function CheckoutPage() {
         }
 
         setReference(result.reference_number);
-        setTimeout(() => downloadPaymentReferencePdf(result.reference_number, finalPrice, user), 0);
+        setTimeout(() => {
+          downloadPaymentReferencePdf(result.reference_number, finalPrice, user)
+            .catch((err) => console.error('Auto reference PDF error:', err));
+        }, 0);
         return;
       }
 
@@ -1473,11 +1493,16 @@ const handleDownloadPdf = async () => {
                     O bilhete sera emitido automaticamente apos a confirmacao do pagamento.
                   </p>
                   <Button
-                    onClick={() => downloadPaymentReferencePdf(reference, finalPrice, currentUser)}
+                    type="button"
+                    onClick={() => handleReferencePdfDownload(reference, finalPrice, currentUser)}
+                    disabled={referencePdfLoading}
                     className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white"
                   >
-                    Baixar referencia de pagamento (PDF)
+                    {referencePdfLoading ? 'A gerar PDF...' : 'Baixar referencia / factura (PDF)'}
                   </Button>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Se o download automatico nao abrir, toque neste botao.
+                  </p>
                 </div>
               ) : reference === 'CASH_PAYMENT' ? (
                 <div className="text-center p-6 border-2 border-green-500 border-dashed rounded-lg bg-green-50 dark:bg-green-900/20">
