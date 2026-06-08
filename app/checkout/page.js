@@ -182,6 +182,128 @@ export default function CheckoutPage() {
     }
   };
 
+  const getUserDisplayName = (user) => (
+    user?.user_metadata?.full_name ||
+    `${user?.user_metadata?.first_name || ''} ${user?.user_metadata?.last_name || ''}`.trim() ||
+    'Cliente'
+  );
+
+  const downloadPaymentReferencePdf = (paymentReference, finalPrice, user) => {
+    if (!bookingDetails || !paymentReference) return;
+
+    const { tripType, outboundTrip, returnTrip } = bookingDetails;
+    const doc = new jsPDF();
+    const orange = [245, 158, 11];
+    const darkGray = [45, 45, 45];
+    const warningRed = [185, 28, 28];
+
+    const passengerName = getUserDisplayName(user);
+    const now = new Date();
+
+    const renderTrip = (title, trip, startY) => {
+      let y = startY;
+      const sortedSeats = [...(trip.selectedSeats || [])].sort((a, b) => a - b);
+      const companions = trip.companions || {};
+
+      doc.setTextColor(...orange);
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text(title, 20, y);
+      y += 8;
+
+      doc.setTextColor(...darkGray);
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Rota: ${trip.routes?.origin_city || 'Origem'} -> ${trip.routes?.destination_city || 'Destino'}`, 20, y);
+      y += 7;
+      doc.text(`Partida: ${trip.departure_time ? new Date(trip.departure_time).toLocaleString('pt-PT') : 'Data nao definida'}`, 20, y);
+      y += 7;
+      doc.text(`Autocarro: ${trip.buses?.license_plate || trip.bus_plate || 'N/A'}`, 20, y);
+      y += 7;
+
+      doc.setFont(undefined, 'bold');
+      doc.text('Passageiros / lugares selecionados:', 20, y);
+      doc.setFont(undefined, 'normal');
+      y += 7;
+
+      sortedSeats.forEach((seat, index) => {
+        const name = index === 0 ? passengerName : (companions[seat]?.name || 'Passageiro adicional');
+        if (y > 265) {
+          doc.addPage();
+          y = 20;
+        }
+        doc.text(`Lugar ${seat}: ${name}`, 25, y);
+        y += 6;
+      });
+
+      return y + 5;
+    };
+
+    doc.setFillColor(...orange);
+    doc.rect(0, 0, 210, 42, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont(undefined, 'bold');
+    doc.text('NAWABUS', 105, 20, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text('Referencia de pagamento', 105, 31, { align: 'center' });
+
+    doc.setTextColor(...warningRed);
+    doc.setFontSize(13);
+    doc.setFont(undefined, 'bold');
+    doc.text('ESTE DOCUMENTO NAO E BILHETE', 105, 55, { align: 'center' });
+
+    doc.setTextColor(...darkGray);
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text('O bilhete so sera emitido e valido depois da confirmacao do pagamento.', 105, 63, { align: 'center' });
+
+    doc.setDrawColor(...orange);
+    doc.setFillColor(255, 248, 240);
+    doc.roundedRect(15, 75, 180, 48, 4, 4, 'FD');
+    doc.setTextColor(...darkGray);
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.text('Dados para pagamento MULTICAIXA', 20, 87);
+    doc.setFont(undefined, 'normal');
+    doc.text('Entidade: 1219', 20, 99);
+    doc.setFontSize(18);
+    doc.setFont(undefined, 'bold');
+    doc.text(`Referencia: ${paymentReference}`, 105, 108, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text(`Valor: ${Math.round(finalPrice)},00 Kz`, 105, 118, { align: 'center' });
+
+    doc.setTextColor(...darkGray);
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Cliente: ${passengerName}`, 20, 137);
+    doc.text(`Emitido em: ${now.toLocaleString('pt-PT')}`, 20, 145);
+
+    let y = renderTrip('VIAGEM DE IDA', outboundTrip, 160);
+    if (tripType === 'round-trip' && returnTrip) {
+      y = renderTrip('VIAGEM DE VOLTA', returnTrip, y);
+    }
+
+    if (y > 230) {
+      doc.addPage();
+      y = 25;
+    }
+
+    doc.setFillColor(254, 242, 242);
+    doc.setDrawColor(...warningRed);
+    doc.roundedRect(15, y, 180, 40, 4, 4, 'FD');
+    doc.setTextColor(...warningRed);
+    doc.setFont(undefined, 'bold');
+    doc.text('IMPORTANTE', 20, y + 10);
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(9);
+    doc.text('- Esta referencia nao confirma a viagem.', 20, y + 18);
+    doc.text('- Os lugares e bilhetes so ficam validos depois do pagamento confirmado.', 20, y + 25);
+    doc.text('- Apos o pagamento, recebera o link para baixar o(s) bilhete(s).', 20, y + 32);
+
+    doc.save(`nawabus-referencia-${paymentReference}.pdf`);
+  };
+
   const proceedWithPayment = async (user) => {
     if (!bookingDetails) return;
 
@@ -239,6 +361,7 @@ export default function CheckoutPage() {
         }
 
         setReference(result.reference_number);
+        setTimeout(() => downloadPaymentReferencePdf(result.reference_number, finalPrice, user), 0);
         return;
       }
 
@@ -1196,6 +1319,12 @@ const handleDownloadPdf = async () => {
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     O bilhete sera emitido automaticamente apos a confirmacao do pagamento.
                   </p>
+                  <Button
+                    onClick={() => downloadPaymentReferencePdf(reference, finalPrice, currentUser)}
+                    className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Baixar referencia de pagamento (PDF)
+                  </Button>
                 </div>
               ) : reference === 'CASH_PAYMENT' ? (
                 <div className="text-center p-6 border-2 border-green-500 border-dashed rounded-lg bg-green-50 dark:bg-green-900/20">
