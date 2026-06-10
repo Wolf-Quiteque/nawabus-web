@@ -48,6 +48,7 @@ function SearchResults() {
           id,
           departure_time,
           arrival_time,
+          created_at,
           price_usd,
           available_seats,
           seat_class,
@@ -175,17 +176,7 @@ function SearchResults() {
     router.push(`/booking?outboundTripId=${selectedOutboundTrip.id}&returnTripId=${selectedReturnTrip.id}`);
   };
 
-  const visibleOutboundTrips = useMemo(() => {
-    if (isRoundTrip && selectedOutboundTrip) return [selectedOutboundTrip];
-    return outboundTrips;
-  }, [isRoundTrip, selectedOutboundTrip, outboundTrips]);
-
-  const visibleReturnTrips = useMemo(() => {
-    if (selectedReturnTrip) return [selectedReturnTrip];
-    return returnTrips;
-  }, [selectedReturnTrip, returnTrips]);
-
-  const getCampaignBoardingPoint = (originCity = '') => {
+  const getCampaignBoardingPoint = useCallback((originCity = '') => {
     const normalizedCity = originCity.toLowerCase();
 
     if (normalizedCity.includes('gamek')) {
@@ -203,7 +194,48 @@ function SearchResults() {
     }
 
     return null;
-  };
+  }, []);
+
+  const getTripGroupKey = useCallback((trip) => {
+    const departure = new Date(trip.departure_time);
+    const day = departure.toISOString().slice(0, 10);
+    const time = departure.toISOString().slice(11, 16);
+    const route = `${trip.routes.origin_city}->${trip.routes.destination_city}`;
+    const boardingPoint = getCampaignBoardingPoint(trip.routes.origin_city)?.title || trip.routes.origin_city;
+    return `${route}|${day}|${time}|${boardingPoint}`;
+  }, [getCampaignBoardingPoint]);
+
+  const groupCampaignTrips = useCallback((trips) => {
+    if (!isMangaisCampaign) return trips;
+
+    const groups = new Map();
+    [...trips]
+      .sort((a, b) => {
+        const departureDiff = new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime();
+        if (departureDiff !== 0) return departureDiff;
+
+        const createdDiff = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+        if (createdDiff !== 0) return createdDiff;
+
+        return String(a.id).localeCompare(String(b.id));
+      })
+      .forEach((trip) => {
+        const key = getTripGroupKey(trip);
+        if (!groups.has(key)) groups.set(key, trip);
+      });
+
+    return [...groups.values()];
+  }, [getTripGroupKey, isMangaisCampaign]);
+
+  const visibleOutboundTrips = useMemo(() => {
+    if (isRoundTrip && selectedOutboundTrip) return [selectedOutboundTrip];
+    return groupCampaignTrips(outboundTrips);
+  }, [groupCampaignTrips, isRoundTrip, selectedOutboundTrip, outboundTrips]);
+
+  const visibleReturnTrips = useMemo(() => {
+    if (selectedReturnTrip) return [selectedReturnTrip];
+    return groupCampaignTrips(returnTrips);
+  }, [groupCampaignTrips, selectedReturnTrip, returnTrips]);
 
   const renderTripCard = (trip, onSelect, isSelected = false) => {
     const campaignBoardingPoint = isMangaisCampaign
