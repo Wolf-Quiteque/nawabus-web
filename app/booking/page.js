@@ -23,6 +23,26 @@ async function getSiblingIds(supabase, busId, departureTime) {
   return data?.map(t => t.id) ?? [];
 }
 
+async function getHeldSeatNumbers(tripIds) {
+  if (!tripIds?.length) return [];
+
+  const response = await fetch(`/api/held-seats?trip_ids=${encodeURIComponent(tripIds.join(','))}`, {
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    console.warn('Unable to load temporary seat holds');
+    return [];
+  }
+
+  const result = await response.json();
+  return (result.held_seats || []).map(hold => hold.seat_number);
+}
+
+function uniqueSeatNumbers(seats) {
+  return [...new Set((seats || []).map(seat => Number(seat)).filter(Number.isFinite))];
+}
+
 function BookingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -85,7 +105,11 @@ function BookingPage() {
           .in('status', ['active', 'used']);
 
         if (outboundTicketsError) throw outboundTicketsError;
-        setOutboundOccupiedSeats(outboundTickets ? outboundTickets.map(t => t.seat_number) : []);
+        const outboundHeldSeats = await getHeldSeatNumbers(outboundSiblingIds);
+        setOutboundOccupiedSeats(uniqueSeatNumbers([
+          ...(outboundTickets ? outboundTickets.map(t => t.seat_number) : []),
+          ...outboundHeldSeats,
+        ]));
 
         // Check if the current user already has a ticket for this trip
         const { data: userData } = await supabase.auth.getUser();
@@ -134,7 +158,11 @@ function BookingPage() {
             .in('status', ['active', 'used']);
 
           if (returnTicketsError) throw returnTicketsError;
-          setReturnOccupiedSeats(returnTickets ? returnTickets.map(t => t.seat_number) : []);
+          const returnHeldSeats = await getHeldSeatNumbers(returnSiblingIds);
+          setReturnOccupiedSeats(uniqueSeatNumbers([
+            ...(returnTickets ? returnTickets.map(t => t.seat_number) : []),
+            ...returnHeldSeats,
+          ]));
 
           // Check if user already booked for return trip
           if (userData?.user) {

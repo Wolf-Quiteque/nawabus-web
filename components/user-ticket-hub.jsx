@@ -90,6 +90,22 @@ function getPendingBooking(transaction) {
   return transaction?.gateway_response?.booking_details || null;
 }
 
+function getPendingDeadline(transaction) {
+  const booking = getPendingBooking(transaction);
+  return booking?.hold_expires_at || null;
+}
+
+function formatPendingDeadline(transaction) {
+  const deadline = getPendingDeadline(transaction);
+  if (!deadline) return "1 hora apos gerar";
+  return formatDate(deadline);
+}
+
+function isPendingExpired(transaction) {
+  const deadline = getPendingDeadline(transaction);
+  return Boolean(deadline && new Date(deadline).getTime() <= Date.now());
+}
+
 function countPendingSeats(booking) {
   if (!booking) return 0;
   const outbound = booking.outbound_trip?.selected_seats?.length || 0;
@@ -657,7 +673,8 @@ export function UserTicketHub() {
     doc.setFontSize(10);
     doc.setTextColor(75, 85, 99);
     doc.text(`Emitido em: ${new Date(transaction.created_at).toLocaleString("pt-PT")}`, 18, 154);
-    doc.text(`Lugares: ${getPendingSeatText(booking)}`, 18, 166, { maxWidth: 174 });
+    doc.text(`Expira em: ${formatPendingDeadline(transaction)}`, 18, 166);
+    doc.text(`Lugares: ${getPendingSeatText(booking)}`, 18, 178, { maxWidth: 174 });
 
     doc.setFillColor(254, 242, 242);
     doc.setDrawColor(185, 28, 28);
@@ -667,7 +684,8 @@ export function UserTicketHub() {
     doc.text("Importante", 24, 206);
     doc.setFont(undefined, "normal");
     doc.setFontSize(9);
-    doc.text("O bilhete so sera emitido e valido depois da confirmacao do pagamento.", 24, 216, { maxWidth: 160 });
+    doc.text("Pague dentro de 1 hora. Depois disso, a referencia expira e os lugares voltam a ficar disponiveis.", 24, 216, { maxWidth: 160 });
+    doc.text("O bilhete so sera emitido e valido depois da confirmacao do pagamento.", 24, 224, { maxWidth: 160 });
 
     doc.save(`nawabus-referencia-${transaction.transaction_id}.pdf`);
   }
@@ -1041,28 +1059,35 @@ function PaidGroupCard({ group, user, payment, onShowQr }) {
 function PendingReferenceCard({ transaction, onCopy, onDownload }) {
   const booking = getPendingBooking(transaction);
   const seatCount = countPendingSeats(booking);
+  const expired = isPendingExpired(transaction);
 
   return (
-    <article className="rounded-3xl border border-orange-300/20 bg-orange-400/10 p-4">
+    <article className={`rounded-3xl border p-4 ${expired ? "border-red-300/20 bg-red-500/10" : "border-orange-300/20 bg-orange-400/10"}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-300">Por pagar</div>
+          <div className={`text-xs font-semibold uppercase tracking-[0.18em] ${expired ? "text-red-300" : "text-orange-300"}`}>
+            {expired ? "Expirada" : "Por pagar"}
+          </div>
           <h3 className="mt-2 text-2xl font-bold tracking-[0.12em] text-white">{transaction.transaction_id}</h3>
           <p className="mt-1 text-sm text-neutral-300">Entidade {ENTITY} | {formatMoney(transaction.amount_usd)}</p>
         </div>
-        <Ticket className="h-7 w-7 text-orange-300" />
+        <Ticket className={`h-7 w-7 ${expired ? "text-red-300" : "text-orange-300"}`} />
       </div>
 
       <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-3 text-sm text-neutral-300">
         <p>{seatCount > 0 ? `${seatCount} lugar(es) selecionado(s)` : "Pagamento aguardando confirmacao"}</p>
         <p className="mt-1 text-xs text-neutral-500">{getPendingSeatText(booking)}</p>
+        <p className={`mt-2 text-xs font-semibold ${expired ? "text-red-200" : "text-orange-200"}`}>
+          {expired ? "Expirou em" : "Expira em"}: {formatPendingDeadline(transaction)}
+        </p>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={onCopy}
-          className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 px-3 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+          disabled={expired}
+          className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 px-3 py-3 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Copy className="h-4 w-4" />
           Copiar ref.
@@ -1070,7 +1095,8 @@ function PendingReferenceCard({ transaction, onCopy, onDownload }) {
         <button
           type="button"
           onClick={onDownload}
-          className="flex items-center justify-center gap-2 rounded-2xl bg-[#FF8C00] px-3 py-3 text-sm font-semibold text-black transition hover:bg-orange-400"
+          disabled={expired}
+          className="flex items-center justify-center gap-2 rounded-2xl bg-[#FF8C00] px-3 py-3 text-sm font-semibold text-black transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Download className="h-4 w-4" />
           PDF
@@ -1078,8 +1104,10 @@ function PendingReferenceCard({ transaction, onCopy, onDownload }) {
       </div>
 
       <p className="mt-3 flex items-center gap-2 text-xs text-neutral-400">
-        <ArrowRight className="h-3.5 w-3.5 text-orange-300" />
-        Pague no MULTICAIXA ou home banking. O bilhete aparece em Pagos depois da confirmacao.
+        <ArrowRight className={`h-3.5 w-3.5 ${expired ? "text-red-300" : "text-orange-300"}`} />
+        {expired
+          ? "Esta referencia ja expirou. Reserve novamente ou peca uma nova referencia no admin."
+          : "Pague em ate 1 hora. O bilhete aparece em Pagos depois da confirmacao."}
       </p>
     </article>
   );

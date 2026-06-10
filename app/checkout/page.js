@@ -25,6 +25,7 @@ export default function CheckoutPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [referencePdfLoading, setReferencePdfLoading] = useState(false);
   const [reference, setReference] = useState(null);
+  const [referenceExpiresAt, setReferenceExpiresAt] = useState(null);
   const [ticketNumbers, setTicketNumbers] = useState({ outbound: null, return: null });
   const [outboundTicket, setOutboundTicket] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('referencia'); // 'cash' or 'referencia'
@@ -148,6 +149,38 @@ export default function CheckoutPage() {
     return index === 0 ? passengerName : 'Passageiro adicional';
   };
 
+  const getTripSeatTotal = (trip) => {
+    if (!trip || !Array.isArray(trip.selectedSeats)) return 0;
+    const seatCount = trip.selectedSeats.length;
+    const unitPrice = Number(trip.price_usd ?? trip.price_per_seat ?? trip.price ?? 0);
+    return Number((seatCount * unitPrice).toFixed(2));
+  };
+
+  const getComputedTotalPrice = (details) => {
+    if (!details?.outboundTrip) return 0;
+    const outboundTotal = getTripSeatTotal(details.outboundTrip);
+    const returnTotal = details.tripType === 'round-trip' && details.returnTrip
+      ? getTripSeatTotal(details.returnTrip)
+      : 0;
+    return Number((outboundTotal + returnTotal).toFixed(2));
+  };
+
+  const validateBookingBeforePayment = (details) => {
+    if (!details?.outboundTrip?.selectedSeats?.length) {
+      throw new Error('Selecione pelo menos um lugar de ida.');
+    }
+
+    if (details.tripType === 'round-trip') {
+      if (!details.returnTrip) {
+        throw new Error('A viagem de volta esta em falta. Volte a pesquisa e escolha a volta.');
+      }
+
+      if (!details.returnTrip.selectedSeats?.length) {
+        throw new Error('Selecione pelo menos um lugar de volta.');
+      }
+    }
+  };
+
   // Send SMS to companions who provided a phone number
   const sendCompanionSms = async (allTickets, trip, user) => {
     const companions = trip.companions || {};
@@ -195,7 +228,18 @@ export default function CheckoutPage() {
     'Cliente'
   );
 
-  const downloadPaymentReferencePdf = async (paymentReference, finalPrice, user) => {
+  const formatReferenceDeadline = (expiresAt) => {
+    if (!expiresAt) return '1 hora apos a geracao';
+    return new Date(expiresAt).toLocaleString('pt-PT', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const downloadPaymentReferencePdf = async (paymentReference, finalPrice, user, expiresAt = referenceExpiresAt) => {
     if (!bookingDetails || !paymentReference) {
       throw new Error('Faltam dados para gerar a referencia de pagamento.');
     }
@@ -215,7 +259,7 @@ export default function CheckoutPage() {
     const passengerName = getUserDisplayName(user);
     const now = new Date();
     const formattedAmount = `${Math.round(finalPrice).toLocaleString('pt-PT')},00 Kz`;
-    const paymentDeadline = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const paymentDeadline = expiresAt ? new Date(expiresAt) : new Date(now.getTime() + 60 * 60 * 1000);
 
     const routeName = (trip) =>
       `${trip.routes?.origin_city || trip.origin || 'Origem'} -> ${trip.routes?.destination_city || trip.destination || 'Destino'}`;
@@ -457,21 +501,21 @@ export default function CheckoutPage() {
     doc.setFont(undefined, 'normal');
     doc.setFontSize(9);
     let noticeY = y + 18;
-    noticeY = drawWrappedText('- Esta referencia nao confirma a viagem nem reserva definitivamente os lugares.', 24, noticeY, 162, 5);
-    noticeY = drawWrappedText('- Depois do pagamento confirmado, a NawaBus emite automaticamente o(s) bilhete(s) valido(s).', 24, noticeY + 1, 162, 5);
-    drawWrappedText('- Apresente apenas o PDF final do bilhete ou o SMS de confirmacao no embarque.', 24, noticeY + 1, 162, 5);
+    noticeY = drawWrappedText('- Os lugares ficam bloqueados apenas por 1 hora enquanto aguarda pagamento.', 24, noticeY, 162, 5);
+    noticeY = drawWrappedText('- Se nao pagar dentro desse prazo, a referencia expira e os lugares voltam a ficar disponiveis.', 24, noticeY + 1, 162, 5);
+    drawWrappedText('- O bilhete valido sera emitido automaticamente depois do pagamento confirmado.', 24, noticeY + 1, 162, 5);
 
     drawFooter();
 
     doc.save(`nawabus-referencia-${paymentReference}.pdf`);
   };
 
-  const handleReferencePdfDownload = async (paymentReference, finalPrice, user) => {
+  const handleReferencePdfDownload = async (paymentReference, finalPrice, user, expiresAt = referenceExpiresAt) => {
     if (referencePdfLoading) return;
 
     setReferencePdfLoading(true);
     try {
-      await downloadPaymentReferencePdf(paymentReference, finalPrice, user);
+      await downloadPaymentReferencePdf(paymentReference, finalPrice, user, expiresAt);
     } catch (err) {
       console.error('Reference PDF error:', err);
       alert(err.message || 'Nao foi possivel gerar o PDF da referencia. Tente novamente.');
@@ -483,7 +527,9 @@ export default function CheckoutPage() {
   const proceedWithPayment = async (user) => {
     if (!bookingDetails) return;
 
-    const { tripType, outboundTrip, returnTrip, totalPrice } = bookingDetails;
+    const { tripType, outboundTrip, returnTrip } = bookingDetails;
+    validateBookingBeforePayment(bookingDetails);
+    const totalPrice = getComputedTotalPrice(bookingDetails);
     const discountFactor = appliedCoupon ? (1 - appliedCoupon.discount_percentage / 100) : 1;
     const finalPrice = parseFloat((totalPrice * discountFactor).toFixed(2));
     const passengerId = user.id;
@@ -537,8 +583,9 @@ export default function CheckoutPage() {
         }
 
         setReference(result.reference_number);
+        setReferenceExpiresAt(result.hold_expires_at || null);
         setTimeout(() => {
-          downloadPaymentReferencePdf(result.reference_number, finalPrice, user)
+          downloadPaymentReferencePdf(result.reference_number, finalPrice, user, result.hold_expires_at || null)
             .catch((err) => console.error('Auto reference PDF error:', err));
         }, 0);
         return;
@@ -573,6 +620,7 @@ export default function CheckoutPage() {
 
       if (isFreeTrip) {
         setReference('CAMPAIGN_FREE');
+        setReferenceExpiresAt(null);
         // Send companion SMS for free trips too
         sendCompanionSms(outboundTickets, outboundTrip, user);
         if (returnTrip) sendCompanionSms(returnTickets, returnTrip, user);
@@ -582,6 +630,7 @@ export default function CheckoutPage() {
       sendCompanionSms(outboundTickets, outboundTrip, user);
       if (returnTrip) sendCompanionSms(returnTickets, returnTrip, user);
       setReference('CASH_PAYMENT');
+      setReferenceExpiresAt(null);
     } catch (error) {
       console.error('Payment error:', error);
       alert(error.message);
@@ -695,7 +744,8 @@ const handleDownloadPdf = async () => {
     return;
   }
 
-  const { tripType, outboundTrip, returnTrip, totalPrice } = bookingDetails;
+  const { tripType, outboundTrip, returnTrip } = bookingDetails;
+  const totalPrice = getComputedTotalPrice(bookingDetails);
   const pdfDiscountFactor = appliedCoupon ? (1 - appliedCoupon.discount_percentage / 100) : 1;
   const pdfFinalPrice = parseFloat((totalPrice * pdfDiscountFactor).toFixed(2));
   const doc = new jsPDF(); // A4 portrait, unit mm by default (210 x 297)
@@ -1197,7 +1247,8 @@ const handleDownloadPdf = async () => {
     return <div className="text-center py-10">A carregar detalhes da reserva...</div>;
   }
 
-  const { tripType, outboundTrip, returnTrip, totalPrice } = bookingDetails;
+  const { tripType, outboundTrip, returnTrip } = bookingDetails;
+  const totalPrice = getComputedTotalPrice(bookingDetails);
   const discountAmount = appliedCoupon ? parseFloat((totalPrice * appliedCoupon.discount_percentage / 100).toFixed(2)) : 0;
   const finalPrice = totalPrice - discountAmount;
 
@@ -1474,12 +1525,18 @@ const handleDownloadPdf = async () => {
                   <p className="text-sm text-gray-500 mb-4">
                     Dirija-se a um multicaixa ou utilize o seu home banking.
                   </p>
+                  <p className="text-sm font-semibold text-red-700 dark:text-red-300 mb-3">
+                    Pague em ate 1 hora. Expira em: {formatReferenceDeadline(referenceExpiresAt)}.
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
+                    Se nao pagar dentro de 1 hora, a referencia fica inativa e os lugares voltam a ficar disponiveis.
+                  </p>
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     O bilhete sera emitido automaticamente apos a confirmacao do pagamento.
                   </p>
                   <Button
                     type="button"
-                    onClick={() => handleReferencePdfDownload(reference, finalPrice, currentUser)}
+                    onClick={() => handleReferencePdfDownload(reference, finalPrice, currentUser, referenceExpiresAt)}
                     disabled={referencePdfLoading}
                     className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white"
                   >
