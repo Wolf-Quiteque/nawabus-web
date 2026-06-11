@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { MdEventSeat } from 'react-icons/md';
 import { GiSteeringWheel } from 'react-icons/gi';
@@ -20,6 +20,7 @@ export default function SeatSelection({
   isSelectingReturn = false
 }) {
   const router = useRouter();
+  const seatSelectionRef = useRef(null);
   const [outboundSelectedSeats, setOutboundSelectedSeats] = useState([]);
   const [returnSelectedSeats, setReturnSelectedSeats] = useState([]);
   const [currentStep, setCurrentStep] = useState(isSelectingReturn ? 'return' : 'outbound');
@@ -121,6 +122,9 @@ export default function SeatSelection({
   const handleContinue = () => {
     if (currentStep === 'outbound' && returnTrip) {
       setCurrentStep('return');
+      window.setTimeout(() => {
+        seatSelectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 0);
     } else {
       // Build companions map for outbound
       // If user already booked, ALL seats are companions
@@ -181,7 +185,7 @@ export default function SeatSelection({
   const canContinue = currentSelectedSeats.length > 0 && allCompanionsValid;
 
   return (
-    <div className="flex flex-col md:flex-row gap-8">
+    <div ref={seatSelectionRef} className="flex flex-col md:flex-row gap-8 scroll-mt-4">
       {/* ── LEFT COLUMN: Seat Grid ── */}
       <div className="w-full md:w-5/12">
         <Card className="shadow-lg">
