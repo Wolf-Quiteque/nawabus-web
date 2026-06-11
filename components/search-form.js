@@ -58,6 +58,7 @@ export default function SearchForm() {
   };
 
   const today = new Date().toISOString().split('T')[0];
+  const shouldHighlightReturnDate = tripType === 'round-trip' && !returnDate;
 
   return (
     <Card className="w-full max-w-7xl mx-auto shadow-xl border-0">
@@ -163,9 +164,18 @@ export default function SearchForm() {
                   value={returnDate}
                   onChange={(e) => setReturnDate(e.target.value)}
                   min={departureDate || today}
-                  className="h-12 text-base border-gray-300 focus:border-yellow-500 focus:ring-yellow-500"
+                  className={`h-12 text-base transition-all duration-200 focus:border-yellow-500 focus:ring-yellow-500 ${
+                    shouldHighlightReturnDate
+                      ? 'animate-pulse border-2 border-orange-400 shadow-[0_0_0_4px_rgba(255,140,0,0.22),0_0_22px_rgba(255,140,0,0.38)]'
+                      : 'border-gray-300'
+                  }`}
                   required={tripType === 'round-trip'}
                 />
+                {shouldHighlightReturnDate && (
+                  <p className="mt-2 text-xs font-semibold text-orange-600 dark:text-orange-300">
+                    Escolha a data de volta para continuar.
+                  </p>
+                )}
               </div>
             )}
             
