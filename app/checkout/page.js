@@ -19,6 +19,51 @@ import {
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 
+function openTicketHub(tab) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('nawabus:open-ticket-hub', {
+    detail: { tab },
+  }));
+}
+
+function showTicketHubHint(tab) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('nawabus:show-ticket-hub-hint', {
+    detail: { tab },
+  }));
+}
+
+function TicketHubGuide({ mode }) {
+  const isPending = mode === 'pending';
+
+  return (
+    <div className="mt-5 rounded-2xl border-2 border-orange-300 bg-orange-50 p-4 text-left shadow-sm dark:border-orange-500/60 dark:bg-orange-950/30">
+      <div className="flex items-start gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FF8C00] text-lg font-black text-white">
+          i
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-base font-bold text-gray-900 dark:text-white">
+            Onde encontro o meu bilhete?
+          </p>
+          <p className="mt-1 text-sm leading-relaxed text-gray-700 dark:text-gray-200">
+            {isPending
+              ? 'Depois de pagar, toque no botao laranja no canto inferior direito e abra Pagos para baixar o bilhete. Enquanto nao pagar, esta referencia fica em Pendentes.'
+              : 'O seu bilhete esta em Pagos no botao laranja. Pode voltar a baixar o PDF e mostrar o QR no embarque.'}
+          </p>
+          <Button
+            type="button"
+            onClick={() => openTicketHub(isPending ? 'pending' : 'paid')}
+            className="mt-3 w-full bg-[#FF8C00] text-black hover:bg-orange-400"
+          >
+            {isPending ? 'Abrir area do cliente' : 'Abrir meus bilhetes'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const [bookingDetails, setBookingDetails] = useState(null);
@@ -584,6 +629,7 @@ export default function CheckoutPage() {
 
         setReference(result.reference_number);
         setReferenceExpiresAt(result.hold_expires_at || null);
+        showTicketHubHint('pending');
         setTimeout(() => {
           downloadPaymentReferencePdf(result.reference_number, finalPrice, user, result.hold_expires_at || null)
             .catch((err) => console.error('Auto reference PDF error:', err));
@@ -621,6 +667,7 @@ export default function CheckoutPage() {
       if (isFreeTrip) {
         setReference('CAMPAIGN_FREE');
         setReferenceExpiresAt(null);
+        showTicketHubHint('paid');
         // Send companion SMS for free trips too
         sendCompanionSms(outboundTickets, outboundTrip, user);
         if (returnTrip) sendCompanionSms(returnTickets, returnTrip, user);
@@ -631,6 +678,7 @@ export default function CheckoutPage() {
       if (returnTrip) sendCompanionSms(returnTickets, returnTrip, user);
       setReference('CASH_PAYMENT');
       setReferenceExpiresAt(null);
+      showTicketHubHint('paid');
     } catch (error) {
       console.error('Payment error:', error);
       alert(error.message);
@@ -1507,6 +1555,7 @@ const handleDownloadPdf = async () => {
                   >
                     📄 Baixar Bilhete (PDF)
                   </Button>
+                  <TicketHubGuide mode="paid" />
                 </div>
               ) : reference && reference !== 'CASH_PAYMENT' ? (
                 <div className="text-center p-6 border-2 border-green-500 border-dashed rounded-lg bg-green-50 dark:bg-green-900/20">
@@ -1545,6 +1594,7 @@ const handleDownloadPdf = async () => {
                   <p className="mt-2 text-xs text-gray-500">
                     Se o download automatico nao abrir, toque neste botao.
                   </p>
+                  <TicketHubGuide mode="pending" />
                 </div>
               ) : reference === 'CASH_PAYMENT' ? (
                 <div className="text-center p-6 border-2 border-green-500 border-dashed rounded-lg bg-green-50 dark:bg-green-900/20">
@@ -1569,6 +1619,7 @@ const handleDownloadPdf = async () => {
                   >
                     📄 Baixar Bilhete (PDF)
                   </Button>
+                  <TicketHubGuide mode="paid" />
                 </div>
               ) : (
                 <Button

@@ -419,6 +419,7 @@ export function UserTicketHub() {
   const [dataLoading, setDataLoading] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [qrDataUrl, setQrDataUrl] = useState("");
+  const [showHubHelper, setShowHubHelper] = useState(false);
 
   const paidGroups = useMemo(() => groupPaidTickets(tickets), [tickets]);
   const upcomingRideCount = useMemo(() => getUpcomingRideCount(tickets), [tickets]);
@@ -457,6 +458,37 @@ export function UserTicketHub() {
       fetchUserData(user.id);
     }
   }, [user]);
+
+  useEffect(() => {
+    let helperTimeout;
+
+    const normalizeTab = (tab) => (tab === "pending" ? "pending" : "paid");
+
+    const handleOpenHub = (event) => {
+      setActiveTab(normalizeTab(event.detail?.tab));
+      setIsOpen(true);
+      setShowHubHelper(false);
+      setAuthError("");
+    };
+
+    const handleShowHint = (event) => {
+      setActiveTab(normalizeTab(event.detail?.tab));
+      setShowHubHelper(true);
+      window.clearTimeout(helperTimeout);
+      helperTimeout = window.setTimeout(() => {
+        setShowHubHelper(false);
+      }, 18000);
+    };
+
+    window.addEventListener("nawabus:open-ticket-hub", handleOpenHub);
+    window.addEventListener("nawabus:show-ticket-hub-hint", handleShowHint);
+
+    return () => {
+      window.clearTimeout(helperTimeout);
+      window.removeEventListener("nawabus:open-ticket-hub", handleOpenHub);
+      window.removeEventListener("nawabus:show-ticket-hub-hint", handleShowHint);
+    };
+  }, []);
 
   useEffect(() => {
     if (!selectedTicket) {
@@ -692,12 +724,21 @@ export function UserTicketHub() {
 
   function openPanel() {
     setIsOpen(true);
+    setShowHubHelper(false);
     setAuthError("");
   }
 
   return (
     <>
       <div className="fixed bottom-5 right-5 z-40 md:bottom-7 md:right-7">
+        {showHubHelper && !isOpen && (
+          <div className="pointer-events-none absolute bottom-16 right-0 w-48 rounded-2xl border border-orange-200 bg-neutral-950 px-4 py-3 text-right text-white shadow-2xl shadow-black/30 md:bottom-20 md:w-56">
+            <p className="text-sm font-bold text-orange-300">Meus bilhetes</p>
+            <p className="mt-1 text-xs leading-snug text-neutral-200">
+              Toque no botao laranja para ver Pagos e Pendentes.
+            </p>
+          </div>
+        )}
         {user && upcomingRideCount > 0 && (
           <div className="absolute -right-1 -top-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-full border border-black/10 bg-white px-1.5 text-xs font-bold text-black shadow-lg md:h-7 md:min-w-7 md:text-sm">
             {upcomingRideCount > 99 ? "99+" : upcomingRideCount}
@@ -707,7 +748,9 @@ export function UserTicketHub() {
           type="button"
           onClick={openPanel}
           aria-label="Abrir area do cliente"
-          className="flex h-14 w-14 items-center justify-center rounded-full border border-white/20 bg-[#FF8C00] text-white shadow-[0_18px_45px_rgba(0,0,0,0.28)] transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-orange-300 md:h-16 md:w-16"
+          className={`flex h-14 w-14 items-center justify-center rounded-full border border-white/20 bg-[#FF8C00] text-white shadow-[0_18px_45px_rgba(0,0,0,0.28)] transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-orange-300 md:h-16 md:w-16 ${
+            showHubHelper && !isOpen ? "animate-pulse ring-4 ring-orange-200 ring-offset-2 ring-offset-white" : ""
+          }`}
         >
           <User className="h-7 w-7" strokeWidth={2.6} />
         </button>
