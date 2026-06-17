@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { ArrowLeft, ArrowRight, CalendarDays, Check, Loader2, MapPin, Minus, Plus, UsersRound } from 'lucide-react';
@@ -204,7 +204,8 @@ function MangaisEventFlow() {
   const [outboundPoint, setOutboundPoint] = useState('');
   const [returnPlace, setReturnPlace] = useState('');
   const [returnPoint, setReturnPoint] = useState('');
-  const [companionCount, setCompanionCount] = useState(null);
+  const [companionCount, setCompanionCount] = useState(0);
+  const companionCountRef = useRef(0);
   const [passengerCountConfirmed, setPassengerCountConfirmed] = useState(false);
   const [passengerNamesConfirmed, setPassengerNamesConfirmed] = useState(false);
   const [companions, setCompanions] = useState([]);
@@ -216,7 +217,7 @@ function MangaisEventFlow() {
 
   const needsOutbound = direction === 'one-way' || direction === 'round-trip';
   const needsReturn = direction === 'return-only' || direction === 'round-trip';
-  const totalPassengers = (companionCount ?? 0) + 1;
+  const totalPassengers = companionCount + 1;
 
   const step = useMemo(() => {
     if (!eventDate) return 'date';
@@ -309,13 +310,16 @@ function MangaisEventFlow() {
     loadTrips();
   }, [eventDate, fetchTrips]);
 
-  useEffect(() => {
-    setCompanions((current) => {
-      if (companionCount === null) return [];
-      const next = Array.from({ length: companionCount }, (_, index) => current[index] || { name: '', phone: '' });
-      return next;
-    });
-  }, [companionCount]);
+  const updateCompanionCount = (nextCount) => {
+    const normalizedCount = Math.max(0, Math.min(9, Number(nextCount) || 0));
+    companionCountRef.current = normalizedCount;
+    setCompanionCount(normalizedCount);
+    setPassengerCountConfirmed(false);
+    setPassengerNamesConfirmed(normalizedCount === 0);
+    setCompanions((current) => (
+      Array.from({ length: normalizedCount }, (_, index) => current[index] || { name: '', phone: '' })
+    ));
+  };
 
   const outboundOptions = useMemo(() => getPointOptions(outboundTrips, 'outbound'), [outboundTrips]);
   const returnOptions = useMemo(() => getPointOptions(returnTrips, 'return'), [returnTrips]);
@@ -436,7 +440,8 @@ function MangaisEventFlow() {
     setOutboundPoint('');
     setReturnPlace('');
     setReturnPoint('');
-    setCompanionCount(null);
+    companionCountRef.current = 0;
+    setCompanionCount(0);
     setPassengerCountConfirmed(false);
     setPassengerNamesConfirmed(false);
     setCompanions([]);
@@ -602,18 +607,18 @@ function MangaisEventFlow() {
                 <div className="mx-auto flex max-w-xs items-center justify-center gap-4 rounded-[1.7rem] border border-white/15 bg-white/10 p-5">
                   <button
                     type="button"
-                    onClick={() => setCompanionCount((count) => Math.max(0, (count ?? 0) - 1))}
+                    onClick={() => updateCompanionCount(companionCountRef.current - 1)}
                     className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-green-950 transition hover:bg-lime-100"
                   >
                     <Minus className="h-5 w-5" />
                   </button>
                   <div className="min-w-20 text-center">
-                    <p className="text-5xl font-black">{companionCount ?? 0}</p>
+                    <p className="text-5xl font-black">{companionCount}</p>
                     <p className="text-xs font-bold uppercase tracking-[0.14em] text-lime-100">passageiros</p>
                   </div>
                   <button
                     type="button"
-                    onClick={() => setCompanionCount((count) => Math.min(9, (count ?? 0) + 1))}
+                    onClick={() => updateCompanionCount(companionCountRef.current + 1)}
                     className="flex h-12 w-12 items-center justify-center rounded-full bg-[#dfff84] text-green-950 transition hover:bg-lime-200"
                   >
                     <Plus className="h-5 w-5" />
@@ -622,7 +627,7 @@ function MangaisEventFlow() {
                 <Button
                   type="button"
                   onClick={() => {
-                    const count = companionCount ?? 0;
+                    const count = companionCountRef.current;
                     setCompanionCount(count);
                     setPassengerCountConfirmed(true);
                     if (count === 0) {
@@ -630,6 +635,9 @@ function MangaisEventFlow() {
                       setCompanions([]);
                     } else {
                       setPassengerNamesConfirmed(false);
+                      setCompanions((current) => (
+                        Array.from({ length: count }, (_, index) => current[index] || { name: '', phone: '' })
+                      ));
                     }
                   }}
                   className="mt-5 h-12 w-full rounded-2xl bg-[#dfff84] font-black text-green-950 hover:bg-lime-200"
@@ -714,7 +722,7 @@ function MangaisEventFlow() {
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
               <div className="flex items-center gap-2 text-xs font-bold text-lime-100/80">
                 <UsersRound className="h-4 w-4" />
-                Voce + {companionCount ?? 0} passageiro{companionCount === 1 ? '' : 's'}
+                Voce + {companionCount} passageiro{companionCount === 1 ? '' : 's'}
               </div>
               {step !== 'date' && (
                 <button
