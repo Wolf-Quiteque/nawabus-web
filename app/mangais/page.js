@@ -84,6 +84,15 @@ function tripStopKey(trip, direction) {
     : trip.routes?.origin_city || '';
 }
 
+function getTripOptionKey(trip, direction) {
+  const departure = new Date(trip.departure_time);
+  return [
+    tripStopKey(trip, direction),
+    departure.toISOString().slice(0, 10),
+    departure.toISOString().slice(11, 16),
+  ].join('|');
+}
+
 function sortTrips(a, b) {
   const departureDiff = new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime();
   if (departureDiff !== 0) return departureDiff;
@@ -117,10 +126,12 @@ function getPointOptions(trips, direction) {
 
   getGroupedVisibleTrips(trips, direction).forEach((trip) => {
     const city = tripStopKey(trip, direction);
-    if (!city || options.has(city)) return;
+    const optionKey = getTripOptionKey(trip, direction);
+    if (!city || options.has(optionKey)) return;
 
-    options.set(city, {
-      value: city,
+    options.set(optionKey, {
+      value: optionKey,
+      city,
       title: normalizeStopName(city),
       detail: getStopDetail(city),
       time: formatTime(trip.departure_time),
@@ -130,6 +141,31 @@ function getPointOptions(trips, direction) {
   });
 
   return [...options.values()];
+}
+
+function getPlaceOptions(timeOptions) {
+  const places = new Map();
+
+  timeOptions.forEach((option) => {
+    if (!option.city || places.has(option.city)) return;
+    places.set(option.city, {
+      value: option.city,
+      title: option.title,
+      detail: option.detail,
+    });
+  });
+
+  return [...places.values()];
+}
+
+function getTimeOptions(timeOptions, city) {
+  return timeOptions.filter((option) => option.city === city);
+}
+
+function getSelectedOptionLabel(options, value) {
+  const option = options.find((item) => item.value === value);
+  if (!option) return '';
+  return `${option.title} - ${option.time}`;
 }
 
 function findBestSeats(availableSeats, count) {
@@ -164,7 +200,9 @@ function MangaisEventFlow() {
   const initialDate = searchParams.get('date');
   const [eventDate, setEventDate] = useState(EVENT_DATES[initialDate] ? initialDate : '');
   const [direction, setDirection] = useState('');
+  const [outboundPlace, setOutboundPlace] = useState('');
   const [outboundPoint, setOutboundPoint] = useState('');
+  const [returnPlace, setReturnPlace] = useState('');
   const [returnPoint, setReturnPoint] = useState('');
   const [companionCount, setCompanionCount] = useState(null);
   const [passengerCountConfirmed, setPassengerCountConfirmed] = useState(false);
@@ -183,12 +221,14 @@ function MangaisEventFlow() {
   const step = useMemo(() => {
     if (!eventDate) return 'date';
     if (!direction) return 'direction';
-    if (needsOutbound && !outboundPoint) return 'outbound-point';
-    if (needsReturn && !returnPoint) return 'return-point';
+    if (needsOutbound && !outboundPlace) return 'outbound-point';
+    if (needsOutbound && !outboundPoint) return 'outbound-time';
+    if (needsReturn && !returnPlace) return 'return-point';
+    if (needsReturn && !returnPoint) return 'return-time';
     if (!passengerCountConfirmed) return 'count';
     if (companionCount > 0 && !passengerNamesConfirmed) return 'names';
     return 'review';
-  }, [companionCount, direction, eventDate, needsOutbound, needsReturn, outboundPoint, passengerCountConfirmed, passengerNamesConfirmed, returnPoint]);
+  }, [companionCount, direction, eventDate, needsOutbound, needsReturn, outboundPlace, outboundPoint, passengerCountConfirmed, passengerNamesConfirmed, returnPlace, returnPoint]);
 
   const fetchTrips = useCallback(async (date, isReturn = false) => {
     const startOfDay = new Date(`${date}T00:00:00`);
@@ -279,10 +319,14 @@ function MangaisEventFlow() {
 
   const outboundOptions = useMemo(() => getPointOptions(outboundTrips, 'outbound'), [outboundTrips]);
   const returnOptions = useMemo(() => getPointOptions(returnTrips, 'return'), [returnTrips]);
+  const outboundPlaceOptions = useMemo(() => getPlaceOptions(outboundOptions), [outboundOptions]);
+  const returnPlaceOptions = useMemo(() => getPlaceOptions(returnOptions), [returnOptions]);
+  const outboundTimeOptions = useMemo(() => getTimeOptions(outboundOptions, outboundPlace), [outboundOptions, outboundPlace]);
+  const returnTimeOptions = useMemo(() => getTimeOptions(returnOptions, returnPlace), [returnOptions, returnPlace]);
 
-  const pickTripAndSeats = async (trips, point, tripDirection) => {
+  const pickTripAndSeats = async (trips, optionKey, tripDirection) => {
     const candidates = getGroupedVisibleTrips(trips, tripDirection)
-      .filter((trip) => tripStopKey(trip, tripDirection) === point)
+      .filter((trip) => getTripOptionKey(trip, tripDirection) === optionKey)
       .filter((trip) => Number(trip.available_seats) >= totalPassengers);
 
     for (const trip of candidates) {
@@ -312,7 +356,7 @@ function MangaisEventFlow() {
       }
     }
 
-    throw new Error('Nao ha lugares suficientes nesse ponto. Escolha outro ponto ou tente mais tarde.');
+    throw new Error('Nao ha lugares suficientes nesse horario. Escolha outro horario ou tente mais tarde.');
   };
 
   const buildCompanionMap = (selectedSeats) => {
@@ -388,7 +432,9 @@ function MangaisEventFlow() {
   };
 
   const resetAfterDirection = () => {
+    setOutboundPlace('');
     setOutboundPoint('');
+    setReturnPlace('');
     setReturnPoint('');
     setCompanionCount(null);
     setPassengerCountConfirmed(false);
@@ -511,18 +557,42 @@ function MangaisEventFlow() {
 
               <EventStep active={step === 'outbound-point'}>
                 <QuestionTitle title="Embarque para Mangais" description="De onde vais sair?" />
-                <PointChoices
-                  options={outboundOptions}
+                <PlaceChoices
+                  options={outboundPlaceOptions}
                   emptyText="Ainda nao encontramos pontos de ida para esta data."
+                  onSelect={(place) => {
+                    setOutboundPlace(place);
+                    setOutboundPoint('');
+                  }}
+                />
+              </EventStep>
+
+              <EventStep active={step === 'outbound-time'}>
+                <QuestionTitle title="Horario de ida" description={`Escolhe a hora de saida em ${normalizeStopName(outboundPlace)}.`} />
+                <PointChoices
+                  options={outboundTimeOptions}
+                  emptyText="Ainda nao encontramos horarios para este ponto."
                   onSelect={setOutboundPoint}
                 />
               </EventStep>
 
               <EventStep active={step === 'return-point'}>
                 <QuestionTitle title="Volta para onde?" description="Escolhe onde queres sair no regresso." />
-                <PointChoices
-                  options={returnOptions}
+                <PlaceChoices
+                  options={returnPlaceOptions}
                   emptyText="Ainda nao encontramos pontos de volta para esta data."
+                  onSelect={(place) => {
+                    setReturnPlace(place);
+                    setReturnPoint('');
+                  }}
+                />
+              </EventStep>
+
+              <EventStep active={step === 'return-time'}>
+                <QuestionTitle title="Horario de volta" description={`Escolhe a hora de volta para ${normalizeStopName(returnPlace)}.`} />
+                <PointChoices
+                  options={returnTimeOptions}
+                  emptyText="Ainda nao encontramos horarios para este ponto."
                   onSelect={setReturnPoint}
                 />
               </EventStep>
@@ -616,8 +686,8 @@ function MangaisEventFlow() {
                 <div className="space-y-3 rounded-[1.5rem] border border-white/15 bg-white/10 p-4 text-sm font-bold text-lime-50">
                   <SummaryRow label="Data" value={selectedDateMeta?.label || ''} />
                   <SummaryRow label="Tipo" value={directionOptions.find((option) => option.value === direction)?.title || ''} />
-                  {outboundPoint && <SummaryRow label="Ida" value={normalizeStopName(outboundPoint)} />}
-                  {returnPoint && <SummaryRow label="Volta" value={normalizeStopName(returnPoint)} />}
+                  {outboundPoint && <SummaryRow label="Ida" value={getSelectedOptionLabel(outboundOptions, outboundPoint)} />}
+                  {returnPoint && <SummaryRow label="Volta" value={getSelectedOptionLabel(returnOptions, returnPoint)} />}
                   <SummaryRow label="Total" value={`${totalPassengers} passageiro${totalPassengers === 1 ? '' : 's'}`} />
                 </div>
                 <Button
@@ -652,9 +722,12 @@ function MangaisEventFlow() {
                   onClick={() => {
                     if (step === 'direction') setEventDate('');
                     else if (step === 'outbound-point') setDirection('');
+                    else if (step === 'outbound-time') setOutboundPlace('');
                     else if (step === 'return-point') {
                       if (needsOutbound) setOutboundPoint('');
                       else setDirection('');
+                    } else if (step === 'return-time') {
+                      setReturnPlace('');
                     } else if (step === 'count') {
                       if (needsReturn) setReturnPoint('');
                       else setOutboundPoint('');
@@ -705,6 +778,44 @@ function ChoiceButton({ title, detail, onClick }) {
   );
 }
 
+function PlaceChoices({ options, emptyText, onSelect }) {
+  if (!options.length) {
+    return (
+      <div className="rounded-2xl border border-amber-200/40 bg-amber-300/15 p-4 text-sm font-bold text-amber-50">
+        {emptyText}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-3">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => onSelect(option.value)}
+          className="group grid w-full grid-cols-[1fr_auto] items-center gap-4 rounded-[1.4rem] border border-white/12 bg-white/10 p-4 text-left transition duration-300 hover:-translate-y-0.5 hover:border-lime-200 hover:bg-[#dfff84] hover:text-green-950"
+        >
+          <span>
+            <span className="flex items-center gap-2 text-lg font-black">
+              <MapPin className="h-5 w-5 text-lime-200 group-hover:text-green-950" />
+              {option.title}
+            </span>
+            {option.detail && (
+              <span className="mt-1 block text-xs font-bold text-lime-50/72 group-hover:text-green-900/70">
+                {option.detail}
+              </span>
+            )}
+          </span>
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-green-950">
+            <ArrowRight className="h-5 w-5" />
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function PointChoices({ options, emptyText, onSelect }) {
   if (!options.length) {
     return (
@@ -735,6 +846,9 @@ function PointChoices({ options, emptyText, onSelect }) {
             )}
             <span className="mt-2 block text-sm font-bold text-lime-50/78 group-hover:text-green-900/70">
               Saida {option.time} - chegada {option.arrival}
+            </span>
+            <span className="mt-1 block text-xs font-bold text-lime-100/70 group-hover:text-green-900/60">
+              {option.availableSeats} lugares disponiveis neste horario
             </span>
           </span>
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-green-950">
