@@ -178,6 +178,17 @@ function findBestSeats(availableSeats, count) {
   return availableSeats.slice(0, count);
 }
 
+function safeCompanion(companion) {
+  return {
+    name: typeof companion?.name === 'string' ? companion.name : '',
+    phone: typeof companion?.phone === 'string' ? companion.phone : '',
+  };
+}
+
+function hasCompanionName(companion) {
+  return safeCompanion(companion).name.trim().length > 0;
+}
+
 function EventStep({ children, active }) {
   return (
     <div
@@ -311,14 +322,20 @@ function MangaisEventFlow() {
   }, [eventDate, fetchTrips]);
 
   const updateCompanionCount = (nextCount) => {
-    const normalizedCount = Math.max(0, Math.min(9, Number(nextCount) || 0));
-    companionCountRef.current = normalizedCount;
-    setCompanionCount(normalizedCount);
-    setPassengerCountConfirmed(false);
-    setPassengerNamesConfirmed(normalizedCount === 0);
-    setCompanions((current) => (
-      Array.from({ length: normalizedCount }, (_, index) => current[index] || { name: '', phone: '' })
-    ));
+    try {
+      const normalizedCount = Math.max(0, Math.min(9, Number(nextCount) || 0));
+      companionCountRef.current = normalizedCount;
+      setCompanionCount(normalizedCount);
+      setPassengerCountConfirmed(false);
+      setPassengerNamesConfirmed(normalizedCount === 0);
+      setCompanions((current) => {
+        const source = Array.isArray(current) ? current : [];
+        return Array.from({ length: normalizedCount }, (_, index) => safeCompanion(source[index]));
+      });
+    } catch (err) {
+      console.error('Could not update passenger count:', err);
+      setError('Nao foi possivel atualizar os passageiros. Recarregue a pagina e tente novamente.');
+    }
   };
 
   const outboundOptions = useMemo(() => getPointOptions(outboundTrips, 'outbound'), [outboundTrips]);
@@ -327,6 +344,10 @@ function MangaisEventFlow() {
   const returnPlaceOptions = useMemo(() => getPlaceOptions(returnOptions), [returnOptions]);
   const outboundTimeOptions = useMemo(() => getTimeOptions(outboundOptions, outboundPlace), [outboundOptions, outboundPlace]);
   const returnTimeOptions = useMemo(() => getTimeOptions(returnOptions, returnPlace), [returnOptions, returnPlace]);
+  const companionFields = useMemo(
+    () => Array.from({ length: companionCount }, (_, index) => safeCompanion(companions[index])),
+    [companionCount, companions]
+  );
 
   const pickTripAndSeats = async (trips, optionKey, tripDirection) => {
     const candidates = getGroupedVisibleTrips(trips, tripDirection)
@@ -371,8 +392,8 @@ function MangaisEventFlow() {
       companionSeats.map((seat, index) => [
         seat,
         {
-          name: companions[index]?.name?.trim() || '',
-          phone: companions[index]?.phone?.trim() || '',
+          name: safeCompanion(companionFields[index]).name.trim(),
+          phone: safeCompanion(companionFields[index]).phone.trim(),
         },
       ])
     );
@@ -636,7 +657,7 @@ function MangaisEventFlow() {
                     } else {
                       setPassengerNamesConfirmed(false);
                       setCompanions((current) => (
-                        Array.from({ length: count }, (_, index) => current[index] || { name: '', phone: '' })
+                        Array.from({ length: count }, (_, index) => safeCompanion(current?.[index]))
                       ));
                     }
                   }}
@@ -649,28 +670,38 @@ function MangaisEventFlow() {
               <EventStep active={step === 'names'}>
                 <QuestionTitle title="Nome dos passageiros" description="O telefone e opcional. O nome ajuda o motorista a conferir o bilhete." />
                 <div className="max-h-[21rem] space-y-3 overflow-y-auto pr-1">
-                  {companions.map((companion, index) => (
+                  {companionFields.map((companion, index) => (
                     <div key={index} className="rounded-2xl border border-white/12 bg-white/10 p-3">
                       <p className="mb-2 text-sm font-black text-lime-50">Passageiro {index + 2}</p>
                       <div className="grid gap-2 sm:grid-cols-[1fr_12rem]">
                         <Input
-                          value={companion.name}
+                          value={safeCompanion(companion).name}
                           onChange={(event) => {
-                            const next = [...companions];
-                            next[index] = { ...next[index], name: event.target.value };
                             setPassengerNamesConfirmed(false);
-                            setCompanions(next);
+                            setCompanions((current) => {
+                              const next = Array.from(
+                                { length: companionCountRef.current },
+                                (_, itemIndex) => safeCompanion(current?.[itemIndex])
+                              );
+                              next[index] = { ...safeCompanion(next[index]), name: event.target.value };
+                              return next;
+                            });
                           }}
                           placeholder="Nome completo"
                           className="h-11 border-white/20 bg-white text-gray-950"
                         />
                         <Input
-                          value={companion.phone}
+                          value={safeCompanion(companion).phone}
                           onChange={(event) => {
-                            const next = [...companions];
-                            next[index] = { ...next[index], phone: event.target.value };
                             setPassengerNamesConfirmed(false);
-                            setCompanions(next);
+                            setCompanions((current) => {
+                              const next = Array.from(
+                                { length: companionCountRef.current },
+                                (_, itemIndex) => safeCompanion(current?.[itemIndex])
+                              );
+                              next[index] = { ...safeCompanion(next[index]), phone: event.target.value };
+                              return next;
+                            });
                           }}
                           placeholder="Telefone opcional"
                           className="h-11 border-white/20 bg-white text-gray-950"
@@ -682,7 +713,7 @@ function MangaisEventFlow() {
                 <Button
                   type="button"
                   onClick={() => setPassengerNamesConfirmed(true)}
-                  disabled={companions.some((companion) => !companion.name.trim())}
+                  disabled={companionFields.some((companion) => !hasCompanionName(companion))}
                   className="mt-5 h-12 w-full rounded-2xl bg-[#dfff84] font-black text-green-950 hover:bg-lime-200 disabled:opacity-60"
                 >
                   Continuar
