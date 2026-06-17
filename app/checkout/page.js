@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Check, Copy } from 'lucide-react';
 import { createClient } from '@/lib/supabase-client';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -71,6 +71,7 @@ export default function CheckoutPage() {
   const [referencePdfLoading, setReferencePdfLoading] = useState(false);
   const [reference, setReference] = useState(null);
   const [referenceExpiresAt, setReferenceExpiresAt] = useState(null);
+  const [copiedPaymentField, setCopiedPaymentField] = useState(null);
   const [ticketNumbers, setTicketNumbers] = useState({ outbound: null, return: null });
   const [outboundTicket, setOutboundTicket] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('referencia'); // 'cash' or 'referencia'
@@ -282,6 +283,17 @@ export default function CheckoutPage() {
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const copyPaymentText = async (label, value) => {
+    try {
+      await navigator.clipboard.writeText(String(value));
+      setCopiedPaymentField(label);
+      setTimeout(() => setCopiedPaymentField(null), 1800);
+    } catch (err) {
+      console.error('Could not copy payment text:', err);
+      alert('Nao foi possivel copiar. Pressione e segure no numero para copiar.');
+    }
   };
 
   const downloadPaymentReferencePdf = async (paymentReference, finalPrice, user, expiresAt = referenceExpiresAt) => {
@@ -1563,10 +1575,37 @@ const handleDownloadPdf = async () => {
                     <p className="font-semibold text-green-700 dark:text-green-300 mb-2">
                       Pague com esta referência:
                     </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Entidade: 1219</p>
-                    <p className="text-3xl font-bold text-green-600 tracking-widest my-3">
-                      {reference}
-                    </p>
+                    <div className="mt-4 grid gap-3">
+                      <button
+                        type="button"
+                        onClick={() => copyPaymentText('entity', '1219')}
+                        className="flex items-center justify-between rounded-2xl border border-green-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-green-500 dark:border-green-800 dark:bg-gray-900"
+                      >
+                        <span>
+                          <span className="block text-xs font-bold uppercase tracking-[0.16em] text-gray-500">Entidade</span>
+                          <span className="block text-2xl font-black text-gray-900 dark:text-white">1219</span>
+                        </span>
+                        <span className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-2 text-sm font-bold text-green-800">
+                          {copiedPaymentField === 'entity' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                          {copiedPaymentField === 'entity' ? 'Copiado' : 'Copiar'}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => copyPaymentText('reference', reference)}
+                        className="flex items-center justify-between rounded-2xl border border-green-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-green-500 dark:border-green-800 dark:bg-gray-900"
+                      >
+                        <span>
+                          <span className="block text-xs font-bold uppercase tracking-[0.16em] text-gray-500">Referencia</span>
+                          <span className="block text-3xl font-black tracking-widest text-green-600">{reference}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-2 text-sm font-bold text-green-800">
+                          {copiedPaymentField === 'reference' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                          {copiedPaymentField === 'reference' ? 'Copiado' : 'Copiar'}
+                        </span>
+                      </button>
+                    </div>
                     <p className="text-lg font-semibold text-green-700 dark:text-green-300">
                       Valor: {Math.round(finalPrice)},00 Kz
                     </p>
@@ -1583,6 +1622,11 @@ const handleDownloadPdf = async () => {
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     O bilhete sera emitido automaticamente apos a confirmacao do pagamento.
                   </p>
+                  {copiedPaymentField === 'reference' && (
+                    <p className="mt-3 rounded-xl bg-white px-3 py-2 text-sm font-bold text-green-800 dark:bg-gray-900 dark:text-green-300">
+                      Depois de pagar, toque no botao laranja no canto inferior direito e abra Pagos para baixar o bilhete.
+                    </p>
+                  )}
                   <Button
                     type="button"
                     onClick={() => handleReferencePdfDownload(reference, finalPrice, currentUser, referenceExpiresAt)}
@@ -1660,6 +1704,31 @@ const handleDownloadPdf = async () => {
               }
             </DialogDescription>
           </DialogHeader>
+
+          <div className="grid grid-cols-2 gap-2 rounded-2xl bg-gray-100 p-1 dark:bg-gray-800">
+            <button
+              type="button"
+              onClick={() => setAuthMode('login')}
+              className={`rounded-xl px-3 py-3 text-sm font-bold transition ${
+                authMode === 'login'
+                  ? 'bg-white text-gray-950 shadow-sm dark:bg-gray-950 dark:text-white'
+                  : 'text-gray-600 hover:text-gray-950 dark:text-gray-300 dark:hover:text-white'
+              }`}
+            >
+              Entrar
+            </button>
+            <button
+              type="button"
+              onClick={() => setAuthMode('signup')}
+              className={`rounded-xl px-3 py-3 text-sm font-bold transition ${
+                authMode === 'signup'
+                  ? 'bg-white text-gray-950 shadow-sm dark:bg-gray-950 dark:text-white'
+                  : 'text-gray-600 hover:text-gray-950 dark:text-gray-300 dark:hover:text-white'
+              }`}
+            >
+              Criar Conta
+            </button>
+          </div>
 
           <form className="space-y-4" onSubmit={handleAuthSubmit}>
             <div className="space-y-2">

@@ -10,13 +10,13 @@ const mangaisDates = [
     day: '20',
     weekday: 'Sábado',
     label: '20 de Junho',
-    href: 'https://www.nawabus.co.ao/search?origin=Luanda&destination=Barra+do+Cuanza&date=2026-06-20&tripType=one-way',
+    href: '/mangais?date=2026-06-20',
   },
   {
     day: '21',
     weekday: 'Domingo',
     label: '21 de Junho',
-    href: 'https://www.nawabus.co.ao/search?origin=Luanda&destination=Barra+do+Cuanza&date=2026-06-21&tripType=one-way',
+    href: '/mangais?date=2026-06-21',
   },
 ];
 
