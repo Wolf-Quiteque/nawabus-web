@@ -350,7 +350,8 @@ function MangaisEventFlow() {
   );
 
   const pickTripAndSeats = async (trips, optionKey, tripDirection) => {
-    const candidates = getGroupedVisibleTrips(trips, tripDirection)
+    const candidates = [...trips]
+      .sort(sortTrips)
       .filter((trip) => getTripOptionKey(trip, tripDirection) === optionKey)
       .filter((trip) => Number(trip.available_seats) >= totalPassengers);
 
