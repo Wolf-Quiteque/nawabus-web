@@ -31,6 +31,8 @@ const directionOptions = [
   },
 ];
 
+const VISIBLE_RETURN_DEPARTURE_UTC_TIME = '19:00';
+
 function minuteWindow(isoString) {
   const d = new Date(isoString);
   d.setSeconds(0, 0);
@@ -162,6 +164,10 @@ function getTimeOptions(timeOptions, city) {
   return timeOptions.filter((option) => option.city === city);
 }
 
+function isVisibleReturnTrip(trip) {
+  return new Date(trip.departure_time).toISOString().slice(11, 16) === VISIBLE_RETURN_DEPARTURE_UTC_TIME;
+}
+
 function getSelectedOptionLabel(options, value) {
   const option = options.find((item) => item.value === value);
   if (!option) return '';
@@ -183,6 +189,12 @@ function safeCompanion(companion) {
     name: typeof companion?.name === 'string' ? companion.name : '',
     phone: typeof companion?.phone === 'string' ? companion.phone : '',
   };
+}
+
+function safePassengerCount(value) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return 0;
+  return Math.max(0, Math.min(9, Math.floor(numericValue)));
 }
 
 function hasCompanionName(companion) {
@@ -297,6 +309,54 @@ function MangaisEventFlow() {
   }, [supabase]);
 
   useEffect(() => {
+    const reportClientError = (payload) => {
+      fetch('/api/client-errors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          page: 'mangais',
+          step,
+          eventDate,
+          direction,
+          outboundPlace,
+          outboundPoint,
+          returnPlace,
+          returnPoint,
+          companionCount,
+          ...payload,
+        }),
+      }).catch(() => {});
+    };
+
+    const handleError = (event) => {
+      reportClientError({
+        type: 'window.error',
+        message: event.message,
+        source: event.filename,
+        line: event.lineno,
+        column: event.colno,
+        stack: event.error?.stack,
+      });
+    };
+
+    const handleRejection = (event) => {
+      reportClientError({
+        type: 'unhandledrejection',
+        message: event.reason?.message || String(event.reason),
+        stack: event.reason?.stack,
+      });
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleRejection);
+
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleRejection);
+    };
+  }, [companionCount, direction, eventDate, outboundPlace, outboundPoint, returnPlace, returnPoint, step]);
+
+  useEffect(() => {
     if (!eventDate) return;
 
     const loadTrips = async () => {
@@ -323,7 +383,7 @@ function MangaisEventFlow() {
 
   const updateCompanionCount = (nextCount) => {
     try {
-      const normalizedCount = Math.max(0, Math.min(9, Number(nextCount) || 0));
+      const normalizedCount = safePassengerCount(nextCount);
       companionCountRef.current = normalizedCount;
       setCompanionCount(normalizedCount);
       setPassengerCountConfirmed(false);
@@ -338,14 +398,18 @@ function MangaisEventFlow() {
     }
   };
 
+  const visibleReturnTrips = useMemo(() => returnTrips.filter(isVisibleReturnTrip), [returnTrips]);
   const outboundOptions = useMemo(() => getPointOptions(outboundTrips, 'outbound'), [outboundTrips]);
-  const returnOptions = useMemo(() => getPointOptions(returnTrips, 'return'), [returnTrips]);
+  const returnOptions = useMemo(() => getPointOptions(visibleReturnTrips, 'return'), [visibleReturnTrips]);
   const outboundPlaceOptions = useMemo(() => getPlaceOptions(outboundOptions), [outboundOptions]);
   const returnPlaceOptions = useMemo(() => getPlaceOptions(returnOptions), [returnOptions]);
   const outboundTimeOptions = useMemo(() => getTimeOptions(outboundOptions, outboundPlace), [outboundOptions, outboundPlace]);
   const returnTimeOptions = useMemo(() => getTimeOptions(returnOptions, returnPlace), [returnOptions, returnPlace]);
   const companionFields = useMemo(
-    () => Array.from({ length: companionCount }, (_, index) => safeCompanion(companions[index])),
+    () => {
+      const source = Array.isArray(companions) ? companions : [];
+      return Array.from({ length: safePassengerCount(companionCount) }, (_, index) => safeCompanion(source[index]));
+    },
     [companionCount, companions]
   );
 
@@ -429,7 +493,7 @@ function MangaisEventFlow() {
       }
 
       if (needsReturn) {
-        returnSelection = await pickTripAndSeats(returnTrips, returnPoint, 'return');
+        returnSelection = await pickTripAndSeats(visibleReturnTrips, returnPoint, 'return');
       }
 
       const primarySelection = outboundSelection || returnSelection;
@@ -649,7 +713,8 @@ function MangaisEventFlow() {
                 <Button
                   type="button"
                   onClick={() => {
-                    const count = companionCountRef.current;
+                    const count = safePassengerCount(companionCountRef.current);
+                    companionCountRef.current = count;
                     setCompanionCount(count);
                     setPassengerCountConfirmed(true);
                     if (count === 0) {
