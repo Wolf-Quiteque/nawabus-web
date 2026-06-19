@@ -66,10 +66,13 @@ function pointSort(a, b) {
 }
 
 function buildDirectionSummary(dateLabel, directionTitle, groups) {
+  const total = groups.reduce((sum, group) => sum + group.total, 0);
   const lines = [dateLabel, "", directionTitle, ""];
 
   if (!groups.length) {
     lines.push("Sem passageiros pagos.");
+    lines.push("");
+    lines.push("Total: 0 passageiros");
     return lines.join("\n");
   }
 
@@ -80,6 +83,9 @@ function buildDirectionSummary(dateLabel, directionTitle, groups) {
       lines.push(`${normalizeTimeForCopy(item.time)} - ${item.count} passageiro${item.count === 1 ? "" : "s"}`);
     });
   });
+
+  lines.push("");
+  lines.push(`Total: ${total} passageiro${total === 1 ? "" : "s"}`);
 
   return lines.join("\n");
 }
@@ -256,7 +262,7 @@ function DirectionCard({ direction, groups, total, loading, copied, onCopy }) {
         <div>
           <p className="text-xs font-black uppercase tracking-[0.18em] text-orange-300">Rota</p>
           <h2 className="mt-1 text-xl font-black">{direction.title}</h2>
-          <p className="mt-1 text-sm text-neutral-400">{total} passageiros pagos</p>
+          <p className="mt-1 text-sm text-neutral-400">Total: {total} passageiros pagos</p>
         </div>
         <button
           type="button"
