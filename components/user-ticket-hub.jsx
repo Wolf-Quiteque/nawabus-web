@@ -638,7 +638,9 @@ export function UserTicketHub() {
         console.warn("Pending reference filtered query failed:", pendingError.message);
         setPendingTransactions([]);
       } else {
-        setPendingTransactions(pending || []);
+        setPendingTransactions((pending || []).filter((transaction) => (
+          Boolean(getPendingBooking(transaction)) && !isPendingExpired(transaction)
+        )));
       }
     } catch (err) {
       console.error("User hub data error:", err);

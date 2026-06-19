@@ -624,6 +624,8 @@ export default function CheckoutPage() {
               booking_source: 'online',
               payment_method: 'referencia',
               coupon_code: appliedCoupon?.code || null,
+              event: bookingDetails.event || null,
+              event_date: bookingDetails.eventDate || null,
               trip_type: tripType,
               outbound_trip: buildDeferredTrip(outboundTrip, outboundPerSeat),
               return_trip: tripType === 'round-trip' && returnTrip

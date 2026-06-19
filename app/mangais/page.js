@@ -13,6 +13,8 @@ const EVENT_DATES = {
   '2026-06-21': { day: '21', label: '21 de Junho', weekday: 'Domingo' },
 };
 
+const EVENT_ROUTE_CAP = 220;
+
 const directionOptions = [
   {
     value: 'one-way',
@@ -39,6 +41,12 @@ function minuteWindow(isoString) {
   return { start: d.toISOString(), end: new Date(d.getTime() + 60000).toISOString() };
 }
 
+function getLuandaDayRange(date) {
+  const start = new Date(`${date}T00:00:00+01:00`);
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
 async function getSiblingIds(supabase, busId, departureTime) {
   const { start, end } = minuteWindow(departureTime);
   const { data } = await supabase
@@ -62,6 +70,62 @@ async function getHeldSeatNumbers(tripIds) {
 
   const result = await response.json();
   return (result.held_seats || []).map((hold) => Number(hold.seat_number)).filter(Number.isFinite);
+}
+
+async function countPaidTicketsForTrips(supabase, tripIds) {
+  if (!tripIds?.length) return 0;
+
+  const { count, error } = await supabase
+    .from('tickets')
+    .select('id', { count: 'exact', head: true })
+    .in('trip_id', tripIds)
+    .eq('payment_status', 'paid')
+    .in('status', ['active', 'used']);
+
+  if (error) throw error;
+  return count || 0;
+}
+
+async function getCampaignTripIds(supabase, date, isReturn = false) {
+  const range = getLuandaDayRange(date);
+  let query = supabase
+    .from('trips')
+    .select('id, routes!inner(origin_province, destination_province)')
+    .gte('departure_time', range.start)
+    .lt('departure_time', range.end);
+
+  if (isReturn) {
+    query = query
+      .ilike('routes.origin_province', '%Barra%')
+      .ilike('routes.destination_province', '%Luanda%');
+  } else {
+    query = query
+      .ilike('routes.origin_province', '%Luanda%')
+      .ilike('routes.destination_province', '%Barra%');
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data || []).map((trip) => trip.id);
+}
+
+async function getCampaignCapacityCountsForDate(supabase, date) {
+  const [outboundTripIds, returnTripIds] = await Promise.all([
+    getCampaignTripIds(supabase, date, false),
+    getCampaignTripIds(supabase, date, true),
+  ]);
+
+  const [outboundPaid, returnPaid, outboundHeld, returnHeld] = await Promise.all([
+    countPaidTicketsForTrips(supabase, outboundTripIds),
+    countPaidTicketsForTrips(supabase, returnTripIds),
+    getHeldSeatNumbers(outboundTripIds),
+    getHeldSeatNumbers(returnTripIds),
+  ]);
+
+  return {
+    outboundUsed: outboundPaid + outboundHeld.length,
+    returnUsed: returnPaid + returnHeld.length,
+  };
 }
 
 function formatTime(value) {
@@ -234,6 +298,11 @@ function MangaisEventFlow() {
   const [companions, setCompanions] = useState([]);
   const [outboundTrips, setOutboundTrips] = useState([]);
   const [returnTrips, setReturnTrips] = useState([]);
+  const [routeCapacity, setRouteCapacity] = useState({
+    outboundUsed: 0,
+    returnUsed: 0,
+    loading: false,
+  });
   const [loadingTrips, setLoadingTrips] = useState(false);
   const [buildingBooking, setBuildingBooking] = useState(false);
   const [error, setError] = useState('');
@@ -255,8 +324,7 @@ function MangaisEventFlow() {
   }, [companionCount, direction, eventDate, needsOutbound, needsReturn, outboundPlace, outboundPoint, passengerCountConfirmed, passengerNamesConfirmed, returnPlace, returnPoint]);
 
   const fetchTrips = useCallback(async (date, isReturn = false) => {
-    const startOfDay = new Date(`${date}T00:00:00`);
-    const endOfDay = new Date(`${date}T23:59:59.999`);
+    const range = getLuandaDayRange(date);
 
     let query = supabase
       .from('trips')
@@ -289,8 +357,8 @@ function MangaisEventFlow() {
       `)
       .eq('status', 'scheduled')
       .gt('available_seats', 0)
-      .gte('departure_time', startOfDay.toISOString())
-      .lte('departure_time', endOfDay.toISOString())
+      .gte('departure_time', range.start)
+      .lt('departure_time', range.end)
       .order('departure_time', { ascending: true });
 
     if (isReturn) {
@@ -307,6 +375,16 @@ function MangaisEventFlow() {
     if (tripError) throw tripError;
     return data || [];
   }, [supabase]);
+
+  const fetchRouteCapacity = useCallback(async () => {
+    if (!eventDate) return { outboundUsed: 0, returnUsed: 0 };
+    const counts = await getCampaignCapacityCountsForDate(supabase, eventDate);
+    setRouteCapacity({
+      ...counts,
+      loading: false,
+    });
+    return counts;
+  }, [eventDate, supabase]);
 
   useEffect(() => {
     const reportClientError = (payload) => {
@@ -361,25 +439,29 @@ function MangaisEventFlow() {
 
     const loadTrips = async () => {
       setLoadingTrips(true);
+      setRouteCapacity((current) => ({ ...current, loading: true }));
       setError('');
 
       try {
-        const [outboundData, returnData] = await Promise.all([
+        const [outboundData, returnData, capacityCounts] = await Promise.all([
           fetchTrips(eventDate, false),
           fetchTrips(eventDate, true),
+          getCampaignCapacityCountsForDate(supabase, eventDate),
         ]);
         setOutboundTrips(outboundData);
         setReturnTrips(returnData);
+        setRouteCapacity({ ...capacityCounts, loading: false });
       } catch (err) {
         console.error('Mangais trips error:', err);
         setError('Nao foi possivel carregar as viagens do evento. Tente novamente.');
       } finally {
         setLoadingTrips(false);
+        setRouteCapacity((current) => ({ ...current, loading: false }));
       }
     };
 
     loadTrips();
-  }, [eventDate, fetchTrips]);
+  }, [eventDate, fetchTrips, supabase]);
 
   const updateCompanionCount = (nextCount) => {
     try {
@@ -399,6 +481,19 @@ function MangaisEventFlow() {
   };
 
   const visibleReturnTrips = useMemo(() => returnTrips.filter(isVisibleReturnTrip), [returnTrips]);
+  const outboundRemaining = Math.max(0, EVENT_ROUTE_CAP - routeCapacity.outboundUsed);
+  const returnRemaining = Math.max(0, EVENT_ROUTE_CAP - routeCapacity.returnUsed);
+  const isOutboundSoldOut = outboundRemaining <= 0;
+  const isReturnSoldOut = returnRemaining <= 0;
+  const isEventSoldOut = isOutboundSoldOut && isReturnSoldOut;
+  const availableDirectionOptions = useMemo(() => (
+    directionOptions.filter((option) => {
+      if (option.value === 'one-way') return !isOutboundSoldOut;
+      if (option.value === 'return-only') return !isReturnSoldOut;
+      if (option.value === 'round-trip') return !isOutboundSoldOut && !isReturnSoldOut;
+      return true;
+    })
+  ), [isOutboundSoldOut, isReturnSoldOut]);
   const outboundOptions = useMemo(() => getPointOptions(outboundTrips, 'outbound'), [outboundTrips]);
   const returnOptions = useMemo(() => getPointOptions(visibleReturnTrips, 'return'), [visibleReturnTrips]);
   const outboundPlaceOptions = useMemo(() => getPlaceOptions(outboundOptions), [outboundOptions]);
@@ -412,6 +507,22 @@ function MangaisEventFlow() {
     },
     [companionCount, companions]
   );
+  const maxPassengersForDirection = useMemo(() => {
+    if (direction === 'one-way') return outboundRemaining;
+    if (direction === 'return-only') return returnRemaining;
+    if (direction === 'round-trip') return Math.min(outboundRemaining, returnRemaining);
+    return EVENT_ROUTE_CAP;
+  }, [direction, outboundRemaining, returnRemaining]);
+  const maxAllowedPassengers = Math.max(0, Math.min(10, maxPassengersForDirection));
+
+  useEffect(() => {
+    if (!direction) return;
+    const stillAvailable = availableDirectionOptions.some((option) => option.value === direction);
+    if (!stillAvailable) {
+      setDirection('');
+      resetAfterDirection();
+    }
+  }, [availableDirectionOptions, direction]);
 
   const pickTripAndSeats = async (trips, optionKey, tripDirection) => {
     const candidates = [...trips]
@@ -485,6 +596,18 @@ function MangaisEventFlow() {
     setError('');
 
     try {
+      const latestCapacity = await fetchRouteCapacity();
+      const latestOutboundRemaining = Math.max(0, EVENT_ROUTE_CAP - latestCapacity.outboundUsed);
+      const latestReturnRemaining = Math.max(0, EVENT_ROUTE_CAP - latestCapacity.returnUsed);
+
+      if (needsOutbound && totalPassengers > latestOutboundRemaining) {
+        throw new Error('Espaco esgotado para ida. Escolha apenas volta ou tente mais tarde.');
+      }
+
+      if (needsReturn && totalPassengers > latestReturnRemaining) {
+        throw new Error('Espaco esgotado para volta. Escolha apenas ida ou tente mais tarde.');
+      }
+
       let outboundSelection = null;
       let returnSelection = null;
 
@@ -608,6 +731,18 @@ function MangaisEventFlow() {
               </div>
             )}
 
+            {eventDate && !loadingTrips && (
+              <div className="mb-4 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-bold text-lime-50">
+                <p>Disponibilidade do evento</p>
+                <p className="mt-1 text-xs text-lime-100/80">
+                  Ida Luanda {'->'} Barra do Cuanza: {outboundRemaining} de {EVENT_ROUTE_CAP} lugares
+                </p>
+                <p className="text-xs text-lime-100/80">
+                  Volta Barra do Cuanza {'->'} Luanda: {returnRemaining} de {EVENT_ROUTE_CAP} lugares
+                </p>
+              </div>
+            )}
+
             {error && (
               <div className="mb-4 rounded-2xl border border-red-200 bg-red-500/15 px-4 py-3 text-sm font-bold text-red-50">
                 {error}
@@ -631,19 +766,35 @@ function MangaisEventFlow() {
 
               <EventStep active={step === 'direction'}>
                 <QuestionTitle title="O que queres comprar?" description="Escolhe a opcao mais simples para a tua viagem." />
-                <div className="grid gap-3">
-                  {directionOptions.map((option) => (
-                    <ChoiceButton
-                      key={option.value}
-                      title={option.title}
-                      detail={option.description}
-                      onClick={() => {
-                        setDirection(option.value);
-                        resetAfterDirection();
-                      }}
-                    />
-                  ))}
-                </div>
+                {isEventSoldOut ? (
+                  <SoldOutNotice text="Espaco esgotado para ida e volta neste evento." />
+                ) : (
+                  <div className="grid gap-3">
+                    {availableDirectionOptions.map((option) => (
+                      <ChoiceButton
+                        key={option.value}
+                        title={option.title}
+                        detail={
+                          option.value === 'round-trip'
+                            ? `${option.description} (${Math.min(outboundRemaining, returnRemaining)} disponiveis)`
+                            : option.value === 'one-way'
+                              ? `${option.description} (${outboundRemaining} disponiveis)`
+                              : `${option.description} (${returnRemaining} disponiveis)`
+                        }
+                        onClick={() => {
+                          setDirection(option.value);
+                          resetAfterDirection();
+                        }}
+                      />
+                    ))}
+                    {isOutboundSoldOut && !isReturnSoldOut && (
+                      <SoldOutNotice text="Ida esgotada. Neste momento so e possivel comprar volta." />
+                    )}
+                    {isReturnSoldOut && !isOutboundSoldOut && (
+                      <SoldOutNotice text="Volta esgotada. Neste momento so e possivel comprar ida." />
+                    )}
+                  </div>
+                )}
               </EventStep>
 
               <EventStep active={step === 'outbound-point'}>
@@ -704,16 +855,26 @@ function MangaisEventFlow() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => updateCompanionCount(companionCountRef.current + 1)}
-                    className="flex h-12 w-12 items-center justify-center rounded-full bg-[#dfff84] text-green-950 transition hover:bg-lime-200"
+                    onClick={() => updateCompanionCount(Math.min(companionCountRef.current + 1, Math.max(0, maxAllowedPassengers - 1)))}
+                    disabled={totalPassengers >= maxAllowedPassengers}
+                    className="flex h-12 w-12 items-center justify-center rounded-full bg-[#dfff84] text-green-950 transition hover:bg-lime-200 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Plus className="h-5 w-5" />
                   </button>
                 </div>
+                {maxAllowedPassengers < 10 && (
+                  <p className="mt-3 text-center text-xs font-bold text-lime-100/80">
+                    Restam {maxAllowedPassengers} lugar{maxAllowedPassengers === 1 ? '' : 'es'} para esta opcao.
+                  </p>
+                )}
                 <Button
                   type="button"
                   onClick={() => {
                     const count = safePassengerCount(companionCountRef.current);
+                    if (count + 1 > maxAllowedPassengers) {
+                      setError('Espaco esgotado para a quantidade escolhida. Reduza passageiros ou escolha outra opcao.');
+                      return;
+                    }
                     companionCountRef.current = count;
                     setCompanionCount(count);
                     setPassengerCountConfirmed(true);
@@ -861,6 +1022,14 @@ function QuestionTitle({ title, description }) {
     <div className="mb-5">
       <h2 className="text-2xl font-black leading-tight text-white sm:text-3xl">{title}</h2>
       <p className="mt-2 text-sm font-semibold leading-6 text-lime-50/78">{description}</p>
+    </div>
+  );
+}
+
+function SoldOutNotice({ text }) {
+  return (
+    <div className="rounded-2xl border border-red-100/60 bg-red-500/20 px-4 py-3 text-sm font-black text-red-50">
+      {text}
     </div>
   );
 }
