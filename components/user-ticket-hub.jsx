@@ -172,6 +172,19 @@ function getGroupRouteSummary(group) {
   return tripGroups.map((tripGroup, index) => `Viagem ${index + 1}: ${getRoute(tripGroup.firstTicket)}`).join(" | ");
 }
 
+function getTripQrLabel(index, total) {
+  if (total === 2) return index === 0 ? "Ida" : "Volta";
+  return total > 1 ? `Viagem ${index + 1}` : "Viagem";
+}
+
+function buildQrTripPayload(tripGroup, index = 0, total = 1) {
+  return {
+    label: getTripQrLabel(index, total),
+    firstTicket: tripGroup.firstTicket,
+    tickets: tripGroup.tickets,
+  };
+}
+
 function getUpcomingRideCount(tickets) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -306,6 +319,48 @@ async function downloadPaidTicketGroup(group, user, payment) {
     doc.setFont(undefined, "bold");
     doc.setFontSize(10);
     doc.text("Pagamento confirmado. Este manifesto e valido junto com os QR codes das paginas seguintes.", 24, 262, { maxWidth: 160 });
+
+    if (tripGroups.length > 1) {
+      doc.addPage();
+      doc.setFillColor(...dark);
+      doc.rect(0, 0, 210, 46, "F");
+      doc.setFillColor(...orange);
+      doc.rect(0, 41, 210, 5, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont(undefined, "bold");
+      doc.setFontSize(22);
+      doc.text("QR por viagem", 18, 20);
+      doc.setFontSize(10);
+      doc.text("Use cada QR apenas para a viagem indicada", 18, 31);
+
+      for (let tripIndex = 0; tripIndex < tripGroups.length; tripIndex += 1) {
+        const tripGroup = tripGroups[tripIndex];
+        const qrDataUrl = await QRCode.toDataURL(tripGroup.firstTicket.id, { width: 220, margin: 1 });
+        const top = 62 + tripIndex * 92;
+
+        if (top > 210) {
+          doc.addPage();
+        }
+
+        doc.setFillColor(255, 255, 255);
+        doc.setDrawColor(229, 231, 235);
+        doc.roundedRect(16, top, 178, 76, 5, 5, "FD");
+        doc.setTextColor(...orange);
+        doc.setFont(undefined, "bold");
+        doc.setFontSize(15);
+        doc.text(`QR ${getTripQrLabel(tripIndex, tripGroups.length)}`, 26, top + 16);
+        doc.setTextColor(...dark);
+        doc.setFontSize(10);
+        doc.text(getRoute(tripGroup.firstTicket), 26, top + 30, { maxWidth: 100 });
+        doc.setFont(undefined, "normal");
+        doc.setTextColor(...muted);
+        doc.text(`Partida: ${formatDate(tripGroup.firstTicket.trips?.departure_time)}`, 26, top + 42, { maxWidth: 100 });
+        doc.text(`Lugares: ${tripGroup.tickets.map((ticket) => ticket.seat_number).join(", ")}`, 26, top + 54, { maxWidth: 100 });
+        doc.addImage(qrDataUrl, "PNG", 146, top + 16, 38, 38);
+        doc.setFontSize(8);
+        doc.text("Scan isolado desta viagem", 165, top + 62, { align: "center" });
+      }
+    }
   }
 
   for (let index = 0; index < group.tickets.length; index += 1) {
@@ -417,7 +472,7 @@ export function UserTicketHub() {
   const [paymentsByReference, setPaymentsByReference] = useState({});
   const [pendingTransactions, setPendingTransactions] = useState([]);
   const [dataLoading, setDataLoading] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [selectedQrTrip, setSelectedQrTrip] = useState(null);
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [showHubHelper, setShowHubHelper] = useState(false);
 
@@ -437,7 +492,7 @@ export function UserTicketHub() {
         setTickets([]);
         setPaymentsByReference({});
         setPendingTransactions([]);
-        setSelectedTicket(null);
+        setSelectedQrTrip(null);
       }
     });
 
@@ -491,18 +546,18 @@ export function UserTicketHub() {
   }, []);
 
   useEffect(() => {
-    if (!selectedTicket) {
+    if (!selectedQrTrip?.firstTicket) {
       setQrDataUrl("");
       return;
     }
 
-    QRCode.toDataURL(selectedTicket.id, { width: 220, margin: 1 })
+    QRCode.toDataURL(selectedQrTrip.firstTicket.id, { width: 220, margin: 1 })
       .then(setQrDataUrl)
       .catch((err) => {
         console.error("QR generation failed:", err);
         setQrDataUrl("");
       });
-  }, [selectedTicket]);
+  }, [selectedQrTrip]);
 
   async function fetchUserData(userId) {
     setDataLoading(true);
@@ -938,7 +993,7 @@ export function UserTicketHub() {
                             group={group}
                             user={user}
                             payment={paymentsByReference[group.reference]}
-                            onShowQr={setSelectedTicket}
+                            onShowQr={setSelectedQrTrip}
                           />
                         ))}
                       </div>
@@ -966,17 +1021,17 @@ export function UserTicketHub() {
         </div>
       )}
 
-      {selectedTicket && (
+      {selectedQrTrip && (
         <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/65 p-4 backdrop-blur-sm md:items-center">
           <div className="w-full max-w-sm rounded-[28px] border border-white/15 bg-neutral-950 p-5 text-white shadow-2xl">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.25em] text-orange-300">QR de embarque</p>
-                <h3 className="mt-1 text-lg font-semibold">Lugar {selectedTicket.seat_number}</h3>
+                <h3 className="mt-1 text-lg font-semibold">QR {selectedQrTrip.label}</h3>
               </div>
               <button
                 type="button"
-                onClick={() => setSelectedTicket(null)}
+                onClick={() => setSelectedQrTrip(null)}
                 className="rounded-full bg-white/10 p-2"
                 aria-label="Fechar QR"
               >
@@ -990,8 +1045,13 @@ export function UserTicketHub() {
                 <div className="flex h-56 items-center justify-center text-sm text-neutral-500">A gerar QR...</div>
               )}
             </div>
-            <p className="mt-4 text-sm text-neutral-300">{getRoute(selectedTicket)}</p>
-            <p className="mt-1 text-xs text-neutral-500">{selectedTicket.id}</p>
+            <p className="mt-4 text-sm text-neutral-300">{getRoute(selectedQrTrip.firstTicket)}</p>
+            <p className="mt-1 text-xs text-neutral-400">
+              Lugares: {selectedQrTrip.tickets.map((ticket) => ticket.seat_number).join(", ")}
+            </p>
+            <p className="mt-1 text-xs text-neutral-500">
+              Este QR valida apenas esta viagem. A ida e a volta sao controladas separadamente.
+            </p>
           </div>
         </div>
       )}
@@ -1003,6 +1063,7 @@ function PaidGroupCard({ group, user, payment, onShowQr }) {
   const ticket = group.firstTicket;
   const tripGroups = groupTicketsByTrip(group.tickets);
   const routeSummary = getGroupRouteSummary(group);
+  const firstTripQr = buildQrTripPayload(tripGroups[0], 0, tripGroups.length);
   const seats = tripGroups
     .map((tripGroup, index) => `V${index + 1}: ${tripGroup.tickets.map((item) => item.seat_number).join(", ")}`)
     .join(" | ");
@@ -1060,16 +1121,19 @@ function PaidGroupCard({ group, user, payment, onShowQr }) {
         </div>
 
         <div className="space-y-2">
-          {group.tickets.slice(0, 3).map((ticket) => (
+          {tripGroups.map((tripGroup, index) => (
             <button
               type="button"
-              key={ticket.id}
-              onClick={() => onShowQr(ticket)}
+              key={tripGroup.tripId || tripGroup.firstTicket.id}
+              onClick={() => onShowQr(buildQrTripPayload(tripGroup, index, tripGroups.length))}
               className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-left transition hover:bg-white/10"
             >
               <span className="min-w-0">
-                <span className="block truncate text-sm font-medium">{getPassengerName(ticket, user, payment)}</span>
-                <span className="text-xs text-neutral-500">Lugar {ticket.seat_number}</span>
+                <span className="block truncate text-sm font-medium">QR {getTripQrLabel(index, tripGroups.length)}</span>
+                <span className="block truncate text-xs text-neutral-400">{getRoute(tripGroup.firstTicket)}</span>
+                <span className="text-xs text-neutral-500">
+                  {formatDate(tripGroup.firstTicket.trips?.departure_time)} | Lugares {tripGroup.tickets.map((item) => item.seat_number).join(", ")}
+                </span>
               </span>
               <QrCode className="h-5 w-5 text-orange-300" />
             </button>
@@ -1088,8 +1152,9 @@ function PaidGroupCard({ group, user, payment, onShowQr }) {
           </button>
           <button
             type="button"
-            onClick={() => onShowQr(ticket)}
+            onClick={() => onShowQr(firstTripQr)}
             className="flex items-center justify-center rounded-2xl border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+            aria-label="Mostrar QR"
           >
             <Eye className="h-4 w-4" />
           </button>
