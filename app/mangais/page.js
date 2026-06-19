@@ -13,7 +13,7 @@ const EVENT_DATES = {
   '2026-06-21': { day: '21', label: '21 de Junho', weekday: 'Domingo' },
 };
 
-const EVENT_ROUTE_CAP = 220;
+const EVENT_ROUTE_CAP = 250;
 
 const directionOptions = [
   {
