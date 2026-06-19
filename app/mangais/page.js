@@ -213,15 +213,29 @@ function getPlaceOptions(timeOptions) {
   const places = new Map();
 
   timeOptions.forEach((option) => {
-    if (!option.city || places.has(option.city)) return;
-    places.set(option.city, {
+    if (!option.city) return;
+
+    const place = places.get(option.city) || {
       value: option.city,
       title: option.title,
       detail: option.detail,
-    });
+      times: [],
+    };
+
+    if (!place.times.some((item) => item.time === option.time)) {
+      place.times.push({
+        time: option.time,
+        availableSeats: option.availableSeats,
+      });
+    }
+
+    places.set(option.city, place);
   });
 
-  return [...places.values()];
+  return [...places.values()].map((place) => ({
+    ...place,
+    times: place.times.sort((a, b) => a.time.localeCompare(b.time)),
+  }));
 }
 
 function getTimeOptions(timeOptions, city) {
@@ -1078,6 +1092,18 @@ function PlaceChoices({ options, emptyText, onSelect }) {
             {option.detail && (
               <span className="mt-1 block text-xs font-bold text-lime-50/72 group-hover:text-green-900/70">
                 {option.detail}
+              </span>
+            )}
+            {option.times?.length > 0 && (
+              <span className="mt-3 flex flex-wrap gap-2">
+                {option.times.map((timeOption) => (
+                  <span
+                    key={timeOption.time}
+                    className="rounded-full border border-lime-200/35 bg-lime-100/12 px-3 py-1 text-xs font-black text-lime-50 group-hover:border-green-800/25 group-hover:bg-green-950/10 group-hover:text-green-950"
+                  >
+                    {timeOption.time}
+                  </span>
+                ))}
               </span>
             )}
           </span>
