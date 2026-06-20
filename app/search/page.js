@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import SearchForm from '@/components/search-form';
 import { isClosedMangaisOutboundTrip } from '@/lib/mangais-closed-trips';
+import { getClosedTodayPurchaseMessage, isDatePurchasable } from '@/lib/purchase-date';
 
 function SearchResults() {
   const router = useRouter();
@@ -96,6 +97,16 @@ function SearchResults() {
   useEffect(() => {
     const loadTrips = async () => {
       if (!origin || !destination || !date) {
+        setLoading(false);
+        return;
+      }
+
+      if (!isDatePurchasable(date) || (isRoundTrip && returnDate && !isDatePurchasable(returnDate))) {
+        setError(getClosedTodayPurchaseMessage());
+        setOutboundTrips([]);
+        setReturnTrips([]);
+        setSelectedOutboundTrip(null);
+        setSelectedReturnTrip(null);
         setLoading(false);
         return;
       }

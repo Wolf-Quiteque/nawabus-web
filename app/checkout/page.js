@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
+import { getClosedTodayPurchaseMessage, isTripPurchasable } from '@/lib/purchase-date';
 
 function openTicketHub(tab) {
   if (typeof window === 'undefined') return;
@@ -215,6 +216,10 @@ export default function CheckoutPage() {
       throw new Error('Selecione pelo menos um lugar de ida.');
     }
 
+    if (!isTripPurchasable(details.outboundTrip)) {
+      throw new Error(getClosedTodayPurchaseMessage());
+    }
+
     if (details.tripType === 'round-trip') {
       if (!details.returnTrip) {
         throw new Error('A viagem de volta esta em falta. Volte a pesquisa e escolha a volta.');
@@ -222,6 +227,10 @@ export default function CheckoutPage() {
 
       if (!details.returnTrip.selectedSeats?.length) {
         throw new Error('Selecione pelo menos um lugar de volta.');
+      }
+
+      if (!isTripPurchasable(details.returnTrip)) {
+        throw new Error(getClosedTodayPurchaseMessage());
       }
     }
   };
@@ -422,6 +431,9 @@ export default function CheckoutPage() {
 
     try {
       await proceedWithPayment(user);
+    } catch (error) {
+      console.error('Payment validation error:', error);
+      alert(error.message || 'Nao foi possivel continuar com o pagamento.');
     } finally {
       setIsLoading(false);
     }
@@ -498,8 +510,14 @@ export default function CheckoutPage() {
 
       setShowAuthDialog(false);
       setIsLoading(true);
-      await proceedWithPayment(authedUser);
-      setIsLoading(false);
+      try {
+        await proceedWithPayment(authedUser);
+      } catch (error) {
+        console.error('Payment validation error:', error);
+        alert(error.message || 'Nao foi possivel continuar com o pagamento.');
+      } finally {
+        setIsLoading(false);
+      }
     } finally {
       setAuthSubmitting(false);
     }

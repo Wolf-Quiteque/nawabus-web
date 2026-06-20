@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { clampToMinPurchaseDate, getMinPurchaseDateKey } from '@/lib/purchase-date';
 
 export default function SearchForm() {
   const router = useRouter();
@@ -13,7 +14,7 @@ export default function SearchForm() {
   const [locations, setLocations] = useState([]);
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
-  const [departureDate, setDepartureDate] = useState(new Date().toISOString().split('T')[0]);
+  const [departureDate, setDepartureDate] = useState(() => getMinPurchaseDateKey());
   const [returnDate, setReturnDate] = useState('');
   const [tripType, setTripType] = useState('one-way'); // 'one-way' or 'round-trip'
 
@@ -27,8 +28,8 @@ export default function SearchForm() {
     
     if (o) setOrigin(o);
     if (d) setDestination(d);
-    if (dt) setDepartureDate(dt);
-    if (rt) setReturnDate(rt);
+    if (dt) setDepartureDate(clampToMinPurchaseDate(dt));
+    if (rt) setReturnDate(clampToMinPurchaseDate(rt));
     if (tt) setTripType(tt);
 
     // Fetch locations (mock - replace with actual Supabase call)
@@ -43,21 +44,29 @@ export default function SearchForm() {
 
   const handleSearch = (e) => {
     e.preventDefault();
+    const safeDepartureDate = clampToMinPurchaseDate(departureDate.trim());
+    const safeReturnDate = tripType === 'round-trip'
+      ? clampToMinPurchaseDate(returnDate.trim() || safeDepartureDate)
+      : '';
+
+    setDepartureDate(safeDepartureDate);
+    if (tripType === 'round-trip') setReturnDate(safeReturnDate);
+
     const params = new URLSearchParams({
       origin: origin.trim(),
       destination: destination.trim(),
-      date: departureDate.trim(),
+      date: safeDepartureDate,
       tripType: tripType
     });
     
-    if (tripType === 'round-trip' && returnDate) {
-      params.append('returnDate', returnDate.trim());
+    if (tripType === 'round-trip' && safeReturnDate) {
+      params.append('returnDate', safeReturnDate);
     }
     
     router.push(`/search?${params.toString()}`);
   };
 
-  const today = new Date().toISOString().split('T')[0];
+  const minPurchaseDate = getMinPurchaseDateKey();
   const shouldHighlightReturnDate = tripType === 'round-trip' && !returnDate;
 
   return (
@@ -145,8 +154,12 @@ export default function SearchForm() {
                 id="departureDate"
                 type="date"
                 value={departureDate}
-                onChange={(e) => setDepartureDate(e.target.value)}
-                min={today}
+                onChange={(e) => {
+                  const nextDate = clampToMinPurchaseDate(e.target.value);
+                  setDepartureDate(nextDate);
+                  if (returnDate && returnDate < nextDate) setReturnDate(nextDate);
+                }}
+                min={minPurchaseDate}
                 className="h-12 text-base border-gray-300 focus:border-yellow-500 focus:ring-yellow-500"
                 required
               />
@@ -162,8 +175,8 @@ export default function SearchForm() {
                   id="returnDate"
                   type="date"
                   value={returnDate}
-                  onChange={(e) => setReturnDate(e.target.value)}
-                  min={departureDate || today}
+                  onChange={(e) => setReturnDate(clampToMinPurchaseDate(e.target.value))}
+                  min={departureDate || minPurchaseDate}
                   className={`h-12 text-base transition-all duration-200 focus:border-yellow-500 focus:ring-yellow-500 ${
                     shouldHighlightReturnDate
                       ? 'animate-pulse border-2 border-orange-400 shadow-[0_0_0_4px_rgba(255,140,0,0.22),0_0_22px_rgba(255,140,0,0.38)]'

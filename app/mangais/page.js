@@ -8,11 +8,20 @@ import { createClient } from '@/lib/supabase-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { isClosedMangaisOutboundTrip } from '@/lib/mangais-closed-trips';
+import { isDatePurchasable } from '@/lib/purchase-date';
 
 const EVENT_DATES = {
   '2026-06-20': { day: '20', label: '20 de Junho', weekday: 'Sabado' },
   '2026-06-21': { day: '21', label: '21 de Junho', weekday: 'Domingo' },
 };
+
+function getPurchasableEventEntries() {
+  return Object.entries(EVENT_DATES).filter(([value]) => isDatePurchasable(value));
+}
+
+function getDefaultEventDate() {
+  return getPurchasableEventEntries()[0]?.[0] || '';
+}
 
 const EVENT_ROUTE_CAP = 250;
 
@@ -300,7 +309,11 @@ function MangaisEventFlow() {
   const supabase = createClient();
 
   const initialDate = searchParams.get('date');
-  const [eventDate, setEventDate] = useState(EVENT_DATES[initialDate] ? initialDate : '');
+  const [eventDate, setEventDate] = useState(() => (
+    EVENT_DATES[initialDate] && isDatePurchasable(initialDate)
+      ? initialDate
+      : getDefaultEventDate()
+  ));
   const [direction, setDirection] = useState('');
   const [outboundPlace, setOutboundPlace] = useState('');
   const [outboundPoint, setOutboundPoint] = useState('');
@@ -676,6 +689,7 @@ function MangaisEventFlow() {
   };
 
   const selectedDateMeta = EVENT_DATES[eventDate];
+  const purchasableEventEntries = getPurchasableEventEntries();
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#07180d] text-white">
@@ -772,7 +786,7 @@ function MangaisEventFlow() {
               <EventStep active={step === 'date'}>
                 <QuestionTitle title="Escolhe o dia do evento" description="Toca no dia em que queres viajar." />
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {Object.entries(EVENT_DATES).map(([value, meta]) => (
+                  {purchasableEventEntries.map(([value, meta]) => (
                     <ChoiceButton
                       key={value}
                       title={meta.label}
@@ -780,6 +794,9 @@ function MangaisEventFlow() {
                       onClick={() => setEventDate(value)}
                     />
                   ))}
+                  {purchasableEventEntries.length === 0 && (
+                    <SoldOutNotice text="As compras online para estas datas ja encerraram." />
+                  )}
                 </div>
               </EventStep>
 

@@ -4,15 +4,18 @@ import Image from 'next/image';
 import { Suspense, useState, useEffect } from 'react';
 import { ArrowRight, CalendarDays, Leaf, MapPin, Music2, UsersRound } from 'lucide-react';
 import SearchForm from '@/components/search-form';
+import { isDatePurchasable } from '@/lib/purchase-date';
 
 const mangaisDates = [
   {
+    value: '2026-06-20',
     day: '20',
     weekday: 'Sábado',
     label: '20 de Junho',
     href: '/mangais?date=2026-06-20',
   },
   {
+    value: '2026-06-21',
     day: '21',
     weekday: 'Domingo',
     label: '21 de Junho',
@@ -22,6 +25,7 @@ const mangaisDates = [
 
 export default function Home() {
   const [currentAdSeries, setCurrentAdSeries] = useState(1);
+  const availableMangaisDates = mangaisDates.filter((date) => isDatePurchasable(date.value));
 
   // Auto-rotate ads every 4 seconds
   useEffect(() => {
@@ -140,7 +144,7 @@ export default function Home() {
                 </div>
 
                 <div className="grid gap-3">
-                  {mangaisDates.map((date) => (
+                  {availableMangaisDates.map((date) => (
                     <a
                       key={date.day}
                       href={date.href}
@@ -163,6 +167,11 @@ export default function Home() {
                       </span>
                     </a>
                   ))}
+                  {availableMangaisDates.length === 0 && (
+                    <div className="rounded-2xl border border-lime-100/15 bg-white/[0.08] p-4 text-sm font-bold text-lime-50/80">
+                      As compras online para estas datas ja encerraram.
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-5 grid gap-3 border-t border-white/10 pt-5 text-sm font-semibold text-lime-50/90">

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase-client';
 import SeatSelection from '@/components/seat-selection';
+import { getClosedTodayPurchaseMessage, isTripPurchasable } from '@/lib/purchase-date';
 
 function minuteWindow(isoString) {
   const d = new Date(isoString);
@@ -94,6 +95,12 @@ function BookingPage() {
           .single();
 
         if (outboundError) throw outboundError;
+        if (!isTripPurchasable(outboundData)) {
+          alert(getClosedTodayPurchaseMessage());
+          router.replace('/');
+          return;
+        }
+
         setOutboundTrip(outboundData);
 
         // Fetch outbound occupied seats across all sibling trips (same bus + departure minute)
@@ -147,6 +154,12 @@ function BookingPage() {
             .single();
 
           if (returnError) throw returnError;
+          if (!isTripPurchasable(returnData)) {
+            alert(getClosedTodayPurchaseMessage());
+            router.replace('/');
+            return;
+          }
+
           setReturnTrip(returnData);
 
           // Fetch return occupied seats across all sibling trips
