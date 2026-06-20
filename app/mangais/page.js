@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, CalendarDays, Check, Loader2, MapPin, Minus, Plu
 import { createClient } from '@/lib/supabase-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { isClosedMangaisOutboundTrip } from '@/lib/mangais-closed-trips';
 
 const EVENT_DATES = {
   '2026-06-20': { day: '20', label: '20 de Junho', weekday: 'Sabado' },
@@ -494,6 +495,10 @@ function MangaisEventFlow() {
     }
   };
 
+  const selectableOutboundTrips = useMemo(
+    () => outboundTrips.filter((trip) => !isClosedMangaisOutboundTrip(trip)),
+    [outboundTrips]
+  );
   const visibleReturnTrips = useMemo(() => returnTrips.filter(isVisibleReturnTrip), [returnTrips]);
   const outboundRemaining = Math.max(0, EVENT_ROUTE_CAP - routeCapacity.outboundUsed);
   const returnRemaining = Math.max(0, EVENT_ROUTE_CAP - routeCapacity.returnUsed);
@@ -508,7 +513,7 @@ function MangaisEventFlow() {
       return true;
     })
   ), [isOutboundSoldOut, isReturnSoldOut]);
-  const outboundOptions = useMemo(() => getPointOptions(outboundTrips, 'outbound'), [outboundTrips]);
+  const outboundOptions = useMemo(() => getPointOptions(selectableOutboundTrips, 'outbound'), [selectableOutboundTrips]);
   const returnOptions = useMemo(() => getPointOptions(visibleReturnTrips, 'return'), [visibleReturnTrips]);
   const outboundPlaceOptions = useMemo(() => getPlaceOptions(outboundOptions), [outboundOptions]);
   const returnPlaceOptions = useMemo(() => getPlaceOptions(returnOptions), [returnOptions]);
@@ -626,7 +631,7 @@ function MangaisEventFlow() {
       let returnSelection = null;
 
       if (needsOutbound) {
-        outboundSelection = await pickTripAndSeats(outboundTrips, outboundPoint, 'outbound');
+        outboundSelection = await pickTripAndSeats(selectableOutboundTrips, outboundPoint, 'outbound');
       }
 
       if (needsReturn) {

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import SearchForm from '@/components/search-form';
+import { isClosedMangaisOutboundTrip } from '@/lib/mangais-closed-trips';
 
 function SearchResults() {
   const router = useRouter();
@@ -229,7 +230,7 @@ function SearchResults() {
 
   const visibleOutboundTrips = useMemo(() => {
     if (isRoundTrip && selectedOutboundTrip) return [selectedOutboundTrip];
-    return groupCampaignTrips(outboundTrips);
+    return groupCampaignTrips(outboundTrips.filter((trip) => !isClosedMangaisOutboundTrip(trip)));
   }, [groupCampaignTrips, isRoundTrip, selectedOutboundTrip, outboundTrips]);
 
   const visibleReturnTrips = useMemo(() => {
@@ -448,7 +449,7 @@ function SearchResults() {
               <h2 className={`text-2xl font-bold mb-4 ${isMangaisCampaign ? 'text-green-950 dark:text-white' : 'text-gray-800 dark:text-white'}`}>
                 {isRoundTrip ? 'Viagens de Ida' : 'Viagens Disponíveis'}
               </h2>
-              {outboundTrips.length > 0 ? (
+              {visibleOutboundTrips.length > 0 ? (
                 <div className="space-y-4">
                   {visibleOutboundTrips.map((trip) => renderTripCard(
                     trip, 
