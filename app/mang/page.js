@@ -67,12 +67,14 @@ function pointSort(a, b) {
 
 function buildDirectionSummary(dateLabel, directionTitle, groups) {
   const total = groups.reduce((sum, group) => sum + group.total, 0);
+  const confirmed = groups.reduce((sum, group) => sum + group.confirmed, 0);
   const lines = [dateLabel, "", directionTitle, ""];
 
   if (!groups.length) {
     lines.push("Sem passageiros pagos.");
     lines.push("");
     lines.push("Total: 0 passageiros");
+    lines.push("Confirmados: 0 passageiros");
     return lines.join("\n");
   }
 
@@ -80,17 +82,29 @@ function buildDirectionSummary(dateLabel, directionTitle, groups) {
     if (groupIndex > 0) lines.push("");
     lines.push(`${group.point}:`);
     group.times.forEach((item) => {
-      lines.push(`${normalizeTimeForCopy(item.time)} - ${item.count} passageiro${item.count === 1 ? "" : "s"}`);
+      lines.push(
+        `${normalizeTimeForCopy(item.time)} - ${item.count} passageiro${item.count === 1 ? "" : "s"} | ${item.confirmed} confirmado${item.confirmed === 1 ? "" : "s"}`
+      );
     });
   });
 
   lines.push("");
   lines.push(`Total: ${total} passageiro${total === 1 ? "" : "s"}`);
+  lines.push(`Confirmados: ${confirmed} passageiro${confirmed === 1 ? "" : "s"}`);
 
   return lines.join("\n");
 }
 
-function groupTicketsByPointAndTime(tickets, direction) {
+function createTimeBucket() {
+  return {
+    count: 0,
+    scanned: 0,
+    confirmed: 0,
+    boarded: 0,
+  };
+}
+
+function groupTicketsByPointAndTime(tickets, direction, scannedTicketIds = new Set()) {
   const pointMap = new Map();
 
   tickets.forEach((ticket) => {
@@ -101,19 +115,43 @@ function groupTicketsByPointAndTime(tickets, direction) {
     const point = normalizePointName(route[direction.pointField]);
     const time = formatTime(trip.departure_time);
     const pointBucket = pointMap.get(point) || new Map();
-    pointBucket.set(time, (pointBucket.get(time) || 0) + 1);
+    const timeBucket = pointBucket.get(time) || createTimeBucket();
+    const scanned = scannedTicketIds.has(ticket.id);
+    const confirmed = ticket.status === "used";
+
+    timeBucket.count += 1;
+    if (scanned) timeBucket.scanned += 1;
+    if (confirmed) timeBucket.confirmed += 1;
+    if (scanned || confirmed) timeBucket.boarded += 1;
+
+    pointBucket.set(time, timeBucket);
     pointMap.set(point, pointBucket);
   });
 
   return [...pointMap.entries()]
     .map(([point, times]) => ({
       point,
-      total: [...times.values()].reduce((sum, count) => sum + count, 0),
+      total: [...times.values()].reduce((sum, item) => sum + item.count, 0),
+      scanned: [...times.values()].reduce((sum, item) => sum + item.scanned, 0),
+      confirmed: [...times.values()].reduce((sum, item) => sum + item.confirmed, 0),
+      boarded: [...times.values()].reduce((sum, item) => sum + item.boarded, 0),
       times: [...times.entries()]
-        .map(([time, count]) => ({ time, count }))
+        .map(([time, item]) => ({ time, ...item }))
         .sort((a, b) => a.time.localeCompare(b.time)),
     }))
     .sort(pointSort);
+}
+
+function sumDirectionGroups(groups = []) {
+  return groups.reduce(
+    (acc, group) => ({
+      total: acc.total + group.total,
+      scanned: acc.scanned + group.scanned,
+      confirmed: acc.confirmed + group.confirmed,
+      boarded: acc.boarded + group.boarded,
+    }),
+    { total: 0, scanned: 0, confirmed: 0, boarded: 0 }
+  );
 }
 
 export default function MangDashboardPage() {
@@ -161,7 +199,21 @@ export default function MangDashboardPage() {
           if (ticketError) throw ticketError;
 
           const filteredTickets = (tickets || []).filter((ticket) => Boolean(ticket.trips));
-          return [direction.key, groupTicketsByPointAndTime(filteredTickets, direction)];
+          const ticketIds = filteredTickets.map((ticket) => ticket.id);
+          const { data: scans, error: scanError } = ticketIds.length
+            ? await supabase
+                .from("ticket_scans")
+                .select("ticket_id")
+                .in("ticket_id", ticketIds)
+                .eq("scan_type", "boarding")
+            : { data: [], error: null };
+
+          if (scanError) {
+            console.warn("Mang dashboard scan counts unavailable:", scanError.message);
+          }
+
+          const scannedTicketIds = new Set((scans || []).map((scan) => scan.ticket_id));
+          return [direction.key, groupTicketsByPointAndTime(filteredTickets, direction, scannedTicketIds)];
         })
       );
 
@@ -190,8 +242,8 @@ export default function MangDashboardPage() {
   }
 
   const totals = {
-    outbound: (data.outbound || []).reduce((sum, group) => sum + group.total, 0),
-    return: (data.return || []).reduce((sum, group) => sum + group.total, 0),
+    outbound: sumDirectionGroups(data.outbound),
+    return: sumDirectionGroups(data.return),
   };
 
   return (
@@ -243,7 +295,7 @@ export default function MangDashboardPage() {
               key={direction.key}
               direction={direction}
               groups={data[direction.key] || []}
-              total={totals[direction.key]}
+              totals={totals[direction.key]}
               loading={loading}
               copied={copiedKey === direction.key}
               onCopy={() => copySummary(direction)}
@@ -255,14 +307,16 @@ export default function MangDashboardPage() {
   );
 }
 
-function DirectionCard({ direction, groups, total, loading, copied, onCopy }) {
+function DirectionCard({ direction, groups, totals, loading, copied, onCopy }) {
   return (
     <article className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06]">
       <div className="flex items-start justify-between gap-3 border-b border-white/10 bg-white/[0.04] p-4">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.18em] text-orange-300">Rota</p>
           <h2 className="mt-1 text-xl font-black">{direction.title}</h2>
-          <p className="mt-1 text-sm text-neutral-400">Total: {total} passageiros pagos</p>
+          <p className="mt-1 text-sm text-neutral-400">
+            {totals.total} pagos | {totals.confirmed} confirmados
+          </p>
         </div>
         <button
           type="button"
@@ -293,17 +347,30 @@ function DirectionCard({ direction, groups, total, loading, copied, onCopy }) {
           <section key={group.point} className="rounded-xl border border-white/10 bg-black/20 p-3">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h3 className="text-lg font-black">{group.point}</h3>
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-black">
-                {group.total}
-              </span>
+              <div className="flex flex-wrap justify-end gap-2">
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-black">
+                  {group.total} pagos
+                </span>
+                <span className="rounded-full bg-emerald-300 px-3 py-1 text-xs font-black text-emerald-950">
+                  {group.confirmed} confirmados
+                </span>
+              </div>
             </div>
             <div className="space-y-2">
               {group.times.map((item) => (
-                <div key={item.time} className="flex items-center justify-between rounded-lg bg-white/[0.06] px-3 py-2 text-sm">
+                <div key={item.time} className="grid gap-2 rounded-lg bg-white/[0.06] px-3 py-2 text-sm sm:grid-cols-[auto_1fr] sm:items-center">
                   <span className="font-black text-orange-200">{normalizeTimeForCopy(item.time)}</span>
-                  <span className="font-bold text-neutral-100">
-                    {item.count} passageiro{item.count === 1 ? "" : "s"}
-                  </span>
+                  <div className="flex flex-wrap gap-2 sm:justify-end">
+                    <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-black text-neutral-100">
+                      {item.count} pago{item.count === 1 ? "" : "s"}
+                    </span>
+                    <span className="rounded-full bg-blue-300/20 px-2.5 py-1 text-xs font-black text-blue-100">
+                      {item.scanned} lido{item.scanned === 1 ? "" : "s"}
+                    </span>
+                    <span className="rounded-full bg-emerald-300/20 px-2.5 py-1 text-xs font-black text-emerald-100">
+                      {item.confirmed} confirmado{item.confirmed === 1 ? "" : "s"}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
