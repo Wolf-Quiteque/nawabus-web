@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import SearchForm from '@/components/search-form';
-import { isClosedMangaisOutboundTrip } from '@/lib/mangais-closed-trips';
 import { getClosedTodayPurchaseMessage, isDatePurchasable } from '@/lib/purchase-date';
 
 function SearchResults() {
@@ -241,7 +240,7 @@ function SearchResults() {
 
   const visibleOutboundTrips = useMemo(() => {
     if (isRoundTrip && selectedOutboundTrip) return [selectedOutboundTrip];
-    return groupCampaignTrips(outboundTrips.filter((trip) => !isClosedMangaisOutboundTrip(trip)));
+    return groupCampaignTrips(outboundTrips);
   }, [groupCampaignTrips, isRoundTrip, selectedOutboundTrip, outboundTrips]);
 
   const visibleReturnTrips = useMemo(() => {

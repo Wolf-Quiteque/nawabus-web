@@ -7,7 +7,6 @@ import { ArrowLeft, ArrowRight, CalendarDays, Check, Loader2, MapPin, Minus, Plu
 import { createClient } from '@/lib/supabase-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { isClosedMangaisOutboundTrip } from '@/lib/mangais-closed-trips';
 import { isDatePurchasable } from '@/lib/purchase-date';
 
 const EVENT_DATES = {
@@ -23,7 +22,7 @@ function getDefaultEventDate() {
   return getPurchasableEventEntries()[0]?.[0] || '';
 }
 
-const EVENT_ROUTE_CAP = 250;
+const EVENT_ROUTE_CAP = 260;
 
 const directionOptions = [
   {
@@ -42,8 +41,6 @@ const directionOptions = [
     description: 'Ir e voltar no mesmo dia',
   },
 ];
-
-const VISIBLE_RETURN_DEPARTURE_UTC_TIME = '19:00';
 
 function minuteWindow(isoString) {
   const d = new Date(isoString);
@@ -250,10 +247,6 @@ function getPlaceOptions(timeOptions) {
 
 function getTimeOptions(timeOptions, city) {
   return timeOptions.filter((option) => option.city === city);
-}
-
-function isVisibleReturnTrip(trip) {
-  return new Date(trip.departure_time).toISOString().slice(11, 16) === VISIBLE_RETURN_DEPARTURE_UTC_TIME;
 }
 
 function getSelectedOptionLabel(options, value) {
@@ -508,11 +501,8 @@ function MangaisEventFlow() {
     }
   };
 
-  const selectableOutboundTrips = useMemo(
-    () => outboundTrips.filter((trip) => !isClosedMangaisOutboundTrip(trip)),
-    [outboundTrips]
-  );
-  const visibleReturnTrips = useMemo(() => returnTrips.filter(isVisibleReturnTrip), [returnTrips]);
+  const selectableOutboundTrips = outboundTrips;
+  const visibleReturnTrips = returnTrips;
   const outboundRemaining = Math.max(0, EVENT_ROUTE_CAP - routeCapacity.outboundUsed);
   const returnRemaining = Math.max(0, EVENT_ROUTE_CAP - routeCapacity.returnUsed);
   const isOutboundSoldOut = outboundRemaining <= 0;
