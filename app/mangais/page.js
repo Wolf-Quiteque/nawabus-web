@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { isDatePurchasable } from '@/lib/purchase-date';
+import { filterAllowedMangaisReturnSaleTrips, filterOpenMangaisSaleTrips } from '@/lib/mangais-sales-visibility';
 
 const EVENT_DATES = {
   '2026-06-20': { day: '20', label: '20 de Junho', weekday: 'Sabado' },
@@ -501,11 +502,11 @@ function MangaisEventFlow() {
     }
   };
 
-  const selectableOutboundTrips = outboundTrips;
-  const visibleReturnTrips = returnTrips;
+  const selectableOutboundTrips = filterOpenMangaisSaleTrips(outboundTrips);
+  const visibleReturnTrips = filterAllowedMangaisReturnSaleTrips(returnTrips);
   const outboundRemaining = Math.max(0, EVENT_ROUTE_CAP - routeCapacity.outboundUsed);
   const returnRemaining = Math.max(0, EVENT_ROUTE_CAP - routeCapacity.returnUsed);
-  const isOutboundSoldOut = outboundRemaining <= 0;
+  const isOutboundSoldOut = true;
   const isReturnSoldOut = returnRemaining <= 0;
   const isEventSoldOut = isOutboundSoldOut && isReturnSoldOut;
   const availableDirectionOptions = useMemo(() => (
@@ -530,9 +531,9 @@ function MangaisEventFlow() {
     [companionCount, companions]
   );
   const maxPassengersForDirection = useMemo(() => {
-    if (direction === 'one-way') return outboundRemaining;
+    if (direction === 'one-way') return 0;
     if (direction === 'return-only') return returnRemaining;
-    if (direction === 'round-trip') return Math.min(outboundRemaining, returnRemaining);
+    if (direction === 'round-trip') return 0;
     return EVENT_ROUTE_CAP;
   }, [direction, outboundRemaining, returnRemaining]);
   const maxAllowedPassengers = Math.max(0, Math.min(10, maxPassengersForDirection));
@@ -619,11 +620,10 @@ function MangaisEventFlow() {
 
     try {
       const latestCapacity = await fetchRouteCapacity();
-      const latestOutboundRemaining = Math.max(0, EVENT_ROUTE_CAP - latestCapacity.outboundUsed);
       const latestReturnRemaining = Math.max(0, EVENT_ROUTE_CAP - latestCapacity.returnUsed);
 
-      if (needsOutbound && totalPassengers > latestOutboundRemaining) {
-        throw new Error('Espaco esgotado para ida. Escolha apenas volta ou tente mais tarde.');
+      if (needsOutbound) {
+        throw new Error('As vendas online para ida a Mangais estao encerradas. Neste momento so e possivel comprar bilhete de volta.');
       }
 
       if (needsReturn && totalPassengers > latestReturnRemaining) {
@@ -758,7 +758,7 @@ function MangaisEventFlow() {
               <div className="mb-4 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-bold text-lime-50">
                 <p>Disponibilidade do evento</p>
                 <p className="mt-1 text-xs text-lime-100/80">
-                  Ida Luanda {'->'} Barra do Cuanza: {outboundRemaining} de {EVENT_ROUTE_CAP} lugares
+                  Ida Luanda {'->'} Barra do Cuanza: vendas encerradas
                 </p>
                 <p className="text-xs text-lime-100/80">
                   Volta Barra do Cuanza {'->'} Luanda: {returnRemaining} de {EVENT_ROUTE_CAP} lugares

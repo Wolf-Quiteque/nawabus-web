@@ -19,6 +19,7 @@ import {
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 import { getClosedTodayPurchaseMessage, isTripPurchasable } from '@/lib/purchase-date';
+import { isAllowedMangaisReturnSaleTrip, isMangaisOutboundSaleClosedTrip } from '@/lib/mangais-sales-visibility';
 
 function openTicketHub(tab) {
   if (typeof window === 'undefined') return;
@@ -220,6 +221,14 @@ export default function CheckoutPage() {
       throw new Error(getClosedTodayPurchaseMessage());
     }
 
+    if (isMangaisOutboundSaleClosedTrip(details.outboundTrip)) {
+      throw new Error('As vendas online para ida a Mangais estao encerradas. Neste momento so e possivel comprar bilhete de volta.');
+    }
+
+    if (!isAllowedMangaisReturnSaleTrip(details.outboundTrip)) {
+      throw new Error('Neste momento a volta de Mangais so esta disponivel para Gamek, Porto ou Kilamba.');
+    }
+
     if (details.tripType === 'round-trip') {
       if (!details.returnTrip) {
         throw new Error('A viagem de volta esta em falta. Volte a pesquisa e escolha a volta.');
@@ -231,6 +240,10 @@ export default function CheckoutPage() {
 
       if (!isTripPurchasable(details.returnTrip)) {
         throw new Error(getClosedTodayPurchaseMessage());
+      }
+
+      if (!isAllowedMangaisReturnSaleTrip(details.returnTrip)) {
+        throw new Error('Neste momento a volta de Mangais so esta disponivel para Gamek, Porto ou Kilamba.');
       }
     }
   };

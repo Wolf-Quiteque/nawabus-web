@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase-client';
 import SeatSelection from '@/components/seat-selection';
 import { getClosedTodayPurchaseMessage, isTripPurchasable } from '@/lib/purchase-date';
+import { isMangaisOutboundSaleClosedTrip } from '@/lib/mangais-sales-visibility';
 
 function minuteWindow(isoString) {
   const d = new Date(isoString);
@@ -98,6 +99,12 @@ function BookingPage() {
         if (!isTripPurchasable(outboundData)) {
           alert(getClosedTodayPurchaseMessage());
           router.replace('/');
+          return;
+        }
+
+        if (isMangaisOutboundSaleClosedTrip(outboundData)) {
+          alert('As vendas online para ida a Mangais estao encerradas. Neste momento so e possivel comprar bilhete de volta.');
+          router.replace('/mangais?date=2026-06-21');
           return;
         }
 

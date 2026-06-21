@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import SearchForm from '@/components/search-form';
 import { getClosedTodayPurchaseMessage, isDatePurchasable } from '@/lib/purchase-date';
+import { filterAllowedMangaisReturnSaleTrips, filterOpenMangaisSaleTrips } from '@/lib/mangais-sales-visibility';
 
 function SearchResults() {
   const router = useRouter();
@@ -86,7 +87,7 @@ function SearchResults() {
       const { data, error: tripError } = await query;
 
       if (tripError) throw tripError;
-      return data || [];
+      return filterAllowedMangaisReturnSaleTrips(filterOpenMangaisSaleTrips(data || []));
     } catch (err) {
       console.error('Error fetching trips:', err);
       throw err;
