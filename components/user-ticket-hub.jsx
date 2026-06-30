@@ -492,6 +492,10 @@ export function UserTicketHub() {
   const [showHubHelper, setShowHubHelper] = useState(false);
 
   const paidGroups = useMemo(() => groupPaidTickets(tickets), [tickets]);
+  const activePaidTicketCount = useMemo(
+    () => tickets.filter((ticket) => !isTicketExpired(ticket)).length,
+    [tickets]
+  );
   const upcomingRideCount = useMemo(() => getUpcomingRideCount(tickets), [tickets]);
 
   useEffect(() => {
@@ -958,8 +962,8 @@ export function UserTicketHub() {
 
                     <div className="mt-4 grid grid-cols-2 gap-3">
                       <div className="rounded-2xl border border-white/10 bg-white/8 p-3">
-                        <p className="text-xs text-neutral-400">Bilhetes pagos</p>
-                        <p className="mt-1 text-2xl font-semibold text-orange-300">{tickets.length}</p>
+                        <p className="text-xs text-neutral-400">Bilhetes pagos ativos</p>
+                        <p className="mt-1 text-2xl font-semibold text-orange-300">{activePaidTicketCount}</p>
                       </div>
                       <div className="rounded-2xl border border-white/10 bg-white/8 p-3">
                         <p className="text-xs text-neutral-400">Refs pendentes</p>
