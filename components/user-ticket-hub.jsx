@@ -177,29 +177,44 @@ function getTripQrLabel(index, total) {
   return total > 1 ? `Viagem ${index + 1}` : "Viagem";
 }
 
+function getLocalDayStart(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const dayStart = new Date(date);
+  dayStart.setHours(0, 0, 0, 0);
+  return dayStart;
+}
+
+function isTicketExpired(ticket, now = new Date()) {
+  const departureDay = getLocalDayStart(ticket?.trips?.departure_time);
+  if (!departureDay) return false;
+
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+
+  return departureDay < today;
+}
+
+function isTripGroupExpired(tripGroup, now = new Date()) {
+  return tripGroup.tickets.every((ticket) => isTicketExpired(ticket, now));
+}
+
 function buildQrTripPayload(tripGroup, index = 0, total = 1) {
   return {
     label: getTripQrLabel(index, total),
     firstTicket: tripGroup.firstTicket,
     tickets: tripGroup.tickets,
+    expired: isTripGroupExpired(tripGroup),
   };
 }
 
 function getUpcomingRideCount(tickets) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
   const upcomingRideKeys = new Set();
   tickets.forEach((ticket) => {
     const departureTime = ticket?.trips?.departure_time;
-    if (!departureTime) return;
-
-    const departureDate = new Date(departureTime);
-    if (Number.isNaN(departureDate.getTime())) return;
-
-    const departureDay = new Date(departureDate);
-    departureDay.setHours(0, 0, 0, 0);
-    if (departureDay < today) return;
+    if (!getLocalDayStart(departureTime)) return;
+    if (isTicketExpired(ticket)) return;
 
     upcomingRideKeys.add(ticket.trip_id || `${departureTime}-${getRoute(ticket)}`);
   });
@@ -1051,8 +1066,10 @@ export function UserTicketHub() {
             <p className="mt-1 text-xs text-neutral-400">
               Lugares: {selectedQrTrip.tickets.map((ticket) => ticket.seat_number).join(", ")}
             </p>
-            <p className="mt-1 text-xs text-neutral-500">
-              Este QR valida apenas esta viagem. A ida e a volta sao controladas separadamente.
+            <p className={`mt-1 text-xs ${selectedQrTrip.expired ? "font-semibold text-red-300" : "text-neutral-500"}`}>
+              {selectedQrTrip.expired
+                ? "Viagem expirada. Esta data de partida ja passou."
+                : "Este QR valida apenas esta viagem. A ida e a volta sao controladas separadamente."}
             </p>
           </div>
         </div>
@@ -1066,6 +1083,11 @@ function PaidGroupCard({ group, user, payment, onShowQr }) {
   const tripGroups = groupTicketsByTrip(group.tickets);
   const routeSummary = getGroupRouteSummary(group);
   const firstTripQr = buildQrTripPayload(tripGroups[0], 0, tripGroups.length);
+  const expiredTripCount = tripGroups.filter((tripGroup) => isTripGroupExpired(tripGroup)).length;
+  const allTripsExpired = tripGroups.length > 0 && expiredTripCount === tripGroups.length;
+  const hasExpiredTrips = expiredTripCount > 0;
+  const statusLabel = allTripsExpired ? "Expirado" : hasExpiredTrips ? "Parcialmente expirado" : "Pago";
+  const statusClass = allTripsExpired ? "text-red-300" : hasExpiredTrips ? "text-amber-300" : "text-emerald-300";
   const seats = tripGroups
     .map((tripGroup, index) => `V${index + 1}: ${tripGroup.tickets.map((item) => item.seat_number).join(", ")}`)
     .join(" | ");
@@ -1098,9 +1120,9 @@ function PaidGroupCard({ group, user, payment, onShowQr }) {
       <div className="border-b border-white/10 bg-white/[0.04] p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
-              <CheckCircle2 className="h-4 w-4" />
-              Pago
+            <div className={`flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] ${statusClass}`}>
+              {allTripsExpired ? <X className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+              {statusLabel}
             </div>
             <h3 className="mt-2 line-clamp-2 text-lg font-semibold">{routeSummary}</h3>
             <p className="mt-1 text-sm text-neutral-400">
@@ -1123,23 +1145,36 @@ function PaidGroupCard({ group, user, payment, onShowQr }) {
         </div>
 
         <div className="space-y-2">
-          {tripGroups.map((tripGroup, index) => (
-            <button
-              type="button"
-              key={tripGroup.tripId || tripGroup.firstTicket.id}
-              onClick={() => onShowQr(buildQrTripPayload(tripGroup, index, tripGroups.length))}
-              className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-left transition hover:bg-white/10"
-            >
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-medium">QR {getTripQrLabel(index, tripGroups.length)}</span>
-                <span className="block truncate text-xs text-neutral-400">{getRoute(tripGroup.firstTicket)}</span>
-                <span className="text-xs text-neutral-500">
-                  {formatDate(tripGroup.firstTicket.trips?.departure_time)} | Lugares {tripGroup.tickets.map((item) => item.seat_number).join(", ")}
+          {tripGroups.map((tripGroup, index) => {
+            const tripExpired = isTripGroupExpired(tripGroup);
+
+            return (
+              <button
+                type="button"
+                key={tripGroup.tripId || tripGroup.firstTicket.id}
+                onClick={() => onShowQr(buildQrTripPayload(tripGroup, index, tripGroups.length))}
+                className={`flex w-full items-center justify-between rounded-2xl border px-3 py-2 text-left transition hover:bg-white/10 ${
+                  tripExpired ? "border-red-300/20 bg-red-500/10" : "border-white/10 bg-black/20"
+                }`}
+              >
+                <span className="min-w-0">
+                  <span className="flex items-center gap-2 text-sm font-medium">
+                    <span className="truncate">QR {getTripQrLabel(index, tripGroups.length)}</span>
+                    {tripExpired && (
+                      <span className="shrink-0 rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-red-200">
+                        Expirado
+                      </span>
+                    )}
+                  </span>
+                  <span className="block truncate text-xs text-neutral-400">{getRoute(tripGroup.firstTicket)}</span>
+                  <span className="text-xs text-neutral-500">
+                    {formatDate(tripGroup.firstTicket.trips?.departure_time)} | Lugares {tripGroup.tickets.map((item) => item.seat_number).join(", ")}
+                  </span>
                 </span>
-              </span>
-              <QrCode className="h-5 w-5 text-orange-300" />
-            </button>
-          ))}
+                <QrCode className={`h-5 w-5 ${tripExpired ? "text-red-300" : "text-orange-300"}`} />
+              </button>
+            );
+          })}
         </div>
 
         <div className="flex gap-2">
