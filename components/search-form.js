@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { clampToMinPurchaseDate, getMinPurchaseDateKey } from '@/lib/purchase-date';
+import { createClient } from '@/lib/supabase-client';
 
 export default function SearchForm() {
   const router = useRouter();
@@ -32,11 +33,35 @@ export default function SearchForm() {
     if (rt) setReturnDate(clampToMinPurchaseDate(rt));
     if (tt) setTripType(tt);
 
-    // Fetch locations (mock - replace with actual Supabase call)
     const fetchLocations = async () => {
-      // Replace with your actual Supabase query
-      const mockCities = ['Luanda', 'Benguela', 'Huambo', 'Lobito', 'Namibe'];
-      setLocations(mockCities.map(city => ({ value: city.toLowerCase(), label: city })));
+      const supabase = createClient();
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
+        .from('trips')
+        .select('routes!inner(origin_province, destination_province, is_active)')
+        .eq('status', 'scheduled')
+        .gt('available_seats', 0)
+        .eq('routes.is_active', true)
+        .gte('departure_time', startOfToday.toISOString());
+
+      if (error) {
+        console.error('Error fetching active provinces:', error);
+        return;
+      }
+
+      const provinces = new Set();
+      (data || []).forEach((trip) => {
+        if (trip.routes?.origin_province) provinces.add(trip.routes.origin_province);
+        if (trip.routes?.destination_province) provinces.add(trip.routes.destination_province);
+      });
+
+      setLocations(
+        Array.from(provinces)
+          .sort((a, b) => a.localeCompare(b, 'pt'))
+          .map((province) => ({ value: province, label: province }))
+      );
     };
 
     fetchLocations();
@@ -108,20 +133,18 @@ export default function SearchForm() {
               <label htmlFor="origin" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 Origem
               </label>
-              <Input
+              <select
                 id="origin"
-                list="origin-cities"
                 value={origin}
                 onChange={(e) => setOrigin(e.target.value)}
-                placeholder="Selecione a origem"
-                className="h-12 text-base border-gray-300 focus:border-yellow-500 focus:ring-yellow-500"
+                className="flex h-12 w-full rounded-md border border-gray-300 bg-transparent px-3 text-base focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500 dark:bg-gray-900"
                 required
-              />
-              <datalist id="origin-cities">
+              >
+                <option value="" disabled>Selecione a origem</option>
                 {locations.map((opt) => (
-                  <option key={opt.value} value={opt.label} />
+                  <option key={opt.value} value={opt.label}>{opt.label}</option>
                 ))}
-              </datalist>
+              </select>
             </div>
             
             {/* Destination - Wider column */}
@@ -129,20 +152,18 @@ export default function SearchForm() {
               <label htmlFor="destination" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 Destino
               </label>
-              <Input
+              <select
                 id="destination"
-                list="destination-cities"
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
-                placeholder="Selecione o destino"
-                className="h-12 text-base border-gray-300 focus:border-yellow-500 focus:ring-yellow-500"
+                className="flex h-12 w-full rounded-md border border-gray-300 bg-transparent px-3 text-base focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500 dark:bg-gray-900"
                 required
-              />
-              <datalist id="destination-cities">
+              >
+                <option value="" disabled>Selecione o destino</option>
                 {locations.map((opt) => (
-                  <option key={opt.value} value={opt.label} />
+                  <option key={opt.value} value={opt.label}>{opt.label}</option>
                 ))}
-              </datalist>
+              </select>
             </div>
             
             {/* Departure Date */}
