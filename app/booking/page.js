@@ -7,21 +7,14 @@ import { createClient } from '@/lib/supabase-client';
 import SeatSelection from '@/components/seat-selection';
 import { getClosedTodayPurchaseMessage, isTripPurchasable } from '@/lib/purchase-date';
 
-function minuteWindow(isoString) {
-  const d = new Date(isoString);
-  d.setSeconds(0, 0);
-  return { start: d.toISOString(), end: new Date(d.getTime() + 60000).toISOString() };
-}
-
-async function getSiblingIds(supabase, busId, departureTime) {
-  const { start, end } = minuteWindow(departureTime);
-  const { data } = await supabase
-    .from('trips')
-    .select('id')
-    .eq('bus_id', busId)
-    .gte('departure_time', start)
-    .lt('departure_time', end);
-  return data?.map(t => t.id) ?? [];
+async function getSiblingIds(supabase, tripId) {
+  const { data, error } = await supabase
+    .rpc('get_overlapping_trip_ids', { p_trip_id: tripId });
+  if (error) {
+    console.warn('Unable to resolve sibling trips, falling back to trip itself', error);
+    return [tripId];
+  }
+  return data?.map(t => t.id) ?? [tripId];
 }
 
 async function getHeldSeatNumbers(tripIds) {
@@ -104,7 +97,7 @@ function BookingPage() {
         setOutboundTrip(outboundData);
 
         // Fetch outbound occupied seats across all sibling trips (same bus + departure minute)
-        const outboundSiblingIds = await getSiblingIds(supabase, outboundData.bus_id, outboundData.departure_time);
+        const outboundSiblingIds = await getSiblingIds(supabase, outboundTripId);
         const { data: outboundTickets, error: outboundTicketsError } = await supabase
           .from('tickets')
           .select('seat_number')
@@ -163,7 +156,7 @@ function BookingPage() {
           setReturnTrip(returnData);
 
           // Fetch return occupied seats across all sibling trips
-          const returnSiblingIds = await getSiblingIds(supabase, returnData.bus_id, returnData.departure_time);
+          const returnSiblingIds = await getSiblingIds(supabase, returnTripId);
           const { data: returnTickets, error: returnTicketsError } = await supabase
             .from('tickets')
             .select('seat_number')
