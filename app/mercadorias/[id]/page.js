@@ -7,7 +7,6 @@ import {
   Camera,
   CheckCircle2,
   FileText,
-  Fingerprint,
   MapPin,
   Package,
   Phone,
@@ -63,6 +62,8 @@ async function getCargo(id) {
       client_name,
       client_phone,
       bi_number,
+      receiver_name,
+      receiver_phone,
       item_description,
       notes,
       amount_kz,
@@ -92,9 +93,9 @@ async function getCargo(id) {
   return data;
 }
 
-function Detail({ icon: Icon, label, value }) {
-  return (
-    <div className="flex min-h-20 gap-3 rounded-lg border border-neutral-200 bg-white p-4">
+function Detail({ icon: Icon, label, value, href }) {
+  const content = (
+    <>
       <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-neutral-950 text-white">
         <Icon className="size-5" />
       </div>
@@ -102,6 +103,23 @@ function Detail({ icon: Icon, label, value }) {
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-neutral-500">{label}</p>
         <p className="mt-1 break-words text-sm font-semibold text-neutral-950">{value || '-'}</p>
       </div>
+    </>
+  );
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        className="flex min-h-20 gap-3 rounded-lg border border-neutral-200 bg-white p-4 transition hover:border-neutral-400"
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <div className="flex min-h-20 gap-3 rounded-lg border border-neutral-200 bg-white p-4">
+      {content}
     </div>
   );
 }
@@ -109,8 +127,8 @@ function Detail({ icon: Icon, label, value }) {
 export async function generateMetadata({ params }) {
   const { id } = await params;
   return {
-    title: `Mercadoria ${id} | Nawabus`,
-    description: 'Detalhes e rastreio de mercadoria Nawabus.',
+    title: `Encomenda ${id} | Nawabus`,
+    description: 'Detalhes e rastreio de encomenda Nawabus.',
   };
 }
 
@@ -165,14 +183,14 @@ export default async function MercadoriaPage({ params }) {
 
         <div className="flex flex-col justify-center">
           <p className="text-sm font-black uppercase tracking-[0.22em] text-blue-700">
-            Rastreio de mercadoria
+            Rastreio de encomenda
           </p>
           <h1 className="mt-3 text-4xl font-black tracking-tight text-neutral-950 sm:text-5xl">
             {cargo.tracking_number || cargo.id}
           </h1>
           <p className="mt-4 text-base leading-7 text-neutral-600">
-            Informação oficial da mercadoria registada pela Nawabus. Use este ecrã para confirmar
-            o item, remetente, rota e estado atual.
+            Informação oficial da encomenda registada pela Nawabus. Use este ecrã para confirmar
+            o item, o destinatário, a rota e o estado atual.
           </p>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -186,10 +204,13 @@ export default async function MercadoriaPage({ params }) {
 
       <section className="mx-auto grid w-full max-w-7xl gap-6 px-4 pb-12 sm:px-6 lg:grid-cols-[1fr_320px] lg:px-8">
         <div className="grid gap-4 md:grid-cols-2">
-          <Detail icon={User} label="Cliente" value={cargo.client_name} />
-          <Detail icon={Phone} label="Telefone" value={cargo.client_phone} />
-          <Detail icon={Fingerprint} label="BI" value={cargo.bi_number || 'Não informado'} />
-          <Detail icon={FileText} label="Notas" value={cargo.notes || 'Sem notas internas'} />
+          <Detail icon={User} label="Cliente (Destinatário)" value={cargo.receiver_name || 'Não informado'} />
+          <Detail
+            icon={Phone}
+            label="Telefone do cliente"
+            value={cargo.receiver_phone || 'Não informado'}
+            href={cargo.receiver_phone ? `tel:${cargo.receiver_phone}` : undefined}
+          />
           <Detail
             icon={MapPin}
             label="Rota"
@@ -217,6 +238,14 @@ export default async function MercadoriaPage({ params }) {
                 ? [driver.first_name, driver.last_name].filter(Boolean).join(' ')
                 : 'Não associado'
             }
+          />
+          <Detail icon={FileText} label="Notas" value={cargo.notes || 'Sem notas internas'} />
+          <Detail icon={User} label="Remetente" value={cargo.client_name} />
+          <Detail
+            icon={Phone}
+            label="Telefone do remetente"
+            value={cargo.client_phone}
+            href={cargo.client_phone ? `tel:${cargo.client_phone}` : undefined}
           />
         </div>
 
