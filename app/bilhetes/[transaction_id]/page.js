@@ -156,7 +156,7 @@ export default function DownloadTicketPage() {
           ? new Date(singleTicket.trips.departure_time).toLocaleString('pt-PT')
           : 'Data nao especificada';
         const price = singleTicket.price_paid_usd
-          ? `${Math.round(singleTicket.price_paid_usd * 1000)},00 Kz`
+          ? `${Math.round(singleTicket.price_paid_usd)},00 Kz`
           : 'Preco nao disponivel';
         const qrCodeUrl = await QRCode.toDataURL(singleTicket.id, { width: 300, margin: 1 });
 
@@ -259,8 +259,8 @@ export default function DownloadTicketPage() {
         ? new Date(ticket.trips.departure_time).toLocaleString('pt-PT')
         : 'Data não especificada',
       seats: ticket.seat_number || 'N/A',
-      price: ticket.price_paid_usd 
-        ? `${Math.round(ticket.price_paid_usd * 1000)},00 Kz`
+      price: ticket.price_paid_usd
+        ? `${Math.round(ticket.price_paid_usd)},00 Kz`
         : 'Preço não disponível',
       printDate: new Date().toLocaleString('pt-PT'),
     };
