@@ -79,12 +79,12 @@ export default function SeatSelection({
 
   const getSeatClass = (seatNumber) => {
     if (currentOccupiedSeats.includes(seatNumber)) {
-      return 'text-gray-400 cursor-not-allowed';
+      return 'text-stone-700 cursor-not-allowed';
     }
     if (currentSelectedSeats.includes(seatNumber)) {
-      return 'text-yellow-500';
+      return 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.75)] scale-110';
     }
-    return 'text-gray-600 hover:text-yellow-400';
+    return 'text-stone-400 hover:text-amber-300';
   };
 
   const renderSeats = () => {
@@ -102,8 +102,8 @@ export default function SeatSelection({
           className="flex flex-col items-center cursor-pointer"
           onClick={() => handleSeatClick(i)}
         >
-          <MdEventSeat size={32} className={getSeatClass(i)} />
-          <span className="text-xs font-medium">{i}</span>
+          <MdEventSeat size={32} className={`transition-all duration-200 ${getSeatClass(i)}`} />
+          <span className="text-xs font-medium text-stone-400">{i}</span>
         </div>
       );
     }
@@ -188,7 +188,7 @@ export default function SeatSelection({
     <div ref={seatSelectionRef} className="flex flex-col md:flex-row gap-8 scroll-mt-4">
       {/* ── LEFT COLUMN: Seat Grid ── */}
       <div className="w-full md:w-5/12">
-        <Card className="shadow-lg">
+        <Card className="shadow-lg border-amber-200 dark:border-stone-700">
           <CardHeader>
             <CardTitle className="text-center">
               {currentStep === 'outbound' ? 'Selecione os lugares de Ida' : 'Selecione os lugares de Volta'}
@@ -205,26 +205,28 @@ export default function SeatSelection({
             )}
           </CardHeader>
           <CardContent className="flex justify-center">
-            <div className="p-4 border rounded-lg w-full max-w-xs bg-gray-50 dark:bg-gray-800">
+            <div className="relative p-5 w-full max-w-xs bg-stone-900 border border-stone-700 rounded-t-[2.5rem] rounded-b-2xl shadow-2xl overflow-hidden">
+              {/* Windshield glow */}
+              <div aria-hidden="true" className="absolute top-0 inset-x-0 h-16 bg-gradient-to-b from-amber-400/15 to-transparent pointer-events-none"></div>
               <div className="flex justify-end mb-4">
-                <GiSteeringWheel size={32} className="text-gray-700 dark:text-gray-300" />
+                <GiSteeringWheel size={32} className="text-amber-500" />
               </div>
               <div className="grid grid-cols-5 gap-y-4 gap-x-2">
                 {renderSeats()}
               </div>
 
               {/* Legend */}
-              <div className="mt-6 flex justify-around text-xs">
+              <div className="mt-6 flex justify-around text-xs text-stone-300">
                 <div className="flex items-center gap-1">
-                  <MdEventSeat size={20} className="text-gray-600" />
+                  <MdEventSeat size={20} className="text-stone-400" />
                   <span>Disponivel</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <MdEventSeat size={20} className="text-yellow-500" />
+                  <MdEventSeat size={20} className="text-amber-400" />
                   <span>Selecionado</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <MdEventSeat size={20} className="text-gray-400" />
+                  <MdEventSeat size={20} className="text-stone-700" />
                   <span>Ocupado</span>
                 </div>
               </div>
@@ -237,10 +239,10 @@ export default function SeatSelection({
       <div className="w-full md:w-7/12 space-y-6">
 
         {/* Passageiros Card */}
-        <Card className="shadow-lg border-yellow-200 dark:border-yellow-800">
+        <Card className="shadow-lg border-amber-200 dark:border-amber-800">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Users className="h-5 w-5 text-yellow-500" />
+              <Users className="h-5 w-5 text-amber-500" />
               Passageiros
             </CardTitle>
             <p className="text-sm text-gray-500 mt-1">
@@ -269,8 +271,8 @@ export default function SeatSelection({
               <>
                 {/* Main passenger — first seat (only if user hasn't booked yet) */}
                 {mainSeat && (
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
-                    <div className="flex items-center justify-center w-9 h-9 rounded-full bg-yellow-500 text-white text-sm font-bold shrink-0">
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                    <div className="flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-stone-950 text-sm font-bold shrink-0 shadow-md">
                       {mainSeat}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -281,7 +283,7 @@ export default function SeatSelection({
                         Os seus dados serao usados na compra
                       </p>
                     </div>
-                    <User className="h-4 w-4 text-yellow-500 shrink-0" />
+                    <User className="h-4 w-4 text-amber-500 shrink-0" />
                   </div>
                 )}
 
@@ -339,7 +341,7 @@ export default function SeatSelection({
         </Card>
 
         {/* Resumo da Reserva Card */}
-        <Card className="shadow-lg">
+        <Card className="shadow-lg border-amber-200 dark:border-stone-700">
           <CardHeader>
             <CardTitle>Resumo da Reserva</CardTitle>
           </CardHeader>
@@ -360,7 +362,7 @@ export default function SeatSelection({
                 <div className="mt-2">
                   <p className="text-sm font-medium text-gray-600">Lugares selecionados:</p>
                   {outboundSelectedSeats.length > 0 ? (
-                    <p className="font-mono tracking-wider text-yellow-600">
+                    <p className="font-mono tracking-wider font-bold text-amber-600 dark:text-amber-400">
                       {[...outboundSelectedSeats].sort((a, b) => a - b).join(', ')}
                     </p>
                   ) : (
@@ -390,7 +392,7 @@ export default function SeatSelection({
                   <div className="mt-2">
                     <p className="text-sm font-medium text-gray-600">Lugares selecionados:</p>
                     {returnSelectedSeats.length > 0 ? (
-                      <p className="font-mono tracking-wider text-yellow-600">
+                      <p className="font-mono tracking-wider font-bold text-amber-600 dark:text-amber-400">
                         {[...returnSelectedSeats].sort((a, b) => a - b).join(', ')}
                       </p>
                     ) : (
@@ -409,9 +411,9 @@ export default function SeatSelection({
 
               {/* Total */}
               <div className="pt-2">
-                <p className="text-xl font-bold flex justify-between text-gray-800 dark:text-white">
+                <p className="text-xl font-bold flex justify-between items-center text-gray-800 dark:text-white">
                   <span>Total:</span>
-                  <span className="text-yellow-600">{totalPrice === 0 ? 'Gratuito' : `${totalPrice.toFixed(2)} Kz`}</span>
+                  <span className="text-2xl font-black bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">{totalPrice === 0 ? 'Gratuito' : `${totalPrice.toFixed(2)} Kz`}</span>
                 </p>
               </div>
 
@@ -428,7 +430,7 @@ export default function SeatSelection({
                 )}
                 <Button
                   onClick={handleContinue}
-                  className="w-full bg-yellow-500 hover:bg-yellow-600 text-white"
+                  className="w-full bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-stone-950 font-bold shadow-md hover:shadow-amber-500/40"
                   disabled={!canContinue}
                 >
                   {currentStep === 'outbound' && returnTrip

@@ -197,7 +197,7 @@ function BookingPage() {
     return (
       <div className="w-full max-w-6xl mx-auto py-8 px-4">
         <div className="text-center py-10">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-yellow-500 border-r-transparent"></div>
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-amber-500 border-r-transparent"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-400">A carregar detalhes da viagem...</p>
         </div>
       </div>
@@ -213,20 +213,37 @@ function BookingPage() {
   }
 
   return (
-    <div className="w-full max-w-6xl mx-auto py-8 px-4">
+    <div className="relative min-h-screen bg-gradient-to-b from-stone-50 via-amber-50/40 to-stone-50 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950">
+      <div className="relative w-full max-w-6xl mx-auto py-8 px-4">
       <button
         onClick={() => router.back()}
-        className="flex items-center gap-2 mb-4 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
+        className="flex items-center gap-2 mb-4 text-stone-600 hover:text-amber-600 dark:text-stone-400 dark:hover:text-amber-400 font-medium"
       >
         <ArrowLeft />
         <span>Voltar à pesquisa</span>
       </button>
 
-      <h1 className="text-3xl font-bold text-center mb-2 text-gray-800 dark:text-white">
-        Seleção de Assentos
+      {/* Step indicator */}
+      <div className="flex items-center justify-center gap-2 mb-6 text-xs font-bold uppercase tracking-wider">
+        <span className="flex items-center gap-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-3 py-1.5">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+          Pesquisa
+        </span>
+        <span className="w-6 h-0.5 bg-amber-300 dark:bg-amber-700 rounded-full"></span>
+        <span className="rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-stone-950 px-3 py-1.5 shadow-md">
+          2 · Lugares
+        </span>
+        <span className="w-6 h-0.5 bg-stone-300 dark:bg-stone-700 rounded-full"></span>
+        <span className="rounded-full bg-stone-200 dark:bg-stone-800 text-stone-500 dark:text-stone-400 px-3 py-1.5">
+          3 · Pagamento
+        </span>
+      </div>
+
+      <h1 className="text-3xl md:text-4xl font-black tracking-tight text-center mb-2 text-stone-900 dark:text-white">
+        Escolhe os teus <span className="bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">lugares</span>
       </h1>
 
-      <p className="text-center text-gray-500 mb-8">
+      <p className="text-center text-stone-500 dark:text-stone-400 mb-8">
         {returnTrip
           ? `Escolha os seus lugares para a viagem de ${outboundTrip.routes.origin_city} e volta`
           : `Escolha os seus lugares para a viagem de ${outboundTrip.routes.origin_city} para ${outboundTrip.routes.destination_city}`
@@ -241,13 +258,14 @@ function BookingPage() {
         userAlreadyBookedOutbound={userAlreadyBookedOutbound}
         userAlreadyBookedReturn={userAlreadyBookedReturn}
       />
+      </div>
     </div>
   );
 }
 
 export default function BookingPageWrapper() {
   return (
-    <Suspense fallback={<div className="w-full max-w-6xl mx-auto py-8 px-4"><div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-yellow-500 border-r-transparent"></div></div>}>
+    <Suspense fallback={<div className="w-full max-w-6xl mx-auto py-8 px-4"><div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-amber-500 border-r-transparent"></div></div>}>
       <BookingPage />
     </Suspense>
   );

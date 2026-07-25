@@ -120,3 +120,122 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ===== Nawabus rebrand: motion, 3D & Angola pattern helpers ===== */
+
+@keyframes kenburns {
+  from { transform: scale(1.03) translateY(0); }
+  to { transform: scale(1.13) translateY(-1.5%); }
+}
+.animate-kenburns { animation: kenburns 9s ease-out forwards; }
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.animate-marquee { animation: marquee 32s linear infinite; }
+
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-floaty { animation: floaty 6s ease-in-out infinite; }
+
+@keyframes fadeInLeft {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes fadeInRight {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-left { animation: fadeInLeft 0.8s ease-out forwards; opacity: 0; }
+.animate-fade-in-right { animation: fadeInRight 0.8s ease-out forwards; animation-delay: 0.4s; opacity: 0; }
+.animate-fade-in-up { animation: fadeInUp 0.8s ease-out forwards; animation-delay: 0.2s; opacity: 0; }
+
+/* Scroll reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* 3D tilt cards */
+.tilt-card {
+  --rx: 0deg;
+  --ry: 0deg;
+  --gx: 50%;
+  --gy: 50%;
+  perspective: 1100px;
+}
+.tilt-card-inner {
+  position: relative;
+  height: 100%;
+  border-radius: inherit;
+  transform: rotateX(var(--rx)) rotateY(var(--ry));
+  transform-style: preserve-3d;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+.tilt-pop { transform: translateZ(46px); }
+.tilt-pop-sm { transform: translateZ(24px); }
+.tilt-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(420px circle at var(--gx) var(--gy), rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0) 55%);
+  mix-blend-mode: soft-light;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.tilt-card:hover .tilt-glare { opacity: 1; }
+
+/* Samakaka-inspired Angolan triangle strip */
+.samakaka-strip {
+  height: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='14' viewBox='0 0 56 14'%3E%3Cpath d='M0 14 7 0l7 14z' fill='%23f59e0b'/%3E%3Cpath d='M14 14 21 0l7 14z' fill='%231c1917'/%3E%3Cpath d='M28 14 35 0l7 14z' fill='%23fbbf24'/%3E%3Cpath d='M42 14 49 0l7 14z' fill='%23c2410c'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-size: 56px 14px;
+}
+
+/* Vertical samakaka rail for page side edges */
+.samakaka-rail {
+  width: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='56' viewBox='0 0 14 56'%3E%3Cpath d='M0 0l14 7L0 14z' fill='%23f59e0b'/%3E%3Cpath d='M0 14l14 7L0 28z' fill='%231c1917'/%3E%3Cpath d='M0 28l14 7L0 42z' fill='%23fbbf24'/%3E%3Cpath d='M0 42l14 7L0 56z' fill='%23c2410c'/%3E%3C/svg%3E");
+  background-repeat: repeat-y;
+  background-size: 14px 56px;
+}
+.samakaka-rail-flip { transform: scaleX(-1); }
+
+/* Subtle samakaka diamond texture for section backgrounds */
+.samakaka-bg {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath d='M24 4 44 24 24 44 4 24Z' fill='none' stroke='%23f59e0b' stroke-width='1.2' opacity='0.22'/%3E%3Cpath d='M24 14 34 24 24 34 14 24Z' fill='%23f59e0b' opacity='0.08'/%3E%3C/svg%3E");
+  background-size: 48px 48px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-kenburns,
+  .animate-marquee,
+  .animate-floaty,
+  .animate-fade-in-left,
+  .animate-fade-in-right,
+  .animate-fade-in-up {
+    animation: none;
+    opacity: 1;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .tilt-card-inner { transform: none !important; }
+}

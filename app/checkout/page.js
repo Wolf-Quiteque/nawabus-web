@@ -1044,25 +1044,48 @@ const handleDownloadPdf = async () => {
   const finalPrice = totalPrice - discountAmount;
 
   return (
-    <div className="w-full max-w-4xl mx-auto py-8 px-4">
-      <button 
-        onClick={() => router.back()} 
-        className="flex items-center gap-2 mb-4 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
+    <div className="relative min-h-screen bg-gradient-to-b from-amber-50/70 via-stone-50 to-stone-100 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950">
+      <div className="relative w-full max-w-4xl mx-auto py-8 px-4">
+      <button
+        onClick={() => router.back()}
+        className="flex items-center gap-2 mb-4 text-stone-600 hover:text-amber-600 dark:text-stone-400 dark:hover:text-amber-400 font-medium"
       >
         <ArrowLeft />
         <span>Voltar</span>
       </button>
-      
-      <h1 className="text-3xl font-bold text-center mb-8 text-gray-800 dark:text-white">
-        Finalizar Compra
+
+      {/* Step indicator */}
+      <div className="flex items-center justify-center gap-2 mb-6 text-xs font-bold uppercase tracking-wider">
+        <span className="flex items-center gap-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-3 py-1.5">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+          Pesquisa
+        </span>
+        <span className="w-6 h-0.5 bg-amber-300 dark:bg-amber-700 rounded-full"></span>
+        <span className="flex items-center gap-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-3 py-1.5">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+          Lugares
+        </span>
+        <span className="w-6 h-0.5 bg-amber-300 dark:bg-amber-700 rounded-full"></span>
+        <span className="rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-stone-950 px-3 py-1.5 shadow-md">
+          3 · Pagamento
+        </span>
+      </div>
+
+      <h1 className="text-3xl md:text-4xl font-black tracking-tight text-center mb-8 text-stone-900 dark:text-white">
+        Finalizar <span className="bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">Compra</span>
       </h1>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Order Summary */}
         <div>
-          <Card className="shadow-lg">
+          <Card className="shadow-lg border-amber-200 dark:border-stone-700">
             <CardHeader>
-              <CardTitle>Resumo do Pedido</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                </svg>
+                Resumo do Pedido
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Outbound Trip */}
@@ -1084,7 +1107,7 @@ const handleDownloadPdf = async () => {
                   <div className="space-y-1 mt-1">
                     {[...outboundTrip.selectedSeats].sort((a, b) => a - b).map((seat, i) => (
                       <p key={seat} className="text-sm text-gray-600 dark:text-gray-400">
-                        <span className="font-mono text-yellow-600">Lugar {seat}</span>
+                        <span className="font-mono font-bold text-amber-600 dark:text-amber-400">Lugar {seat}</span>
                         {' — '}
                         {i === 0
                           ? <span className="font-medium">{getSeatPassengerName(seat, i, outboundTrip.companions || {}, 'Voce')}</span>
@@ -1119,7 +1142,7 @@ const handleDownloadPdf = async () => {
                     <div className="space-y-1 mt-1">
                       {[...returnTrip.selectedSeats].sort((a, b) => a - b).map((seat, i) => (
                         <p key={seat} className="text-sm text-gray-600 dark:text-gray-400">
-                          <span className="font-mono text-yellow-600">Lugar {seat}</span>
+                          <span className="font-mono font-bold text-amber-600 dark:text-amber-400">Lugar {seat}</span>
                           {' — '}
                           {i === 0
                             ? <span className="font-medium">{getSeatPassengerName(seat, i, returnTrip.companions || {}, 'Voce')}</span>
@@ -1147,13 +1170,13 @@ const handleDownloadPdf = async () => {
                         value={couponCode}
                         onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(''); }}
                         onKeyDown={(e) => e.key === 'Enter' && applyCoupon()}
-                        className="flex-1 border rounded-md px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-yellow-400 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                        className="flex-1 border rounded-md px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-amber-400 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
                         disabled={!!reference}
                       />
                       <button
                         onClick={applyCoupon}
                         disabled={couponLoading || !couponCode.trim() || !!reference}
-                        className="px-4 py-2 text-sm font-medium bg-yellow-500 hover:bg-yellow-600 text-white rounded-md disabled:opacity-50 transition-colors"
+                        className="px-4 py-2 text-sm font-bold bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-stone-950 rounded-md disabled:opacity-50 transition-colors"
                       >
                         {couponLoading ? '...' : 'Aplicar'}
                       </button>
@@ -1187,9 +1210,9 @@ const handleDownloadPdf = async () => {
                     <span>–{discountAmount.toFixed(2)} USD</span>
                   </p>
                 )}
-                <p className="text-xl font-bold flex justify-between text-gray-800 dark:text-white">
+                <p className="text-xl font-bold flex justify-between items-center text-gray-800 dark:text-white">
                   <span>Total:</span>
-                  <span className="text-yellow-600">
+                  <span className="text-2xl font-black bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">
                     {finalPrice === 0 ? 'Gratuito' : `${finalPrice.toFixed(2)} USD`}
                   </span>
                 </p>
@@ -1205,9 +1228,14 @@ const handleDownloadPdf = async () => {
 
         {/* Payment Section */}
         <div>
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle>Pagamento</CardTitle>
+          <Card className="shadow-lg overflow-hidden pt-0 border-stone-300 dark:border-stone-700">
+            <CardHeader className="bg-stone-950 py-5 border-b-4 border-amber-500">
+              <CardTitle className="flex items-center gap-2 text-white">
+                <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+                Pagamento
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               {finalPrice > 0 && (
@@ -1234,7 +1262,7 @@ const handleDownloadPdf = async () => {
                       checked={paymentMethod === 'cash'}
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       disabled={!!reference}
-                      className="mt-1 h-4 w-4 text-yellow-600 focus:ring-yellow-500"
+                      className="mt-1 h-4 w-4 accent-amber-500 focus:ring-amber-500"
                     />
                     <div className="flex-1">
                       <div className="font-semibold text-gray-800 dark:text-white">💵 Pagamento em Cash</div>
@@ -1253,8 +1281,8 @@ const handleDownloadPdf = async () => {
                         : 'cursor-pointer'
                     } ${
                       paymentMethod === 'referencia'
-                        ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 shadow-md'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-amber-300'
                     }`}
                     onClick={() => !reference && setPaymentMethod('referencia')}
                   >
@@ -1265,7 +1293,7 @@ const handleDownloadPdf = async () => {
                       checked={paymentMethod === 'referencia'}
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       disabled={!!reference}
-                      className="mt-1 h-4 w-4 text-yellow-600 focus:ring-yellow-500"
+                      className="mt-1 h-4 w-4 accent-amber-500 focus:ring-amber-500"
                     />
                     <div className="flex-1">
                       <div className="font-semibold text-gray-800 dark:text-white">🏦 Pagamento em Referência</div>
@@ -1388,7 +1416,7 @@ const handleDownloadPdf = async () => {
               ) : (
                 <Button
                   onClick={handlePayment}
-                  className="w-full bg-yellow-500 hover:bg-yellow-600 text-white"
+                  className="w-full bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-stone-950 font-bold shadow-md hover:shadow-amber-500/40"
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -1509,7 +1537,7 @@ const handleDownloadPdf = async () => {
                 <Button
                   type="submit"
                   disabled={authSubmitting}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-white min-w-32"
+                  className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-stone-950 font-bold min-w-32"
                 >
                   {authSubmitting ? (
                     <>
@@ -1525,6 +1553,7 @@ const handleDownloadPdf = async () => {
           </form>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

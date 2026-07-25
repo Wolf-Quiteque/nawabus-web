@@ -14,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "NawaBus - Reserve Sua Viagem de Ônibus com Facilidade",
-  description: "Plataforma de reserva de passagens de ônibus simples e eficiente. Encontre, selecione e pague suas viagens com facilidade.",
+  title: "NawaBus — Bilhetes de Autocarro Online | Luanda · Benguela · Angola",
+  description: "Compra o teu bilhete de autocarro online para Benguela, Luanda e toda Angola. Escolhe o lugar, paga por referência Multicaixa e recebe o bilhete no telemóvel. Aluguer de frete para grupos e empresas.",
+  keywords: ["bilhetes de autocarro", "Luanda", "Benguela", "Angola", "NawaBus", "aluguer de frete", "viagens interprovinciais"],
   icons: {
     icon: "/fav.png",
   },
@@ -23,7 +24,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="pt">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
