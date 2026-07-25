@@ -299,16 +299,16 @@ export default function Home() {
       </div>
 
       {/* ============ PROVINCE MARQUEE ============ */}
-      <div className="mt-16 bg-stone-950 py-5 overflow-hidden" aria-hidden="true">
+      <div className="mt-16 bg-white dark:bg-stone-900 border-y border-amber-100 dark:border-stone-800 py-5 overflow-hidden" aria-hidden="true">
         <div className="flex w-max animate-marquee">
           {[0, 1].map((copy) => (
             <div key={copy} className="flex items-center shrink-0">
               {MARQUEE_STOPS.map((stop) => (
                 <span key={`${copy}-${stop}`} className="flex items-center">
-                  <span className="text-amber-400/90 font-bold tracking-[0.3em] text-sm uppercase px-6">
+                  <span className="text-amber-600 dark:text-amber-400 font-bold tracking-[0.3em] text-sm uppercase px-6">
                     {stop}
                   </span>
-                  <svg className="w-3 h-3 text-orange-600" viewBox="0 0 12 12" fill="currentColor">
+                  <svg className="w-3 h-3 text-amber-500" viewBox="0 0 12 12" fill="currentColor">
                     <path d="M6 0l6 6-6 6-6-6z" />
                   </svg>
                 </span>
