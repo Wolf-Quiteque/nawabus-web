@@ -19,6 +19,7 @@ import {
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 import { getClosedTodayPurchaseMessage, isTripPurchasable } from '@/lib/purchase-date';
+import { formatKz } from '@/lib/currency';
 
 function openTicketHub(tab) {
   if (typeof window === 'undefined') return;
@@ -615,7 +616,7 @@ const handleDownloadPdf = async () => {
 
     doc.setFontSize(14);
     doc.text(
-      `Valor Total: ${Math.round(pdfFinalPrice)},00 Kz`,
+      `Valor Total: ${formatKz(pdfFinalPrice)}`,
       105,
       125,
       { align: "center" }
@@ -630,7 +631,7 @@ const handleDownloadPdf = async () => {
 
     doc.setFontSize(14);
     doc.text(
-      `Valor Total: ${Math.round(pdfFinalPrice)},00 Kz`,
+      `Valor Total: ${formatKz(pdfFinalPrice)}`,
       105,
       125,
       { align: "center" }
@@ -1201,26 +1202,21 @@ const handleDownloadPdf = async () => {
                 {appliedCoupon && (
                   <p className="text-sm flex justify-between text-gray-500 line-through">
                     <span>Subtotal:</span>
-                    <span>{totalPrice.toFixed(2)} USD</span>
+                    <span>{formatKz(totalPrice)}</span>
                   </p>
                 )}
                 {appliedCoupon && (
                   <p className="text-sm flex justify-between text-green-600 mb-1">
                     <span>Desconto ({appliedCoupon.discount_percentage}%):</span>
-                    <span>–{discountAmount.toFixed(2)} USD</span>
+                    <span>–{formatKz(discountAmount)}</span>
                   </p>
                 )}
                 <p className="text-xl font-bold flex justify-between items-center text-gray-800 dark:text-white">
                   <span>Total:</span>
                   <span className="text-2xl font-black bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">
-                    {finalPrice === 0 ? 'Gratuito' : `${finalPrice.toFixed(2)} USD`}
+                    {finalPrice === 0 ? 'Gratuito' : formatKz(finalPrice)}
                   </span>
                 </p>
-                {finalPrice > 0 && (
-                  <p className="text-sm text-gray-500 text-right">
-                    ≈ {Math.round(finalPrice)} Kz
-                  </p>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -1366,7 +1362,7 @@ const handleDownloadPdf = async () => {
                       </button>
                     </div>
                     <p className="text-lg font-semibold text-green-700 dark:text-green-300">
-                      Valor: {Math.round(finalPrice)},00 Kz
+                      Valor: {formatKz(finalPrice)}
                     </p>
                   </div>
                   <p className="text-sm text-gray-500 mb-4">
@@ -1399,7 +1395,7 @@ const handleDownloadPdf = async () => {
                       Pagamento: Cash
                     </p>
                     <p className="text-lg font-semibold text-green-700 dark:text-green-300 mt-1">
-                      Valor: {Math.round(finalPrice)},00 Kz
+                      Valor: {formatKz(finalPrice)}
                     </p>
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">

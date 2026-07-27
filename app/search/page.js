@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import SearchForm from '@/components/search-form';
 import { getClosedTodayPurchaseMessage, isDatePurchasable } from '@/lib/purchase-date';
+import { formatKzOrFree } from '@/lib/currency';
 
 function SearchResults() {
   const router = useRouter();
@@ -249,7 +250,7 @@ function SearchResults() {
           <div>
             <p className="text-[11px] font-bold uppercase tracking-widest text-white/70">Preco</p>
             <p className="text-2xl font-black drop-shadow-sm md:text-3xl">
-              {Number(trip.price_usd) === 0 ? 'Gratuito' : `${trip.price_usd.toFixed(2)} Kz`}
+              {formatKzOrFree(trip.price_usd)}
             </p>
             <p className="mt-0.5 text-xs text-white/80">
               {trip.available_seats} {trip.available_seats === 1 ? 'lugar disponivel' : 'lugares disponiveis'}

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Info, User, Phone, Users } from 'lucide-react';
+import { formatKzOrFree } from '@/lib/currency';
 
 export default function SeatSelection({
   outboundTrip,
@@ -370,7 +371,7 @@ export default function SeatSelection({
                   )}
                   {outboundSelectedSeats.length > 0 && (
                     <p className="text-sm text-gray-600 mt-1">
-                      Subtotal: {outboundPrice === 0 ? 'Gratuito' : `${outboundPrice.toFixed(2)} Kz`}
+                      Subtotal: {formatKzOrFree(outboundPrice)}
                     </p>
                   )}
                 </div>
@@ -402,7 +403,7 @@ export default function SeatSelection({
                     )}
                     {returnSelectedSeats.length > 0 && (
                       <p className="text-sm text-gray-600 mt-1">
-                        Subtotal: {returnPrice === 0 ? 'Gratuito' : `${returnPrice.toFixed(2)} Kz`}
+                        Subtotal: {formatKzOrFree(returnPrice)}
                       </p>
                     )}
                   </div>
@@ -413,7 +414,7 @@ export default function SeatSelection({
               <div className="pt-2">
                 <p className="text-xl font-bold flex justify-between items-center text-gray-800 dark:text-white">
                   <span>Total:</span>
-                  <span className="text-2xl font-black bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">{totalPrice === 0 ? 'Gratuito' : `${totalPrice.toFixed(2)} Kz`}</span>
+                  <span className="text-2xl font-black bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">{formatKzOrFree(totalPrice)}</span>
                 </p>
               </div>
 
