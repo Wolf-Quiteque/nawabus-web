@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Info, User, Phone, Users } from 'lucide-react';
 import { formatKzOrFree } from '@/lib/currency';
+import { COPILOT_SEAT_NUMBER, isCopilotSeat } from '@/lib/seats';
 
 export default function SeatSelection({
   outboundTrip,
@@ -62,6 +63,7 @@ export default function SeatSelection({
   }, [currentSelectedSeats.join(','), currentStep, currentUserAlreadyBooked]);
 
   const handleSeatClick = (seatNumber) => {
+    if (isCopilotSeat(seatNumber)) return;
     if (currentOccupiedSeats.includes(seatNumber)) return;
 
     setCurrentSelectedSeats((prev) =>
@@ -79,6 +81,9 @@ export default function SeatSelection({
   };
 
   const getSeatClass = (seatNumber) => {
+    if (isCopilotSeat(seatNumber)) {
+      return 'text-orange-500 cursor-not-allowed';
+    }
     if (currentOccupiedSeats.includes(seatNumber)) {
       return 'text-stone-700 cursor-not-allowed';
     }
@@ -97,14 +102,20 @@ export default function SeatSelection({
         seats.push(<div key={`aisle-${i}`} className="col-span-1"></div>);
       }
 
+      const copilot = isCopilotSeat(i);
+
       seats.push(
         <div
           key={i}
-          className="flex flex-col items-center cursor-pointer"
+          className={`flex flex-col items-center ${copilot ? 'cursor-not-allowed' : 'cursor-pointer'}`}
           onClick={() => handleSeatClick(i)}
+          title={copilot ? 'Lugar reservado ao copiloto' : undefined}
+          aria-disabled={copilot || undefined}
         >
           <MdEventSeat size={32} className={`transition-all duration-200 ${getSeatClass(i)}`} />
-          <span className="text-xs font-medium text-stone-400">{i}</span>
+          <span className={`text-xs font-medium ${copilot ? 'text-orange-400' : 'text-stone-400'}`}>
+            {copilot ? 'CP' : i}
+          </span>
         </div>
       );
     }
@@ -217,18 +228,22 @@ export default function SeatSelection({
               </div>
 
               {/* Legend */}
-              <div className="mt-6 flex justify-around text-xs text-stone-300">
-                <div className="flex items-center gap-1">
+              <div className="mt-6 grid grid-cols-2 gap-y-2 text-xs text-stone-300">
+                <div className="flex items-center gap-1.5">
                   <MdEventSeat size={20} className="text-stone-400" />
                   <span>Disponivel</span>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   <MdEventSeat size={20} className="text-amber-400" />
                   <span>Selecionado</span>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   <MdEventSeat size={20} className="text-stone-700" />
                   <span>Ocupado</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <MdEventSeat size={20} className="text-orange-500" />
+                  <span>Copiloto</span>
                 </div>
               </div>
             </div>
