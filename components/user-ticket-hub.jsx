@@ -490,6 +490,12 @@ export function UserTicketHub() {
   const [selectedQrTrip, setSelectedQrTrip] = useState(null);
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [showHubHelper, setShowHubHelper] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
+  const [passwordChangeError, setPasswordChangeError] = useState("");
+  const [passwordChangeSuccess, setPasswordChangeSuccess] = useState("");
 
   const paidGroups = useMemo(() => groupPaidTickets(tickets), [tickets]);
   const activePaidTicketCount = useMemo(
@@ -727,6 +733,47 @@ export function UserTicketHub() {
     await supabase.auth.signOut();
     setUser(null);
     setIsOpen(false);
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmNewPassword("");
+    setPasswordChangeError("");
+    setPasswordChangeSuccess("");
+  }
+
+  async function handleChangePassword(event) {
+    event.preventDefault();
+    setPasswordChangeError("");
+    setPasswordChangeSuccess("");
+
+    if (newPassword.length < 6) {
+      setPasswordChangeError("A nova senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setPasswordChangeError("As senhas nao coincidem.");
+      return;
+    }
+
+    setPasswordChangeLoading(true);
+    try {
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+      if (verifyError) throw new Error("Senha atual incorreta.");
+
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+      if (updateError) throw updateError;
+
+      setPasswordChangeSuccess("Senha alterada com sucesso.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+    } catch (err) {
+      setPasswordChangeError(err.message || "Nao foi possivel alterar a senha.");
+    } finally {
+      setPasswordChangeLoading(false);
+    }
   }
 
   async function copyReference(reference) {
@@ -993,6 +1040,20 @@ export function UserTicketHub() {
                     </button>
                     <button
                       type="button"
+                      onClick={() => {
+                        setActiveTab("account");
+                        setPasswordChangeError("");
+                        setPasswordChangeSuccess("");
+                      }}
+                      className={`rounded-2xl px-3 text-sm font-semibold transition ${
+                        activeTab === "account" ? "bg-[#FF8C00] text-black" : "bg-white/8 text-neutral-300"
+                      }`}
+                      aria-label="Conta"
+                    >
+                      <Lock className="h-5 w-5" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => fetchUserData(user.id)}
                       className="rounded-2xl bg-white/8 px-3 text-neutral-300 transition hover:bg-white/15"
                       aria-label="Atualizar"
@@ -1018,7 +1079,7 @@ export function UserTicketHub() {
                           />
                         ))}
                       </div>
-                    ) : (
+                    ) : activeTab === "pending" ? (
                       <div className="space-y-3">
                         {dataLoading && <SkeletonRows />}
                         {!dataLoading && pendingTransactions.length === 0 && (
@@ -1033,6 +1094,72 @@ export function UserTicketHub() {
                           />
                         ))}
                       </div>
+                    ) : (
+                      <form onSubmit={handleChangePassword} className="space-y-4">
+                        <div>
+                          <h3 className="text-base font-semibold text-white">Alterar senha</h3>
+                          <p className="mt-1 text-sm text-neutral-400">
+                            Confirme a sua senha atual e escolha uma nova senha.
+                          </p>
+                        </div>
+
+                        <label className="block">
+                          <span className="text-sm text-neutral-300">Senha atual</span>
+                          <input
+                            value={currentPassword}
+                            onChange={(event) => setCurrentPassword(event.target.value)}
+                            required
+                            type="password"
+                            className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-white/8 px-4 text-white outline-none transition placeholder:text-neutral-500 focus:border-orange-300"
+                            placeholder="******"
+                          />
+                        </label>
+
+                        <label className="block">
+                          <span className="text-sm text-neutral-300">Nova senha</span>
+                          <input
+                            value={newPassword}
+                            onChange={(event) => setNewPassword(event.target.value)}
+                            required
+                            minLength={6}
+                            type="password"
+                            className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-white/8 px-4 text-white outline-none transition placeholder:text-neutral-500 focus:border-orange-300"
+                            placeholder="******"
+                          />
+                        </label>
+
+                        <label className="block">
+                          <span className="text-sm text-neutral-300">Confirmar nova senha</span>
+                          <input
+                            value={confirmNewPassword}
+                            onChange={(event) => setConfirmNewPassword(event.target.value)}
+                            required
+                            minLength={6}
+                            type="password"
+                            className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-white/8 px-4 text-white outline-none transition placeholder:text-neutral-500 focus:border-orange-300"
+                            placeholder="******"
+                          />
+                        </label>
+
+                        {passwordChangeError && (
+                          <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+                            {passwordChangeError}
+                          </div>
+                        )}
+                        {passwordChangeSuccess && (
+                          <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+                            {passwordChangeSuccess}
+                          </div>
+                        )}
+
+                        <button
+                          type="submit"
+                          disabled={passwordChangeLoading}
+                          className="flex h-12 w-full items-center justify-center rounded-2xl bg-[#FF8C00] font-semibold text-black transition hover:bg-orange-400 disabled:opacity-60"
+                        >
+                          {passwordChangeLoading ? "A processar..." : "Guardar nova senha"}
+                        </button>
+                      </form>
                     )}
                   </div>
                 </>
