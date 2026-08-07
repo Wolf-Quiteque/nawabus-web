@@ -237,6 +237,29 @@ export default function CheckoutPage() {
     }
   };
 
+  // Confirms the bus(es) for outbound/return trips are still active before any
+  // purchase. When an admin deactivates a bus (buses.is_active = false) this
+  // blocks the website from selling seats on it, covering both the reference
+  // (ProxyPay) path and the direct cash/free ticket-creation path.
+  const assertBusesActive = async (details) => {
+    const tripsToCheck = [details?.outboundTrip, details?.returnTrip].filter(Boolean);
+
+    for (const trip of tripsToCheck) {
+      // Prefer live data so a stale sessionStorage booking cannot bypass it.
+      const { data: tripRow, error } = await supabase
+        .from('trips')
+        .select('buses(is_active)')
+        .eq('id', trip.id)
+        .single();
+
+      if (error) continue;
+      const bus = tripRow && (Array.isArray(tripRow.buses) ? tripRow.buses[0] : tripRow.buses);
+      if (bus && bus.is_active === false) {
+        throw new Error('Autocarro nao disponivel');
+      }
+    }
+  };
+
   // Send SMS to companions who provided a phone number
   const sendCompanionSms = async (allTickets, trip, user) => {
     const companions = trip.companions || {};
@@ -311,6 +334,8 @@ export default function CheckoutPage() {
 
     const { tripType, outboundTrip, returnTrip } = bookingDetails;
     validateBookingBeforePayment(bookingDetails);
+    // Block purchase if the bus has been deactivated (is_active = false).
+    await assertBusesActive(bookingDetails);
     const totalPrice = getComputedTotalPrice(bookingDetails);
     const discountFactor = appliedCoupon ? (1 - appliedCoupon.discount_percentage / 100) : 1;
     const finalPrice = parseFloat((totalPrice * discountFactor).toFixed(2));

@@ -61,6 +61,8 @@ function SearchResults() {
       `)
       .eq('status', 'scheduled')
       .gt('available_seats', 0)
+      // Hide trips whose bus has been deactivated by an admin.
+      .eq('buses.is_active', true)
       .ilike('routes.origin_province', `%${tripOrigin}%`)
       .ilike('routes.destination_province', `%${tripDestination}%`)
       .order('departure_time', { ascending: true });

@@ -40,10 +40,12 @@ export default function SearchForm() {
 
       const { data, error } = await supabase
         .from('trips')
-        .select('routes!inner(origin_province, destination_province, is_active)')
+        .select('routes!inner(origin_province, destination_province, is_active), buses!inner(is_active)')
         .eq('status', 'scheduled')
         .gt('available_seats', 0)
         .eq('routes.is_active', true)
+        // Hide trips whose bus has been deactivated by an admin.
+        .eq('buses.is_active', true)
         .gte('departure_time', startOfToday.toISOString());
 
       if (error) {

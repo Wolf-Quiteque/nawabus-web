@@ -81,7 +81,8 @@ function BookingPage() {
               destination_city
             ),
             buses (
-              capacity
+              capacity,
+              is_active
             )
           `)
           .eq('id', outboundTripId)
@@ -90,6 +91,14 @@ function BookingPage() {
         if (outboundError) throw outboundError;
         if (!isTripPurchasable(outboundData)) {
           alert(getClosedTodayPurchaseMessage());
+          router.replace('/');
+          return;
+        }
+
+        // Bus deactivated by an admin -> this trip is not available anymore.
+        const outboundBus = Array.isArray(outboundData.buses) ? outboundData.buses[0] : outboundData.buses;
+        if (outboundBus && outboundBus.is_active === false) {
+          alert('Viagem nao disponivel');
           router.replace('/');
           return;
         }
@@ -140,7 +149,8 @@ function BookingPage() {
                 destination_city
               ),
               buses (
-                capacity
+                capacity,
+                is_active
               )
             `)
             .eq('id', returnTripId)
@@ -149,6 +159,14 @@ function BookingPage() {
           if (returnError) throw returnError;
           if (!isTripPurchasable(returnData)) {
             alert(getClosedTodayPurchaseMessage());
+            router.replace('/');
+            return;
+          }
+
+          // Bus deactivated by an admin -> return trip is not available anymore.
+          const returnBus = Array.isArray(returnData.buses) ? returnData.buses[0] : returnData.buses;
+          if (returnBus && returnBus.is_active === false) {
+            alert('Viagem nao disponivel');
             router.replace('/');
             return;
           }
