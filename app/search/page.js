@@ -3,7 +3,6 @@
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, AlertCircle, Bus, Plug, Wifi, Wind } from 'lucide-react';
-import { createClient } from '@/lib/supabase-client';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import SearchForm from '@/components/search-form';
@@ -13,7 +12,6 @@ import { formatKzOrFree } from '@/lib/currency';
 function SearchResults() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = createClient();
 
   const [outboundTrips, setOutboundTrips] = useState([]);
   const [returnTrips, setReturnTrips] = useState([]);
@@ -31,52 +29,12 @@ function SearchResults() {
 
   const fetchTrips = useCallback(async (tripOrigin, tripDestination, tripDate) => {
     if (!tripOrigin || !tripDestination || !tripDate) return [];
-
-    let query = supabase
-      .from('trips')
-      .select(`
-        id,
-        departure_time,
-        arrival_time,
-        created_at,
-        price_usd,
-        available_seats,
-        seat_class,
-        status,
-        routes!inner (
-          origin_city,
-          destination_city,
-          distance_km,
-          estimated_duration_hours
-        ),
-        buses!inner (
-          make,
-          model,
-          amenities,
-          companies!inner (
-            name,
-            logo_url
-          )
-        )
-      `)
-      .eq('status', 'scheduled')
-      .gt('available_seats', 0)
-      // Hide trips whose bus has been deactivated by an admin.
-      .eq('buses.is_active', true)
-      .ilike('routes.origin_province', `%${tripOrigin}%`)
-      .ilike('routes.destination_province', `%${tripDestination}%`)
-      .order('departure_time', { ascending: true });
-
-    const startOfDay = new Date(`${tripDate}T00:00:00`);
-    const endOfDay = new Date(`${tripDate}T23:59:59.999`);
-    query = query
-      .gte('departure_time', startOfDay.toISOString())
-      .lte('departure_time', endOfDay.toISOString());
-
-    const { data, error: tripError } = await query;
-    if (tripError) throw tripError;
-    return data || [];
-  }, [supabase]);
+    const params = new URLSearchParams({ origin: tripOrigin, destination: tripDestination, date: tripDate });
+    const response = await fetch(`/api/search-trips?${params}`, { cache: 'no-store' });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || 'Não foi possível carregar as viagens.');
+    return payload.trips || [];
+  }, []);
 
   useEffect(() => {
     const loadTrips = async () => {
