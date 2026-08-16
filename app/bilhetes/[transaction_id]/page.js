@@ -46,21 +46,23 @@ export default function DownloadTicketPage() {
       }
 
       try {
-        // First, fetch the payment transaction
+        // Online purchases have a payment_transactions row. Agent/mobile cash
+        // sales use an `agent-*` reference and may not have one, so the paid
+        // ticket itself is the source of truth for that download path.
         const { data: paymentData, error: paymentError } = await supabase
           .from('payment_transactions')
           .select('*')
           .eq('transaction_id', transactionId)
-          .single();
+          .maybeSingle();
 
         if (paymentError) {
           console.error('Payment error:', paymentError);
-          setError('Pagamento não encontrado');
+          setError('Erro ao verificar o pagamento');
           setIsLoading(false);
           return;
         }
 
-        if (paymentData.status !== 'completed') {
+        if (paymentData && paymentData.status !== 'completed') {
           setError('Pagamento não foi confirmado. O bilhete ainda não está disponível.');
           setIsLoading(false);
           return;
@@ -95,6 +97,24 @@ export default function DownloadTicketPage() {
           return;
         }
 
+        const canUsePaidTicketFallback = !paymentData &&
+          String(transactionId).startsWith('agent-') &&
+          ticketsData.every((ticket) =>
+            ticket.payment_status === 'paid' && ['active', 'used'].includes(ticket.status)
+          );
+
+        if (!paymentData && !canUsePaidTicketFallback) {
+          setError('Pagamento não foi confirmado. O bilhete ainda não está disponível.');
+          setIsLoading(false);
+          return;
+        }
+
+        const resolvedPayment = paymentData || {
+          transaction_id: transactionId,
+          status: 'completed',
+          payment_method: ticketsData[0]?.payment_method || 'cash',
+        };
+
         const passengerIds = [...new Set(ticketsData.map(ticket => ticket.passenger_id).filter(Boolean))];
         const { data: profilesData } = await supabase
           .from('profiles')
@@ -108,14 +128,14 @@ export default function DownloadTicketPage() {
         }));
 
         setTicketData(ticketsWithProfiles);
-        setPaymentData(paymentData); // Store payment data separately
+        setPaymentData(resolvedPayment);
         setIsLoading(false);
 
         // Auto-generate PDF after loading data. In-app browsers like Instagram
         // often block downloads, so those users should open the real browser.
         if (!isRestrictedInAppBrowser()) {
           setTimeout(() => {
-            handleDownloadPdf(ticketsWithProfiles, paymentData)
+            handleDownloadPdf(ticketsWithProfiles, resolvedPayment)
               .catch((err) => console.error('Auto ticket PDF error:', err));
           }, 500);
         }
