@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { isCopilotSeat } from '@/lib/seats';
 
 function normalizeBus(bus) {
   return Array.isArray(bus) ? bus[0] : bus;
@@ -72,7 +73,8 @@ export async function GET(request) {
       }
       const capacity = Number(normalizeBus(trip.buses)?.capacity || 0);
       // Seat 1 is reserved for the co-pilot and is never sellable.
-      return { ...trip, available_seats: Math.max(capacity - 1 - occupied.size, 0) };
+      const occupiedPassengerSeats = [...occupied].filter((seat) => !isCopilotSeat(seat));
+      return { ...trip, available_seats: Math.max(capacity - 1 - occupiedPassengerSeats.length, 0) };
     }).filter((trip) => trip.available_seats > 0);
 
     return NextResponse.json({ trips: availableTrips });

@@ -20,6 +20,7 @@ import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 import { getClosedTodayPurchaseMessage, isTripPurchasable } from '@/lib/purchase-date';
 import { formatKz } from '@/lib/currency';
+import { isSellableSeat } from '@/lib/seats';
 
 function openTicketHub(tab) {
   if (typeof window === 'undefined') return;
@@ -221,6 +222,20 @@ export default function CheckoutPage() {
       throw new Error(getClosedTodayPurchaseMessage());
     }
 
+    const validateTripSeats = (trip, label) => {
+      const seats = (trip.selectedSeats || []).map(Number);
+      const capacity = Number(
+        (Array.isArray(trip.buses) ? trip.buses[0] : trip.buses)?.capacity || 0
+      );
+
+      if (new Set(seats).size !== seats.length ||
+          seats.some((seat) => !Number.isInteger(seat) || !isSellableSeat(seat, capacity))) {
+        throw new Error(`Seleção de lugares inválida para a viagem de ${label}.`);
+      }
+    };
+
+    validateTripSeats(details.outboundTrip, 'ida');
+
     if (details.tripType === 'round-trip') {
       if (!details.returnTrip) {
         throw new Error('A viagem de volta esta em falta. Volte a pesquisa e escolha a volta.');
@@ -234,6 +249,7 @@ export default function CheckoutPage() {
         throw new Error(getClosedTodayPurchaseMessage());
       }
 
+      validateTripSeats(details.returnTrip, 'volta');
     }
   };
 
@@ -248,14 +264,27 @@ export default function CheckoutPage() {
       // Prefer live data so a stale sessionStorage booking cannot bypass it.
       const { data: tripRow, error } = await supabase
         .from('trips')
-        .select('buses(is_active)')
+        .select('id, departure_time, buses(is_active, capacity)')
         .eq('id', trip.id)
         .single();
 
-      if (error) continue;
+      if (error || !tripRow) {
+        throw new Error('Não foi possível confirmar a disponibilidade da viagem. Tente novamente.');
+      }
+
       const bus = tripRow && (Array.isArray(tripRow.buses) ? tripRow.buses[0] : tripRow.buses);
-      if (bus && bus.is_active === false) {
+      if (!bus || bus.is_active === false) {
         throw new Error('Autocarro nao disponivel');
+      }
+
+      if (!isTripPurchasable(tripRow)) {
+        throw new Error(getClosedTodayPurchaseMessage());
+      }
+
+      const seats = (trip.selectedSeats || []).map(Number);
+      if (new Set(seats).size !== seats.length ||
+          seats.some((seat) => !Number.isInteger(seat) || !isSellableSeat(seat, bus.capacity))) {
+        throw new Error('Os lugares selecionados já não são válidos. Volte a selecionar os lugares.');
       }
     }
   };

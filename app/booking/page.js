@@ -111,7 +111,7 @@ function BookingPage() {
           .from('tickets')
           .select('seat_number')
           .in('trip_id', outboundSiblingIds)
-          .in('status', ['active', 'used']);
+          .in('status', ['active', 'pending', 'used']);
 
         if (outboundTicketsError) throw outboundTicketsError;
         const outboundHeldSeats = await getHeldSeatNumbers(outboundSiblingIds);
@@ -179,7 +179,7 @@ function BookingPage() {
             .from('tickets')
             .select('seat_number')
             .in('trip_id', returnSiblingIds)
-            .in('status', ['active', 'used']);
+            .in('status', ['active', 'pending', 'used']);
 
           if (returnTicketsError) throw returnTicketsError;
           const returnHeldSeats = await getHeldSeatNumbers(returnSiblingIds);
