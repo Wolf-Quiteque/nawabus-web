@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { createSupabaseAdmin } from '@/lib/supabase-admin';
 
 const SOCIAL_PLATFORMS = new Set(['facebook', 'instagram', 'tiktok', 'whatsapp', 'youtube', 'other']);
@@ -9,6 +10,14 @@ function splitName(fullName) {
     firstName: parts.shift() || '',
     lastName: parts.join(' ') || '-',
   };
+}
+
+function createPasswordVerifier() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
 }
 
 export async function POST(request) {
@@ -38,7 +47,7 @@ export async function POST(request) {
     }
 
     const { firstName, lastName } = splitName(fullName);
-    const { data, error } = await admin.auth.admin.createUser({
+    const { data: createdUser, error: createUserError } = await admin.auth.admin.createUser({
       email: requestedEmail,
       password,
       email_confirm: true,
@@ -50,16 +59,36 @@ export async function POST(request) {
         phone_number: phone,
       },
     });
-    if (error || !data.user) {
-      const alreadyExists = /already|registered|exists/i.test(error?.message || '');
-      return NextResponse.json({
-        error: alreadyExists
-          ? 'Este email ja esta registado. Use outro email para criar a conta de afiliado.'
-          : 'Nao foi possivel criar a conta.',
-      }, { status: alreadyExists ? 409 : 400 });
+
+    let user = createdUser?.user || null;
+    if (createUserError) {
+      const alreadyExists = /already|registered|exists/i.test(createUserError.message || '');
+      if (!alreadyExists) {
+        return NextResponse.json({ error: 'Nao foi possivel criar a conta.' }, { status: 400 });
+      }
+
+      // Real emails may already belong to an existing passenger account.
+      // Verify the password with an isolated anon client, then attach the
+      // affiliate application to that same Auth user. The admin client remains
+      // untouched so profile/application writes still use the service role.
+      const verifier = createPasswordVerifier();
+      const { data: signInData, error: signInError } = await verifier.auth.signInWithPassword({
+        email: requestedEmail,
+        password,
+      });
+      if (signInError || !signInData.user) {
+        return NextResponse.json({
+          error: 'Este email ja esta registado, mas a palavra-passe esta incorrecta. Use a palavra-passe dessa conta ou recupere-a primeiro.',
+        }, { status: 401 });
+      }
+      user = signInData.user;
+    } else if (user) {
+      createdUserId = user.id;
     }
-    const user = data.user;
-    createdUserId = user.id;
+
+    if (!user) {
+      return NextResponse.json({ error: 'Nao foi possivel criar ou validar a conta.' }, { status: 400 });
+    }
 
     const email = requestedEmail;
     const { data: existingApplication, error: existingError } = await admin
