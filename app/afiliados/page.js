@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase-client';
+import { useState } from 'react';
 
 const initialForm = {
   name: '',
@@ -15,18 +14,9 @@ const initialForm = {
 
 export default function AffiliateApplicationPage() {
   const [form, setForm] = useState(initialForm);
-  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      const currentUser = data?.user || null;
-      setUser(currentUser);
-    });
-  }, []);
 
   const update = (field) => (event) => setForm((current) => ({
     ...current,
@@ -37,23 +27,16 @@ export default function AffiliateApplicationPage() {
     event.preventDefault();
     setError('');
     setMessage('');
-    if (!user && form.password !== form.confirmPassword) {
+    if (form.password !== form.confirmPassword) {
       setError('As palavras-passe nao coincidem.');
       return;
     }
 
     setLoading(true);
     try {
-      const supabase = createClient();
-      const { data: sessionData } = await supabase.auth.getSession();
       const response = await fetch('/api/affiliate-applications', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(sessionData.session?.access_token
-            ? { Authorization: `Bearer ${sessionData.session.access_token}` }
-            : {}),
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
       const result = await response.json();
@@ -87,7 +70,7 @@ export default function AffiliateApplicationPage() {
         <section className="p-8 md:p-12">
           <h2 className="text-2xl font-black">Candidatura</h2>
           <p className="mt-2 text-sm text-stone-400">
-            {user ? 'Vamos usar a conta em que ja entrou.' : 'Crie as credenciais que usara no portal de afiliados.'}
+            Crie uma conta exclusiva com o seu email real e a palavra-passe que usara no portal de afiliados.
           </p>
 
           <form onSubmit={submit} className="mt-8 grid gap-5 sm:grid-cols-2">
@@ -107,12 +90,8 @@ export default function AffiliateApplicationPage() {
             <Field label="Perfil ou nome na rede" value={form.socialProfile} onChange={update('socialProfile')} placeholder="Ex.: @seuperfil" />
             <Field label="Telefone" value={form.phone} onChange={update('phone')} type="tel" inputMode="tel" placeholder="Ex.: 923 000 000" autoComplete="tel" />
             <Field label="Email" value={form.email} onChange={update('email')} type="email" placeholder="Ex.: nome@email.com" autoComplete="email" />
-            {!user && (
-              <>
-                <Field label="Palavra-passe" value={form.password} onChange={update('password')} type="password" placeholder="Mínimo de 8 caracteres" autoComplete="new-password" />
-                <Field label="Confirmar palavra-passe" value={form.confirmPassword} onChange={update('confirmPassword')} type="password" placeholder="Repita a palavra-passe" autoComplete="new-password" />
-              </>
-            )}
+            <Field label="Palavra-passe" value={form.password} onChange={update('password')} type="password" placeholder="Mínimo de 8 caracteres" autoComplete="new-password" minLength={8} />
+            <Field label="Confirmar palavra-passe" value={form.confirmPassword} onChange={update('confirmPassword')} type="password" placeholder="Repita a palavra-passe" autoComplete="new-password" minLength={8} />
             {error && <p className="sm:col-span-2 rounded-xl bg-red-950/60 p-3 text-sm text-red-200">{error}</p>}
             {message && <p className="sm:col-span-2 rounded-xl bg-emerald-950/60 p-3 text-sm text-emerald-200">{message}</p>}
             <button disabled={loading || Boolean(message)} className="sm:col-span-2 rounded-xl bg-amber-400 px-5 py-3 font-black text-stone-950 transition hover:bg-amber-300 disabled:opacity-50">

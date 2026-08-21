@@ -21,6 +21,7 @@ export async function POST(request) {
     const phone = String(body.phone || '').replace(/[^\d+]/g, '').trim();
     const requestedEmail = String(body.email || '').trim().toLowerCase();
     const password = String(body.password || '');
+    const confirmPassword = String(body.confirmPassword || '');
     const primarySocialPlatform = String(body.primarySocialPlatform || '').trim().toLowerCase();
     const socialProfile = String(body.socialProfile || '').trim();
 
@@ -29,49 +30,37 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Preencha correctamente todos os campos.' }, { status: 400 });
     }
 
-    const authorization = request.headers.get('authorization') || '';
-    const accessToken = authorization.startsWith('Bearer ') ? authorization.slice(7) : null;
-    let user = null;
-
-    if (accessToken) {
-      const { data, error } = await admin.auth.getUser(accessToken);
-      if (error || !data.user) {
-        return NextResponse.json({ error: 'A sessao terminou. Entre novamente.' }, { status: 401 });
-      }
-      user = data.user;
-    } else {
-      if (password.length < 8) {
-        return NextResponse.json({ error: 'A palavra-passe deve ter pelo menos 8 caracteres.' }, { status: 400 });
-      }
-      const { firstName, lastName } = splitName(fullName);
-      const { data, error } = await admin.auth.admin.createUser({
-        email: requestedEmail,
-        password,
-        email_confirm: true,
-        user_metadata: {
-          role: 'passenger',
-          first_name: firstName,
-          last_name: lastName,
-          full_name: fullName,
-          phone_number: phone,
-        },
-      });
-      if (error || !data.user) {
-        const alreadyExists = /already|registered|exists/i.test(error?.message || '');
-        return NextResponse.json({
-          error: alreadyExists
-            ? 'Este email ja tem uma conta. Entre na conta e envie a candidatura novamente.'
-            : 'Nao foi possivel criar a conta.',
-        }, { status: alreadyExists ? 409 : 400 });
-      }
-      user = data.user;
-      createdUserId = user.id;
+    if (password.length < 8) {
+      return NextResponse.json({ error: 'A palavra-passe deve ter pelo menos 8 caracteres.' }, { status: 400 });
+    }
+    if (password !== confirmPassword) {
+      return NextResponse.json({ error: 'As palavras-passe nao coincidem.' }, { status: 400 });
     }
 
-    // Keep the address explicitly entered in the application as the contact
-    // email. For an authenticated passenger, login still uses their existing
-    // account while this field remains editable instead of being silently
-    // replaced with account metadata.
+    const { firstName, lastName } = splitName(fullName);
+    const { data, error } = await admin.auth.admin.createUser({
+      email: requestedEmail,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        role: 'passenger',
+        first_name: firstName,
+        last_name: lastName,
+        full_name: fullName,
+        phone_number: phone,
+      },
+    });
+    if (error || !data.user) {
+      const alreadyExists = /already|registered|exists/i.test(error?.message || '');
+      return NextResponse.json({
+        error: alreadyExists
+          ? 'Este email ja esta registado. Use outro email para criar a conta de afiliado.'
+          : 'Nao foi possivel criar a conta.',
+      }, { status: alreadyExists ? 409 : 400 });
+    }
+    const user = data.user;
+    createdUserId = user.id;
+
     const email = requestedEmail;
     const { data: existingApplication, error: existingError } = await admin
       .from('affiliate_accounts')
@@ -87,7 +76,6 @@ export async function POST(request) {
       }, { status: 409 });
     }
 
-    const { firstName, lastName } = splitName(fullName);
     const { data: profile, error: profileError } = await admin
       .from('profiles')
       .select('id, role')
