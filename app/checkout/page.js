@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Check, Copy } from 'lucide-react';
 import { createClient } from '@/lib/supabase-client';
@@ -81,9 +81,10 @@ export default function CheckoutPage() {
 
   // Coupon state
   const [couponCode, setCouponCode] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState(null); // { code, discount_percentage }
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState('');
+  const referralChecked = useRef(false);
 
   // Auth state
   const [showAuthDialog, setShowAuthDialog] = useState(false);
@@ -93,6 +94,42 @@ export default function CheckoutPage() {
   const [authName, setAuthName] = useState('');
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+
+  const getPromotionItems = (details) => [
+    details?.outboundTrip && {
+      tripId: details.outboundTrip.id,
+      seatCount: details.outboundTrip.selectedSeats?.length || 0,
+    },
+    details?.tripType === 'round-trip' && details?.returnTrip && {
+      tripId: details.returnTrip.id,
+      seatCount: details.returnTrip.selectedSeats?.length || 0,
+    },
+  ].filter(Boolean);
+
+  const requestPromotionQuote = async (rawCode, source = 'website_code', details = bookingDetails) => {
+    const code = String(rawCode || '').trim().toUpperCase();
+    if (!code || !details) return null;
+
+    const response = await fetch('/api/promotions/quote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code,
+        passengerId: currentUser?.id || null,
+        items: getPromotionItems(details),
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.valid) {
+      throw new Error(data.message || 'Codigo promocional invalido.');
+    }
+
+    const promotion = { ...data, source };
+    setCouponCode(data.code);
+    setAppliedCoupon(promotion);
+    setPaymentMethod('referencia');
+    return promotion;
+  };
 
   useEffect(() => {
     const details = sessionStorage.getItem('bookingDetails');
@@ -108,21 +145,30 @@ export default function CheckoutPage() {
     })();
   }, [router, supabase]);
 
+  useEffect(() => {
+    if (!bookingDetails || referralChecked.current) return;
+    referralChecked.current = true;
+
+    fetch('/api/promotions/referral')
+      .then((response) => response.json())
+      .then((referral) => {
+        if (!referral.code) return null;
+        return requestPromotionQuote(referral.code, referral.source || 'direct', bookingDetails);
+      })
+      .catch((referralError) => {
+        console.warn('Saved referral could not be applied:', referralError);
+      });
+  }, [bookingDetails]);
+
   const applyCoupon = async () => {
     if (!couponCode.trim()) return;
     setCouponLoading(true);
     setCouponError('');
     try {
-      const res = await fetch(`/api/validate-coupon?code=${encodeURIComponent(couponCode.trim())}`);
-      const data = await res.json();
-      if (data.valid) {
-        setAppliedCoupon({ code: data.code, discount_percentage: data.discount_percentage });
-      } else {
-        setCouponError(data.message || 'Cupom inválido');
-        setAppliedCoupon(null);
-      }
-    } catch {
-      setCouponError('Erro ao validar cupom');
+      await requestPromotionQuote(couponCode, 'website_code');
+    } catch (error) {
+      setCouponError(error.message || 'Erro ao validar cupom');
+      setAppliedCoupon(null);
     } finally {
       setCouponLoading(false);
     }
@@ -253,6 +299,14 @@ export default function CheckoutPage() {
     }
   };
 
+  const getTripUnitPrice = (trip) => Number(
+    trip?.price_usd ?? trip?.price_per_seat ?? trip?.price ?? 0
+  );
+
+  const getPromotionTripQuote = (tripId) => (
+    appliedCoupon?.items?.find((item) => item.tripId === tripId) || null
+  );
+
   // Confirms the bus(es) for outbound/return trips are still active before any
   // purchase. When an admin deactivates a bus (buses.is_active = false) this
   // blocks the website from selling seats on it, covering both the reference
@@ -366,8 +420,9 @@ export default function CheckoutPage() {
     // Block purchase if the bus has been deactivated (is_active = false).
     await assertBusesActive(bookingDetails);
     const totalPrice = getComputedTotalPrice(bookingDetails);
-    const discountFactor = appliedCoupon ? (1 - appliedCoupon.discount_percentage / 100) : 1;
-    const finalPrice = parseFloat((totalPrice * discountFactor).toFixed(2));
+    const finalPrice = appliedCoupon
+      ? Number(appliedCoupon.totals.amountDueKz)
+      : totalPrice;
     const passengerId = user.id;
 
     const isFreeTrip = finalPrice === 0;
@@ -377,18 +432,16 @@ export default function CheckoutPage() {
       const effectivePaymentMethod = isFreeTrip ? 'cash' : paymentMethod;
 
       // Calculate per-seat price for outbound
-      const outboundSeatCount = outboundTrip.selectedSeats.length;
-      const outboundPerSeat = isFreeTrip ? 0 : parseFloat(
-        (outboundTrip.price * discountFactor / outboundSeatCount).toFixed(2)
-      );
+      const outboundPerSeat = isFreeTrip
+        ? 0
+        : Number(getPromotionTripQuote(outboundTrip.id)?.amountDuePerTicketKz
+          ?? getTripUnitPrice(outboundTrip));
 
       if (!isFreeTrip && paymentMethod === 'referencia') {
         let returnPerSeat = 0;
         if (tripType === 'round-trip' && returnTrip) {
-          const returnSeatCount = returnTrip.selectedSeats.length;
-          returnPerSeat = parseFloat(
-            (returnTrip.price * discountFactor / returnSeatCount).toFixed(2)
-          );
+          returnPerSeat = Number(getPromotionTripQuote(returnTrip.id)?.amountDuePerTicketKz
+            ?? getTripUnitPrice(returnTrip));
         }
 
         const response = await fetch('/api/create-payment', {
@@ -403,6 +456,7 @@ export default function CheckoutPage() {
               booking_source: 'online',
               payment_method: 'referencia',
               coupon_code: appliedCoupon?.code || null,
+              attribution_source: appliedCoupon?.source || null,
               event: bookingDetails.event || null,
               event_date: bookingDetails.eventDate || null,
               trip_type: tripType,
@@ -437,10 +491,10 @@ export default function CheckoutPage() {
 
       // Create return tickets if round-trip
       if (tripType === 'round-trip' && returnTrip) {
-        const returnSeatCount = returnTrip.selectedSeats.length;
-        const returnPerSeat = isFreeTrip ? 0 : parseFloat(
-          (returnTrip.price * discountFactor / returnSeatCount).toFixed(2)
-        );
+        const returnPerSeat = isFreeTrip
+          ? 0
+          : Number(getPromotionTripQuote(returnTrip.id)?.amountDuePerTicketKz
+            ?? getTripUnitPrice(returnTrip));
 
         returnTickets = await createTicketsForTrip(
           returnTrip, passengerId, returnPerSeat, paymentStatus, effectivePaymentMethod
@@ -592,8 +646,9 @@ const handleDownloadPdf = async () => {
 
   const { tripType, outboundTrip, returnTrip } = bookingDetails;
   const totalPrice = getComputedTotalPrice(bookingDetails);
-  const pdfDiscountFactor = appliedCoupon ? (1 - appliedCoupon.discount_percentage / 100) : 1;
-  const pdfFinalPrice = parseFloat((totalPrice * pdfDiscountFactor).toFixed(2));
+  const pdfFinalPrice = appliedCoupon
+    ? Number(appliedCoupon.totals.amountDueKz)
+    : totalPrice;
   const doc = new jsPDF(); // A4 portrait, unit mm by default (210 x 297)
 
   const orange = [245, 158, 11];
@@ -1095,8 +1150,8 @@ const handleDownloadPdf = async () => {
 
   const { tripType, outboundTrip, returnTrip } = bookingDetails;
   const totalPrice = getComputedTotalPrice(bookingDetails);
-  const discountAmount = appliedCoupon ? parseFloat((totalPrice * appliedCoupon.discount_percentage / 100).toFixed(2)) : 0;
-  const finalPrice = totalPrice - discountAmount;
+  const discountAmount = appliedCoupon ? Number(appliedCoupon.totals.discountAmountKz) : 0;
+  const finalPrice = appliedCoupon ? Number(appliedCoupon.totals.amountDueKz) : totalPrice;
 
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-amber-50/70 via-stone-50 to-stone-100 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950">
@@ -1242,7 +1297,7 @@ const handleDownloadPdf = async () => {
                   <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 rounded-md px-3 py-2">
                     <div>
                       <span className="text-sm font-semibold text-green-700 dark:text-green-300">🏷 {appliedCoupon.code}</span>
-                      <span className="text-sm text-green-600 dark:text-green-400 ml-2">–{appliedCoupon.discount_percentage}% de desconto</span>
+                      <span className="text-sm text-green-600 dark:text-green-400 ml-2">–{formatKz(appliedCoupon.totals.discountAmountKz)} de desconto</span>
                     </div>
                     {!reference && (
                       <button onClick={() => { setAppliedCoupon(null); setCouponCode(''); }} className="text-xs text-gray-500 hover:text-red-500 ml-2">✕</button>
@@ -1261,7 +1316,7 @@ const handleDownloadPdf = async () => {
                 )}
                 {appliedCoupon && (
                   <p className="text-sm flex justify-between text-green-600 mb-1">
-                    <span>Desconto ({appliedCoupon.discount_percentage}%):</span>
+                    <span>Desconto promocional:</span>
                     <span>–{formatKz(discountAmount)}</span>
                   </p>
                 )}
