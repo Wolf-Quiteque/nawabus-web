@@ -91,17 +91,45 @@ export async function POST(request) {
     }
 
     const email = requestedEmail;
-    const { data: existingApplication, error: existingError } = await admin
-      .from('affiliate_accounts')
-      .select('status')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    if (existingError) throw existingError;
+    const [existingByUserResult, existingByEmailResult] = await Promise.all([
+      admin
+        .from('affiliate_accounts')
+        .select('user_id, status')
+        .eq('user_id', user.id)
+        .maybeSingle(),
+      admin
+        .from('affiliate_accounts')
+        .select('user_id, status')
+        .eq('email', email)
+        .maybeSingle(),
+    ]);
+    if (existingByUserResult.error) throw existingByUserResult.error;
+    if (existingByEmailResult.error) throw existingByEmailResult.error;
+
+    const existingApplication = existingByUserResult.data;
+    const legacyApplication = existingByEmailResult.data?.user_id !== user.id
+      ? existingByEmailResult.data
+      : null;
+
     if (existingApplication && existingApplication.status !== 'rejected') {
       return NextResponse.json({
         error: existingApplication.status === 'pending'
           ? 'A sua candidatura ja esta em analise.'
           : 'Esta conta ja participa no programa de afiliados.',
+      }, { status: 409 });
+    }
+
+    // Early versions attached applications to the passenger's synthetic
+    // phone@nawabus.com Auth account while storing their real email here. A
+    // verified real-email login may claim a pending/rejected legacy record,
+    // but approved/suspended records require a supervised financial migration.
+    if (legacyApplication && !['pending', 'rejected'].includes(legacyApplication.status)) {
+      if (createdUserId) {
+        await admin.auth.admin.deleteUser(createdUserId);
+        createdUserId = null;
+      }
+      return NextResponse.json({
+        error: 'Este email ja esta ligado a uma conta de afiliado activa. Contacte a equipa NawaBus para actualizar o acesso.',
       }, { status: 409 });
     }
 
@@ -129,20 +157,34 @@ export async function POST(request) {
     const { error: profileWriteError } = await profileWrite;
     if (profileWriteError) throw profileWriteError;
 
-    const { error: applicationError } = await admin
-      .from('affiliate_accounts')
-      .upsert({
-        user_id: user.id,
-        email,
-        primary_social_platform: primarySocialPlatform,
-        social_profile: socialProfile,
-        status: 'pending',
-        rejected_at: null,
-        rejection_reason: null,
-        applied_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' });
+    const application = {
+      user_id: user.id,
+      email,
+      primary_social_platform: primarySocialPlatform,
+      social_profile: socialProfile,
+      status: 'pending',
+      rejected_at: null,
+      rejection_reason: null,
+      applied_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const applicationWrite = legacyApplication
+      ? admin
+          .from('affiliate_accounts')
+          .update(application)
+          .eq('user_id', legacyApplication.user_id)
+          .in('status', ['pending', 'rejected'])
+          .select('user_id')
+          .single()
+      : admin
+          .from('affiliate_accounts')
+          .upsert(application, { onConflict: 'user_id' })
+          .select('user_id')
+          .single();
+    const { data: savedApplication, error: applicationError } = await applicationWrite;
     if (applicationError) throw applicationError;
+    if (savedApplication.user_id !== user.id) throw new Error('Affiliate application identity mismatch');
 
     return NextResponse.json({ success: true, status: 'pending' }, { status: 201 });
   } catch (error) {
