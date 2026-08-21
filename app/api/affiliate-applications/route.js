@@ -68,7 +68,11 @@ export async function POST(request) {
       createdUserId = user.id;
     }
 
-    const email = String(user.email || requestedEmail).trim().toLowerCase();
+    // Keep the address explicitly entered in the application as the contact
+    // email. For an authenticated passenger, login still uses their existing
+    // account while this field remains editable instead of being silently
+    // replaced with account metadata.
+    const email = requestedEmail;
     const { data: existingApplication, error: existingError } = await admin
       .from('affiliate_accounts')
       .select('status')

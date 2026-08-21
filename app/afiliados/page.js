@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase-client';
 
 const initialForm = {
   name: '',
-  primarySocialPlatform: 'instagram',
+  primarySocialPlatform: '',
   socialProfile: '',
   phone: '',
   email: '',
@@ -25,14 +25,6 @@ export default function AffiliateApplicationPage() {
     supabase.auth.getUser().then(({ data }) => {
       const currentUser = data?.user || null;
       setUser(currentUser);
-      if (currentUser) {
-        setForm((current) => ({
-          ...current,
-          name: currentUser.user_metadata?.full_name || '',
-          email: currentUser.email || '',
-          phone: currentUser.user_metadata?.phone_number || '',
-        }));
-      }
     });
   }, []);
 
@@ -67,7 +59,7 @@ export default function AffiliateApplicationPage() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Nao foi possivel enviar a candidatura.');
       setMessage('Candidatura recebida. A nossa equipa vai analisar e enviar o link do portal depois da aprovacao.');
-      setForm((current) => ({ ...initialForm, email: current.email, name: current.name, phone: current.phone }));
+      setForm(initialForm);
     } catch (submitError) {
       setError(submitError.message);
     } finally {
@@ -99,10 +91,11 @@ export default function AffiliateApplicationPage() {
           </p>
 
           <form onSubmit={submit} className="mt-8 grid gap-5 sm:grid-cols-2">
-            <Field label="Nome completo" value={form.name} onChange={update('name')} className="sm:col-span-2" />
+            <Field label="Nome completo" value={form.name} onChange={update('name')} placeholder="Ex.: Ana Manuel" autoComplete="name" className="sm:col-span-2" />
             <label className="grid gap-2 text-sm font-semibold">
               Rede social principal
-              <select value={form.primarySocialPlatform} onChange={update('primarySocialPlatform')} className="rounded-xl border border-stone-700 bg-stone-950 px-4 py-3">
+              <select required value={form.primarySocialPlatform} onChange={update('primarySocialPlatform')} className="rounded-xl border border-stone-700 bg-stone-950 px-4 py-3">
+                <option value="" disabled>Escolha uma rede social</option>
                 <option value="instagram">Instagram</option>
                 <option value="facebook">Facebook</option>
                 <option value="tiktok">TikTok</option>
@@ -111,13 +104,13 @@ export default function AffiliateApplicationPage() {
                 <option value="other">Outra</option>
               </select>
             </label>
-            <Field label="Perfil ou nome na rede" value={form.socialProfile} onChange={update('socialProfile')} placeholder="@seuperfil" />
-            <Field label="Telefone" value={form.phone} onChange={update('phone')} type="tel" />
-            <Field label="Email" value={form.email} onChange={update('email')} type="email" disabled={Boolean(user)} />
+            <Field label="Perfil ou nome na rede" value={form.socialProfile} onChange={update('socialProfile')} placeholder="Ex.: @seuperfil" />
+            <Field label="Telefone" value={form.phone} onChange={update('phone')} type="tel" inputMode="tel" placeholder="Ex.: 923 000 000" autoComplete="tel" />
+            <Field label="Email" value={form.email} onChange={update('email')} type="email" placeholder="Ex.: nome@email.com" autoComplete="email" />
             {!user && (
               <>
-                <Field label="Palavra-passe" value={form.password} onChange={update('password')} type="password" />
-                <Field label="Confirmar palavra-passe" value={form.confirmPassword} onChange={update('confirmPassword')} type="password" />
+                <Field label="Palavra-passe" value={form.password} onChange={update('password')} type="password" placeholder="Mínimo de 8 caracteres" autoComplete="new-password" />
+                <Field label="Confirmar palavra-passe" value={form.confirmPassword} onChange={update('confirmPassword')} type="password" placeholder="Repita a palavra-passe" autoComplete="new-password" />
               </>
             )}
             {error && <p className="sm:col-span-2 rounded-xl bg-red-950/60 p-3 text-sm text-red-200">{error}</p>}
