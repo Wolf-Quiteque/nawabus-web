@@ -853,7 +853,7 @@ export function UserTicketHub() {
 
   return (
     <>
-      <div className="fixed bottom-5 right-5 z-40 md:bottom-7 md:right-7">
+      <div className="ticket-hub-launcher fixed bottom-5 right-5 z-40 md:bottom-7 md:right-7">
         {showHubHelper && !isOpen && (
           <div className="pointer-events-none absolute bottom-16 right-0 w-48 rounded-2xl border border-orange-200 bg-neutral-950 px-4 py-3 text-right text-white shadow-2xl shadow-black/30 md:bottom-20 md:w-56">
             <p className="text-sm font-bold text-orange-300">Meus bilhetes</p>
@@ -871,7 +871,7 @@ export function UserTicketHub() {
           type="button"
           onClick={openPanel}
           aria-label="Abrir area do cliente"
-          className={`flex h-14 w-14 items-center justify-center rounded-full border border-white/20 bg-[#FF8C00] text-white shadow-[0_18px_45px_rgba(0,0,0,0.28)] transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-orange-300 md:h-16 md:w-16 ${
+          className={`ticket-hub-launcher-button flex h-14 w-14 items-center justify-center rounded-full border border-white/20 bg-[#FF8C00] text-white shadow-[0_18px_45px_rgba(0,0,0,0.28)] transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-orange-300 md:h-16 md:w-16 ${
             showHubHelper && !isOpen ? "animate-pulse ring-4 ring-orange-200 ring-offset-2 ring-offset-white" : ""
           }`}
         >
@@ -880,17 +880,17 @@ export function UserTicketHub() {
       </div>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50">
+        <div className="ticket-hub-overlay fixed inset-0 z-50">
           <button
             type="button"
             aria-label="Fechar area do cliente"
-            className="absolute inset-0 bg-black/55 backdrop-blur-sm"
+            className="ticket-hub-backdrop absolute inset-0 bg-black/55 backdrop-blur-sm"
             onClick={() => setIsOpen(false)}
           />
 
-          <section className="absolute inset-x-0 bottom-0 max-h-[92vh] overflow-hidden rounded-t-[28px] border border-white/15 bg-neutral-950 text-white shadow-2xl md:inset-y-6 md:left-auto md:right-6 md:w-[440px] md:rounded-[28px]">
+          <section className="ticket-hub-panel absolute inset-x-0 bottom-0 max-h-[92vh] overflow-hidden rounded-t-[28px] border border-white/15 bg-neutral-950 text-white shadow-2xl md:inset-y-6 md:left-auto md:right-6 md:w-[440px] md:rounded-[28px]">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,140,0,0.22),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.08),transparent_28%)]" />
-            <div className="relative flex max-h-[92vh] flex-col">
+            <div className="ticket-hub-panel-content relative flex max-h-[92vh] flex-col">
               <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.28em] text-orange-300">NawaBus ID</p>

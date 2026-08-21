@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "./legacy-fallback.css";
 import { UserTicketHub } from "@/components/user-ticket-hub";
 import { ExternalBrowserNotice } from "@/components/external-browser-notice";
 

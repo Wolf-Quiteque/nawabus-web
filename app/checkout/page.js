@@ -1154,18 +1154,18 @@ const handleDownloadPdf = async () => {
   const finalPrice = appliedCoupon ? Number(appliedCoupon.totals.amountDueKz) : totalPrice;
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-b from-amber-50/70 via-stone-50 to-stone-100 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950">
-      <div className="relative w-full max-w-4xl mx-auto py-8 px-4">
+    <div className="checkout-page relative min-h-screen bg-gradient-to-b from-amber-50/70 via-stone-50 to-stone-100 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950">
+      <div className="checkout-container relative w-full max-w-4xl mx-auto py-8 px-4">
       <button
         onClick={() => router.back()}
-        className="flex items-center gap-2 mb-4 text-stone-600 hover:text-amber-600 dark:text-stone-400 dark:hover:text-amber-400 font-medium"
+        className="checkout-back flex items-center gap-2 mb-4 text-stone-600 hover:text-amber-600 dark:text-stone-400 dark:hover:text-amber-400 font-medium"
       >
         <ArrowLeft />
         <span>Voltar</span>
       </button>
 
       {/* Step indicator */}
-      <div className="flex items-center justify-center gap-2 mb-6 text-xs font-bold uppercase tracking-wider">
+      <div className="checkout-steps flex items-center justify-center gap-2 mb-6 text-xs font-bold uppercase tracking-wider">
         <span className="flex items-center gap-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-3 py-1.5">
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
           Pesquisa
@@ -1181,11 +1181,11 @@ const handleDownloadPdf = async () => {
         </span>
       </div>
 
-      <h1 className="text-3xl md:text-4xl font-black tracking-tight text-center mb-8 text-stone-900 dark:text-white">
+      <h1 className="checkout-title text-3xl md:text-4xl font-black tracking-tight text-center mb-8 text-stone-900 dark:text-white">
         Finalizar <span className="bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">Compra</span>
       </h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="checkout-grid grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Order Summary */}
         <div>
           <Card className="shadow-lg border-amber-200 dark:border-stone-700">
@@ -1349,7 +1349,7 @@ const handleDownloadPdf = async () => {
                 <div className="space-y-3 mt-3">
                   {/* Cash Payment Option
                   <div
-                    className={`flex items-start space-x-3 p-4 border-2 rounded-lg transition-all ${
+                    className={`checkout-payment-option flex items-start space-x-3 p-4 border-2 rounded-lg transition-all ${
                       reference
                         ? 'opacity-50 cursor-not-allowed'
                         : 'cursor-pointer'
@@ -1380,7 +1380,7 @@ const handleDownloadPdf = async () => {
 
                   {/* Referencia Payment Option */}
                   <div
-                    className={`flex items-start space-x-3 p-4 border-2 rounded-lg transition-all ${
+                    className={`checkout-payment-option flex items-start space-x-3 p-4 border-2 rounded-lg transition-all ${
                       reference
                         ? 'opacity-50 cursor-not-allowed'
                         : 'cursor-pointer'
@@ -1521,7 +1521,7 @@ const handleDownloadPdf = async () => {
               ) : (
                 <Button
                   onClick={handlePayment}
-                  className="w-full bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-stone-950 font-bold shadow-md hover:shadow-amber-500/40"
+                  className="checkout-primary-action w-full bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-stone-950 font-bold shadow-md hover:shadow-amber-500/40"
                   disabled={isLoading}
                 >
                   {isLoading ? (

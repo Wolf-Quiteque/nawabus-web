@@ -1,0 +1,416 @@
+/*
+ * Tailwind CSS 4 targets modern browsers. Some older Android WebViews ignore
+ * its cascade layers and render the checkout as raw HTML. Keep this small,
+ * direct stylesheet outside Tailwind's layers as a usable compatibility net.
+ */
+@supports not (color: oklch(0.5 0.1 90)) {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: #fdfcf5;
+    color: #211f17;
+    font-family: Arial, Helvetica, sans-serif;
+    line-height: 1.5;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  svg {
+    display: inline-block;
+    width: 1.25rem;
+    height: 1.25rem;
+    vertical-align: middle;
+  }
+
+  .checkout-page {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #fffbeb 0%, #fafaf9 55%, #f5f5f4 100%);
+  }
+
+  .checkout-container {
+    position: relative;
+    width: 100%;
+    max-width: 56rem;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+  }
+
+  .checkout-back {
+    display: inline-flex;
+    align-items: center;
+    margin: 0 0 1rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #57534d;
+    font-weight: 600;
+  }
+
+  .checkout-back svg {
+    margin-right: 0.5rem;
+  }
+
+  .checkout-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .checkout-steps > * {
+    margin: 0 0.2rem;
+  }
+
+  .checkout-steps span {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+  }
+
+  .checkout-title {
+    margin: 0 0 2rem;
+    color: #1c1917;
+    font-size: 2rem;
+    font-weight: 900;
+    line-height: 1.15;
+    text-align: center;
+  }
+
+  .checkout-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .checkout-grid > div + div {
+    margin-top: 2rem;
+  }
+
+  [data-slot="card"] {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #d6d3d1;
+    border-radius: 0.9rem;
+    background: #fff;
+    color: #211f17;
+    box-shadow: 0 10px 30px rgba(28, 25, 23, 0.1);
+  }
+
+  [data-slot="card-header"] {
+    padding: 1.25rem 1.5rem;
+  }
+
+  [data-slot="card-header"] {
+    background: #0c0a09;
+    color: #fff;
+    border-bottom: 4px solid #f59e0b;
+  }
+
+  [data-slot="card-title"] {
+    font-size: 1.15rem;
+    font-weight: 700;
+  }
+
+  [data-slot="card-content"] {
+    padding: 1.5rem;
+  }
+
+  [data-slot="card-content"] > * + * {
+    margin-top: 1.25rem;
+  }
+
+  .checkout-payment-option {
+    display: flex;
+    align-items: flex-start;
+    padding: 1rem;
+    border: 2px solid #f59e0b;
+    border-radius: 0.75rem;
+    background: #fffbeb;
+  }
+
+  .checkout-payment-option input {
+    flex: 0 0 auto;
+    width: 1rem;
+    height: 1rem;
+    margin: 0.25rem 0.75rem 0 0;
+  }
+
+  .checkout-payment-option > div {
+    flex: 1 1 auto;
+  }
+
+  [data-slot="button"],
+  .checkout-primary-action {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.7rem 1rem;
+    border: 0;
+    border-radius: 0.65rem;
+    background: #f59e0b;
+    color: #1c1917;
+    font-weight: 700;
+  }
+
+  .checkout-primary-action {
+    width: 100%;
+  }
+
+  [data-slot="input"] {
+    display: block;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.65rem 0.8rem;
+    border: 1px solid #d6d3d1;
+    border-radius: 0.65rem;
+    background: #fff;
+  }
+
+  [data-slot="label"] {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-weight: 600;
+  }
+
+  [data-slot="dialog-overlay"] {
+    position: fixed;
+    z-index: 50;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: rgba(0, 0, 0, 0.72);
+  }
+
+  [data-slot="dialog-content"] {
+    position: fixed;
+    z-index: 51;
+    top: 50%;
+    left: 50%;
+    display: grid;
+    width: calc(100% - 2rem);
+    max-width: 32rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    padding: 1.5rem;
+    border: 1px solid #d6d3d1;
+    border-radius: 0.9rem;
+    background: #fff;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.3);
+    transform: translate(-50%, -50%);
+  }
+
+  [data-slot="dialog-content"] > * + * {
+    margin-top: 1rem;
+  }
+
+  [data-slot="dialog-title"] {
+    font-size: 1.2rem;
+    font-weight: 700;
+  }
+
+  [data-slot="dialog-description"] {
+    color: #57534d;
+    font-size: 0.9rem;
+  }
+
+  [data-slot="dialog-close"] {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.4rem;
+    border: 0;
+    background: transparent;
+  }
+
+  .ticket-hub-launcher {
+    position: fixed;
+    z-index: 40;
+    right: 1.25rem;
+    bottom: 1.25rem;
+  }
+
+  .ticket-hub-launcher-button {
+    display: flex;
+    width: 3.5rem;
+    height: 3.5rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 50%;
+    background: #ff8c00;
+    color: #fff;
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.3);
+  }
+
+  .ticket-hub-overlay {
+    position: fixed;
+    z-index: 50;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+  }
+
+  .ticket-hub-backdrop {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  .ticket-hub-panel {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    max-height: 92vh;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 1.75rem 1.75rem 0 0;
+    background: #0a0a0a;
+    color: #fff;
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.5);
+  }
+
+  .ticket-hub-panel-content {
+    position: relative;
+    display: flex;
+    max-height: 92vh;
+    flex-direction: column;
+  }
+
+  .ticket-hub-panel > div:first-child {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+  }
+
+  .ticket-hub-panel-content > div {
+    padding: 1rem 1.25rem;
+  }
+
+  .ticket-hub-panel-content > div:first-child {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  }
+
+  .ticket-hub-panel-content > div:first-child > button {
+    flex: 0 0 auto;
+    padding: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+  }
+
+  .ticket-hub-panel-content > div:last-child {
+    overflow-y: auto;
+  }
+
+  .ticket-hub-panel-content h2,
+  .ticket-hub-panel-content h3,
+  .ticket-hub-panel-content p {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+  }
+
+  .ticket-hub-panel-content form {
+    margin-top: 1rem;
+  }
+
+  .ticket-hub-panel-content label {
+    display: block;
+    margin-top: 1rem;
+  }
+
+  .ticket-hub-panel-content input {
+    display: block;
+    width: 100%;
+    height: 3rem;
+    margin-top: 0.5rem;
+    padding: 0 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 1rem;
+    background: #1f1f1f;
+    color: #fff;
+  }
+
+  .ticket-hub-panel-content button[type="submit"] {
+    display: block;
+    width: 100%;
+    min-height: 3rem;
+    margin-top: 1rem;
+    border: 0;
+    border-radius: 1rem;
+    background: #ff8c00;
+    color: #000;
+    font-weight: 700;
+  }
+
+  .ticket-hub-panel-content form > button[type="button"] {
+    display: block;
+    width: 100%;
+    min-height: 3rem;
+    margin-top: 0.75rem;
+    padding: 0.65rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 1rem;
+    background: transparent;
+    color: #fff;
+  }
+
+  @media (min-width: 768px) {
+    .checkout-grid {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      column-gap: 2rem;
+    }
+
+    .checkout-grid > div + div {
+      margin-top: 0;
+    }
+
+    .ticket-hub-panel {
+      top: 1.5rem;
+      right: 1.5rem;
+      bottom: 1.5rem;
+      left: auto;
+      width: 27.5rem;
+      border-radius: 1.75rem;
+    }
+  }
+}
