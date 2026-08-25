@@ -31,7 +31,7 @@ export async function GET(request) {
     const { data: trips, error: tripsError } = await supabase
       .from('trips')
       .select(`
-        id, departure_time, arrival_time, created_at, price_usd, seat_class, status,
+        id, departure_time, arrival_time, created_at, price_usd, seat_class, status, sales_capacity_limit,
         routes!inner(origin_city, destination_city, origin_province, destination_province, distance_km, estimated_duration_hours),
         buses!inner(make, model, amenities, capacity, is_active, companies!inner(name, logo_url))
       `)
@@ -74,7 +74,11 @@ export async function GET(request) {
       const capacity = Number(normalizeBus(trip.buses)?.capacity || 0);
       // Seat 1 is reserved for the co-pilot and is never sellable.
       const occupiedPassengerSeats = [...occupied].filter((seat) => !isCopilotSeat(seat));
-      return { ...trip, available_seats: Math.max(capacity - 1 - occupiedPassengerSeats.length, 0) };
+      const passengerCapacity = Math.max(capacity - 1, 0);
+      const effectiveCapacity = trip.sales_capacity_limit == null
+        ? passengerCapacity
+        : Math.min(passengerCapacity, Number(trip.sales_capacity_limit));
+      return { ...trip, available_seats: Math.max(effectiveCapacity - occupiedPassengerSeats.length, 0) };
     }).filter((trip) => trip.available_seats > 0);
 
     return NextResponse.json({ trips: availableTrips });

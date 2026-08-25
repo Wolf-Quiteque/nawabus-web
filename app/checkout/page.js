@@ -36,6 +36,20 @@ function showTicketHubHint(tab) {
   }));
 }
 
+async function clearSavedReferral() {
+  try {
+    const response = await fetch('/api/promotions/referral', {
+      method: 'DELETE',
+      cache: 'no-store',
+    });
+    if (!response.ok) throw new Error('Referral cookie cleanup failed');
+  } catch (error) {
+    // A completed booking must not be reported as failed only because the
+    // browser could not clear its referral cookie.
+    console.warn('Saved referral could not be cleared:', error);
+  }
+}
+
 function TicketHubGuide({ mode }) {
   const isPending = mode === 'pending';
 
@@ -149,7 +163,7 @@ export default function CheckoutPage() {
     if (!bookingDetails || referralChecked.current) return;
     referralChecked.current = true;
 
-    fetch('/api/promotions/referral')
+    fetch('/api/promotions/referral', { cache: 'no-store' })
       .then((response) => response.json())
       .then((referral) => {
         if (!referral.code) return null;
@@ -474,6 +488,7 @@ export default function CheckoutPage() {
           throw new Error(result.error || 'Falha ao criar referencia de pagamento.');
         }
 
+        await clearSavedReferral();
         setReference(result.reference_number);
         setReferenceExpiresAt(result.hold_expires_at || null);
         showTicketHubHint('pending');
@@ -506,6 +521,7 @@ export default function CheckoutPage() {
         outbound: outboundTickets[0].ticket_number,
         return: returnTickets[0]?.ticket_number || null
       });
+      await clearSavedReferral();
 
       if (isFreeTrip) {
         setReference('CAMPAIGN_FREE');
