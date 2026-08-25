@@ -17,8 +17,9 @@ export async function GET(request) {
 
     const { data, error } = await supabase
       .from('coupons')
-      .select('id, code, discount_percentage, is_active')
+      .select('id, code, discount_type, discount_percentage, discount_amount_kz, is_active, kind')
       .eq('code', code)
+      .eq('kind', 'standard')
       .single();
 
     if (error || !data) {
@@ -29,7 +30,13 @@ export async function GET(request) {
       return NextResponse.json({ valid: false, message: 'Este cupom está inactivo' });
     }
 
-    return NextResponse.json({ valid: true, discount_percentage: data.discount_percentage, code: data.code });
+    return NextResponse.json({
+      valid: true,
+      code: data.code,
+      discount_type: data.discount_type || 'percentage',
+      discount_percentage: data.discount_type === 'fixed_kz' ? null : Number(data.discount_percentage),
+      discount_amount_kz: data.discount_type === 'fixed_kz' ? Number(data.discount_amount_kz) : null,
+    });
   } catch (error) {
     console.error('Error validating coupon:', error);
     return NextResponse.json({ valid: false, message: 'Erro ao validar cupom' }, { status: 500 });
