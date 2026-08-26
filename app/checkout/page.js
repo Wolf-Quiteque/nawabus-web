@@ -332,7 +332,7 @@ export default function CheckoutPage() {
       // Prefer live data so a stale sessionStorage booking cannot bypass it.
       const { data: tripRow, error } = await supabase
         .from('trips')
-        .select('id, departure_time, buses(is_active, capacity)')
+        .select('id, departure_time, status, buses(is_active, capacity)')
         .eq('id', trip.id)
         .single();
 
@@ -341,8 +341,8 @@ export default function CheckoutPage() {
       }
 
       const bus = tripRow && (Array.isArray(tripRow.buses) ? tripRow.buses[0] : tripRow.buses);
-      if (!bus || bus.is_active === false) {
-        throw new Error('Autocarro nao disponivel');
+      if (tripRow.status !== 'scheduled' || !bus || bus.is_active === false) {
+        throw new Error('Esta viagem nao esta disponivel para compra.');
       }
 
       if (!isTripPurchasable(tripRow)) {

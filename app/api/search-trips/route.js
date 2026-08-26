@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { isTripPurchasable } from '@/lib/purchase-date';
 import { isCopilotSeat } from '@/lib/seats';
 
 function normalizeBus(bus) {
@@ -22,6 +23,9 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Data inválida.' }, { status: 400 });
     }
 
+    const requestTime = new Date();
+    const earliestDeparture = start.getTime() > requestTime.getTime() ? start : requestTime;
+
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -39,7 +43,7 @@ export async function GET(request) {
       .eq('buses.is_active', true)
       .ilike('routes.origin_province', `%${origin}%`)
       .ilike('routes.destination_province', `%${destination}%`)
-      .gte('departure_time', start.toISOString())
+      .gt('departure_time', earliestDeparture.toISOString())
       .lte('departure_time', end.toISOString())
       .order('departure_time', { ascending: true });
     if (tripsError) throw tripsError;
@@ -66,7 +70,7 @@ export async function GET(request) {
       seatsByTrip.get(row.trip_id).add(row.seat_number);
     }
 
-    const availableTrips = (trips || []).map((trip) => {
+    const availableTrips = (trips || []).filter((trip) => isTripPurchasable(trip)).map((trip) => {
       const occupied = new Set();
       for (const siblingId of siblingsByTrip.get(trip.id) || [trip.id]) {
         for (const seat of seatsByTrip.get(siblingId) || []) occupied.add(seat);
