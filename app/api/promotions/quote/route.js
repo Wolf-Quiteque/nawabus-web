@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase-admin';
+import { onlineFare } from '@/lib/online-price';
 
 export async function POST(request) {
   try {
@@ -22,10 +23,10 @@ export async function POST(request) {
     const tripIds = [...new Set(items.map((item) => item.tripId))];
     const { data: trips, error: tripsError } = await admin
       .from('trips')
-      .select('id, price_usd')
+      .select('id, price_usd, online_price_kz')
       .in('id', tripIds);
     if (tripsError) throw tripsError;
-    const fareByTrip = new Map((trips || []).map((trip) => [trip.id, Number(trip.price_usd)]));
+    const fareByTrip = new Map((trips || []).map((trip) => [trip.id, onlineFare(trip)]));
     if (fareByTrip.size !== tripIds.length) {
       return NextResponse.json({ valid: false, message: 'Uma das viagens nao existe.' }, { status: 404 });
     }

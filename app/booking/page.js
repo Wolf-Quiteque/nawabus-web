@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase-client';
 import SeatSelection from '@/components/seat-selection';
 import { getClosedTodayPurchaseMessage, isTripPurchasable } from '@/lib/purchase-date';
+import { withOnlinePrice } from '@/lib/online-price';
 
 async function getSiblingIds(supabase, tripId) {
   const { data, error } = await supabase
@@ -75,6 +76,7 @@ function BookingPage() {
             departure_time,
             arrival_time,
             price_usd,
+            online_price_kz,
             seat_class,
             routes (
               origin_city,
@@ -103,7 +105,7 @@ function BookingPage() {
           return;
         }
 
-        setOutboundTrip(outboundData);
+        setOutboundTrip(withOnlinePrice(outboundData));
 
         // Fetch outbound occupied seats across all sibling trips (same bus + departure minute)
         const outboundSiblingIds = await getSiblingIds(supabase, outboundTripId);
@@ -143,6 +145,7 @@ function BookingPage() {
               departure_time,
               arrival_time,
               price_usd,
+              online_price_kz,
               seat_class,
               routes (
                 origin_city,
@@ -171,7 +174,7 @@ function BookingPage() {
             return;
           }
 
-          setReturnTrip(returnData);
+          setReturnTrip(withOnlinePrice(returnData));
 
           // Fetch return occupied seats across all sibling trips
           const returnSiblingIds = await getSiblingIds(supabase, returnTripId);
