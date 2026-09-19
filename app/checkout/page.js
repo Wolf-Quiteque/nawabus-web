@@ -199,40 +199,36 @@ export default function CheckoutPage() {
     return cleaned;
   };
 
-  // Helper to create tickets for one trip (one ticket per seat)
-  const createTicketsForTrip = async (trip, passengerId, perSeatPrice, paymentStatus, effectivePaymentMethod) => {
-    const tickets = [];
-    for (const seatNum of trip.selectedSeats) {
-      const { data, error } = await supabase
-        .from('tickets')
-        .insert({
-          trip_id: trip.id,
-          passenger_id: passengerId,
-          booked_by: passengerId,
-          seat_number: seatNum,
-          price_paid_usd: perSeatPrice,
-          payment_status: paymentStatus,
-          payment_method: effectivePaymentMethod,
-          booking_source: 'online',
-          seat_class: trip.seat_class || 'economy',
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      tickets.push(data);
-
-      // Insert companion record if this seat has companion info
-      const companions = trip.companions || {};
-      if (companions[seatNum] && companions[seatNum].name?.trim()) {
-        await supabase.from('ticket_companions').insert({
-          ticket_id: data.id,
-          name: companions[seatNum].name.trim(),
-          phone: normalizePhoneNumber(companions[seatNum].phone),
-        });
-      }
-    }
-    return tickets;
+  // Free tickets (100% coupon or a free campaign trip) are issued by the
+  // server, which re-prices every seat and refuses anything that isn't free.
+  // The browser used to insert them itself, choosing its own price.
+  const issueFreeTickets = async ({ tripType, outboundTrip, returnTrip }) => {
+    const leg = (trip) => ({
+      trip_id: trip.id,
+      seats: [...trip.selectedSeats].sort((a, b) => a - b),
+      companions: trip.companions || {},
+    });
+    const { data: { session } } = await supabase.auth.getSession();
+    const response = await fetch('/api/checkout/free', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token || ''}`,
+      },
+      body: JSON.stringify({
+        coupon_code: appliedCoupon?.code || null,
+        attribution_source: appliedCoupon?.source || null,
+        outbound: leg(outboundTrip),
+        return: tripType === 'round-trip' && returnTrip ? leg(returnTrip) : null,
+      }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || 'Não foi possível emitir os bilhetes.');
+    const tickets = result.tickets || [];
+    return {
+      outboundTickets: tickets.filter((ticket) => ticket.trip_id === outboundTrip.id),
+      returnTickets: returnTrip ? tickets.filter((ticket) => ticket.trip_id === returnTrip.id) : [],
+    };
   };
 
   const buildDeferredTrip = (trip, perSeatPrice) => ({
@@ -442,9 +438,6 @@ export default function CheckoutPage() {
     const isFreeTrip = finalPrice === 0;
 
     try {
-      const paymentStatus = isFreeTrip ? 'paid' : (paymentMethod === 'cash' ? 'paid' : 'pending');
-      const effectivePaymentMethod = isFreeTrip ? 'cash' : paymentMethod;
-
       // Calculate per-seat price for outbound
       const outboundPerSeat = isFreeTrip
         ? 0
@@ -495,49 +488,27 @@ export default function CheckoutPage() {
         return;
       }
 
-      // Create one ticket per seat for outbound
-      const outboundTickets = await createTicketsForTrip(
-        outboundTrip, passengerId, outboundPerSeat, paymentStatus, effectivePaymentMethod
-      );
-
-      setOutboundTicket(outboundTickets[0]);
-
-      let returnTickets = [];
-
-      // Create return tickets if round-trip
-      if (tripType === 'round-trip' && returnTrip) {
-        const returnPerSeat = isFreeTrip
-          ? 0
-          : Number(getPromotionTripQuote(returnTrip.id)?.amountDuePerTicketKz
-            ?? getTripUnitPrice(returnTrip));
-
-        returnTickets = await createTicketsForTrip(
-          returnTrip, passengerId, returnPerSeat, paymentStatus, effectivePaymentMethod
-        );
+      // Anything that costs money is paid by reference above. The old
+      // "cash at the counter" path marked tickets paid without payment and is
+      // no longer offered anywhere in the page.
+      if (!isFreeTrip) {
+        throw new Error('Este método de pagamento não está disponível. Use a referência Multicaixa.');
       }
 
-      // Store ticket numbers (use first ticket as primary)
+      const { outboundTickets, returnTickets } = await issueFreeTickets(bookingDetails);
+
+      setOutboundTicket(outboundTickets[0]);
       setTicketNumbers({
-        outbound: outboundTickets[0].ticket_number,
-        return: returnTickets[0]?.ticket_number || null
+        outbound: outboundTickets[0]?.ticket_number || null,
+        return: returnTickets[0]?.ticket_number || null,
       });
       await clearSavedReferral();
 
-      if (isFreeTrip) {
-        setReference('CAMPAIGN_FREE');
-        setReferenceExpiresAt(null);
-        showTicketHubHint('paid');
-        // Send companion SMS for free trips too
-        sendCompanionSms(outboundTickets, outboundTrip, user);
-        if (returnTrip) sendCompanionSms(returnTickets, returnTrip, user);
-        return;
-      }
-
-      sendCompanionSms(outboundTickets, outboundTrip, user);
-      if (returnTrip) sendCompanionSms(returnTickets, returnTrip, user);
-      setReference('CASH_PAYMENT');
+      setReference('CAMPAIGN_FREE');
       setReferenceExpiresAt(null);
       showTicketHubHint('paid');
+      sendCompanionSms(outboundTickets, outboundTrip, user);
+      if (returnTrip) sendCompanionSms(returnTickets, returnTrip, user);
     } catch (error) {
       console.error('Payment error:', error);
       alert(error.message);

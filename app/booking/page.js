@@ -18,20 +18,12 @@ async function getSiblingIds(supabase, tripId) {
   return data?.map(t => t.id) ?? [tripId];
 }
 
-async function getHeldSeatNumbers(tripIds) {
-  if (!tripIds?.length) return [];
-
-  const response = await fetch(`/api/held-seats?trip_ids=${encodeURIComponent(tripIds.join(','))}`, {
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
-    console.warn('Unable to load temporary seat holds');
-    return [];
-  }
-
-  const result = await response.json();
-  return (result.held_seats || []).map(hold => hold.seat_number);
+// The seat map comes from the database's public seat function: every leg
+// sharing this bus plus temporary holds, without reading anyone's tickets.
+async function getOccupiedSeatNumbers(supabase, tripId) {
+  const { data, error } = await supabase.rpc('get_trip_seat_availability', { p_trip_ids: [tripId] });
+  if (error) throw error;
+  return uniqueSeatNumbers(data?.[0]?.occupied_seats || []);
 }
 
 function uniqueSeatNumbers(seats) {
@@ -109,18 +101,7 @@ function BookingPage() {
 
         // Fetch outbound occupied seats across all sibling trips (same bus + departure minute)
         const outboundSiblingIds = await getSiblingIds(supabase, outboundTripId);
-        const { data: outboundTickets, error: outboundTicketsError } = await supabase
-          .from('tickets')
-          .select('seat_number')
-          .in('trip_id', outboundSiblingIds)
-          .in('status', ['active', 'pending', 'used']);
-
-        if (outboundTicketsError) throw outboundTicketsError;
-        const outboundHeldSeats = await getHeldSeatNumbers(outboundSiblingIds);
-        setOutboundOccupiedSeats(uniqueSeatNumbers([
-          ...(outboundTickets ? outboundTickets.map(t => t.seat_number) : []),
-          ...outboundHeldSeats,
-        ]));
+        setOutboundOccupiedSeats(await getOccupiedSeatNumbers(supabase, outboundTripId));
 
         // Check if the current user already has a ticket for this trip
         const { data: userData } = await supabase.auth.getUser();
@@ -178,18 +159,7 @@ function BookingPage() {
 
           // Fetch return occupied seats across all sibling trips
           const returnSiblingIds = await getSiblingIds(supabase, returnTripId);
-          const { data: returnTickets, error: returnTicketsError } = await supabase
-            .from('tickets')
-            .select('seat_number')
-            .in('trip_id', returnSiblingIds)
-            .in('status', ['active', 'pending', 'used']);
-
-          if (returnTicketsError) throw returnTicketsError;
-          const returnHeldSeats = await getHeldSeatNumbers(returnSiblingIds);
-          setReturnOccupiedSeats(uniqueSeatNumbers([
-            ...(returnTickets ? returnTickets.map(t => t.seat_number) : []),
-            ...returnHeldSeats,
-          ]));
+          setReturnOccupiedSeats(await getOccupiedSeatNumbers(supabase, returnTripId));
 
           // Check if user already booked for return trip
           if (userData?.user) {
