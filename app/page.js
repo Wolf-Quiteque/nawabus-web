@@ -230,6 +230,21 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </Link>
+
+              {/* Searches by province: Sumbe routes are filed under Cuanza Sul. */}
+              <Link
+                href={buyHref('Luanda', 'Cuanza Sul')}
+                className="group inline-flex w-full sm:w-auto justify-center items-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-700 px-6 sm:px-7 py-4 text-base md:text-lg font-black text-white shadow-[0_10px_40px_rgba(5,150,105,0.45)] hover:shadow-[0_14px_50px_rgba(5,150,105,0.65)] hover:scale-[1.03] transition-all duration-300"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Bilhetes para Sumbe
+                <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </Link>
             </div>
 
             <a
@@ -1014,6 +1029,11 @@ export default function Home() {
                 <li>
                   <Link href={buyHref('Benguela', 'Luanda')} className="text-stone-400 hover:text-amber-400 transition-colors font-medium">
                     Bilhetes para Luanda
+                  </Link>
+                </li>
+                <li>
+                  <Link href={buyHref('Luanda', 'Cuanza Sul')} className="text-stone-400 hover:text-emerald-400 transition-colors font-medium">
+                    Bilhetes para Sumbe
                   </Link>
                 </li>
                 <li>
