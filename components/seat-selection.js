@@ -26,6 +26,7 @@ export default function SeatSelection({
   const [outboundSelectedSeats, setOutboundSelectedSeats] = useState([]);
   const [returnSelectedSeats, setReturnSelectedSeats] = useState([]);
   const [currentStep, setCurrentStep] = useState(isSelectingReturn ? 'return' : 'outbound');
+  const [showSeatPrompt, setShowSeatPrompt] = useState(true);
 
   // Companion info: { [seatNumber]: { name: '', phone: '' } }
   const [outboundCompanions, setOutboundCompanions] = useState({});
@@ -35,6 +36,16 @@ export default function SeatSelection({
   const currentOccupiedSeats = currentStep === 'outbound' ? outboundOccupiedSeats : returnOccupiedSeats;
   const currentSelectedSeats = currentStep === 'outbound' ? outboundSelectedSeats : returnSelectedSeats;
   const setCurrentSelectedSeats = currentStep === 'outbound' ? setOutboundSelectedSeats : setReturnSelectedSeats;
+
+  useEffect(() => {
+    setShowSeatPrompt(true);
+
+    const timeoutId = window.setTimeout(() => {
+      setShowSeatPrompt(false);
+    }, 2000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [currentStep]);
   const currentCompanions = currentStep === 'outbound' ? outboundCompanions : returnCompanions;
   const setCurrentCompanions = currentStep === 'outbound' ? setOutboundCompanions : setReturnCompanions;
 
@@ -198,6 +209,19 @@ export default function SeatSelection({
 
   return (
     <div ref={seatSelectionRef} className="flex flex-col md:flex-row gap-8 scroll-mt-4">
+      {showSeatPrompt && (
+        <div className="pointer-events-none fixed inset-0 z-[100] flex items-center justify-center px-4">
+          <div
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className="flex items-center gap-3 rounded-2xl border border-orange-400/40 bg-stone-950/95 px-6 py-4 text-center text-lg font-bold text-white shadow-2xl backdrop-blur-sm"
+          >
+            <MdEventSeat className="h-6 w-6 shrink-0 text-orange-400" aria-hidden="true" />
+            <span>Selecione o seu assento</span>
+          </div>
+        </div>
+      )}
       {/* ── LEFT COLUMN: Seat Grid ── */}
       <div className="w-full md:w-5/12">
         <Card className="shadow-lg border-amber-200 dark:border-stone-700">

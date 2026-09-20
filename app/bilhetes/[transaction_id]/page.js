@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase-client';
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 import { isRestrictedInAppBrowser, openExternalBrowser } from '@/lib/in-app-browser';
+import { formatLuandaDateTime, ticketDepartureTime } from '@/lib/date-time';
 
 function getTicketPassengerName(ticket, payment) {
   const companionName = ticket?.ticket_companions?.[0]?.name?.trim();
@@ -35,7 +35,6 @@ export default function DownloadTicketPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [error, setError] = useState(null);
-  const supabase = createClient();
 
   useEffect(() => {
     const fetchTicketData = async () => {
@@ -46,88 +45,33 @@ export default function DownloadTicketPage() {
       }
 
       try {
-        // First, fetch the payment transaction
-        const { data: paymentData, error: paymentError } = await supabase
-          .from('payment_transactions')
-          .select('*')
-          .eq('transaction_id', transactionId)
-          .single();
+        const response = await fetch(`/api/tickets/download/${encodeURIComponent(transactionId)}`, {
+          cache: 'no-store',
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || 'Não foi possível carregar o bilhete.');
 
-        if (paymentError) {
-          console.error('Payment error:', paymentError);
-          setError('Pagamento não encontrado');
-          setIsLoading(false);
-          return;
-        }
-
-        if (paymentData.status !== 'completed') {
-          setError('Pagamento não foi confirmado. O bilhete ainda não está disponível.');
-          setIsLoading(false);
-          return;
-        }
-
-        const { data: ticketsData, error: ticketError } = await supabase
-          .from('tickets')
-          .select(`
-            *,
-            ticket_companions (
-              name,
-              phone
-            ),
-            trips: trip_id (
-              *,
-              routes: route_id (*),
-              buses: bus_id (
-                id,
-                make,
-                model,
-                companies: company_id (name)
-              )
-            )
-          `)
-          .eq('payment_reference', transactionId)
-          .order('created_at', { ascending: true });
-
-        if (ticketError || !ticketsData || ticketsData.length === 0) {
-          console.error('Ticket error:', ticketError);
-          setError('Dados do bilhete não encontrados');
-          setIsLoading(false);
-          return;
-        }
-
-        const passengerIds = [...new Set(ticketsData.map(ticket => ticket.passenger_id).filter(Boolean))];
-        const { data: profilesData } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name, phone_number')
-          .in('id', passengerIds);
-
-        const profilesById = Object.fromEntries((profilesData || []).map(profile => [profile.id, profile]));
-        const ticketsWithProfiles = ticketsData.map(ticket => ({
-          ...ticket,
-          profiles: profilesById[ticket.passenger_id] || null,
-        }));
-
-        setTicketData(ticketsWithProfiles);
-        setPaymentData(paymentData); // Store payment data separately
+        setTicketData(payload.tickets);
+        setPaymentData(payload.payment);
         setIsLoading(false);
 
         // Auto-generate PDF after loading data. In-app browsers like Instagram
         // often block downloads, so those users should open the real browser.
         if (!isRestrictedInAppBrowser()) {
           setTimeout(() => {
-            handleDownloadPdf(ticketsWithProfiles, paymentData)
+            handleDownloadPdf(payload.tickets, payload.payment)
               .catch((err) => console.error('Auto ticket PDF error:', err));
           }, 500);
         }
       } catch (err) {
         console.error('Fetch error:', err);
-        setError('Erro ao carregar dados do bilhete');
+        setError(err.message || 'Erro ao carregar dados do bilhete');
         setIsLoading(false);
       }
     };
 
     fetchTicketData();
-  }, [transactionId, supabase]);
+  }, [transactionId]);
 
   const handleDownloadPdf = async (ticket, payment) => {
     if (!ticket || !payment) {
@@ -152,8 +96,8 @@ export default function DownloadTicketPage() {
         const routeName = singleTicket.trips?.routes
           ? `${singleTicket.trips.routes.origin_city || 'Origem'} -> ${singleTicket.trips.routes.destination_city || 'Destino'}`
           : 'Rota nao especificada';
-        const departure = singleTicket.trips?.departure_time
-          ? new Date(singleTicket.trips.departure_time).toLocaleString('pt-PT')
+        const departure = ticketDepartureTime(singleTicket)
+          ? formatLuandaDateTime(ticketDepartureTime(singleTicket))
           : 'Data nao especificada';
         const price = singleTicket.price_paid_usd
           ? `${Math.round(singleTicket.price_paid_usd)},00 Kz`
@@ -255,14 +199,14 @@ export default function DownloadTicketPage() {
       routeName: ticket.trips?.routes 
         ? `${ticket.trips.routes.origin_city || 'Origem'} → ${ticket.trips.routes.destination_city || 'Destino'}`
         : 'Rota não especificada',
-      departure: ticket.trips?.departure_time 
-        ? new Date(ticket.trips.departure_time).toLocaleString('pt-PT')
+      departure: ticketDepartureTime(ticket)
+        ? formatLuandaDateTime(ticketDepartureTime(ticket))
         : 'Data não especificada',
       seats: ticket.seat_number || 'N/A',
       price: ticket.price_paid_usd
         ? `${Math.round(ticket.price_paid_usd)},00 Kz`
         : 'Preço não disponível',
-      printDate: new Date().toLocaleString('pt-PT'),
+      printDate: formatLuandaDateTime(new Date()),
     };
 
     // --- QR Code ---

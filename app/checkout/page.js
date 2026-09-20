@@ -21,6 +21,7 @@ import QRCode from 'qrcode';
 import { getClosedTodayPurchaseMessage, isTripPurchasable } from '@/lib/purchase-date';
 import { formatKz } from '@/lib/currency';
 import { isSellableSeat } from '@/lib/seats';
+import { formatLuandaDateTime } from '@/lib/date-time';
 
 function openTicketHub(tab) {
   if (typeof window === 'undefined') return;
@@ -806,7 +807,7 @@ const handleDownloadPdf = async () => {
   doc.setFont(undefined, "normal");
   renderText(
     outboundTrip.departure_time
-      ? new Date(outboundTrip.departure_time).toLocaleString("pt-PT")
+      ? formatLuandaDateTime(outboundTrip.departure_time)
       : "Data não definida",
     55,
     yPos
@@ -888,7 +889,7 @@ const handleDownloadPdf = async () => {
     doc.setFont(undefined, "normal");
     renderText(
       returnTrip.departure_time
-        ? new Date(returnTrip.departure_time).toLocaleString("pt-PT")
+        ? formatLuandaDateTime(returnTrip.departure_time)
         : "Data não definida",
       55,
       yPos
@@ -1067,7 +1068,7 @@ const handleDownloadPdf = async () => {
   doc.setFontSize(8);
   doc.setTextColor(120, 120, 120);
   doc.text(
-    `Data de Impressão: ${new Date().toLocaleString("pt-PT")}`,
+    `Data de Impressão: ${formatLuandaDateTime(new Date())}`,
     20,
     footerY + 8
   );
@@ -1194,7 +1195,7 @@ const handleDownloadPdf = async () => {
                   {outboundTrip.origin} → {outboundTrip.destination}
                 </p>
                 <p className="text-sm text-gray-500">
-                  {new Date(outboundTrip.departure_time).toLocaleString('pt-PT', { 
+                  {formatLuandaDateTime(outboundTrip.departure_time, {
                     dateStyle: 'full', 
                     timeStyle: 'short' 
                   })}
@@ -1229,7 +1230,7 @@ const handleDownloadPdf = async () => {
                     {returnTrip.origin} → {returnTrip.destination}
                   </p>
                   <p className="text-sm text-gray-500">
-                    {new Date(returnTrip.departure_time).toLocaleString('pt-PT', {
+                    {formatLuandaDateTime(returnTrip.departure_time, {
                       dateStyle: 'full',
                       timeStyle: 'short'
                     })}

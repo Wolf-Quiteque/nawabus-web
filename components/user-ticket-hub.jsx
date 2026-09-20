@@ -19,6 +19,7 @@ import jsPDF from "jspdf";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase-client";
 import { isRestrictedInAppBrowser, openExternalBrowser } from "@/lib/in-app-browser";
+import { formatLuandaDateTime, ticketDepartureTime } from "@/lib/date-time";
 
 const BRAND_ORANGE = "#FF8C00";
 const ENTITY = "1219";
@@ -45,7 +46,7 @@ function ensureNames(fullName) {
 
 function formatDate(value) {
   if (!value) return "Data nao definida";
-  return new Date(value).toLocaleString("pt-PT", {
+  return formatLuandaDateTime(value, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -59,6 +60,10 @@ function formatMoney(value) {
 }
 
 function getRoute(ticket) {
+  const snapshot = ticket?.booking_snapshot;
+  if (snapshot?.origin_city && snapshot?.destination_city) {
+    return `${snapshot.origin_city} -> ${snapshot.destination_city}`;
+  }
   const route = ticket?.trips?.routes;
   if (!route) return "Rota nao definida";
   return `${route.origin_city || "Origem"} -> ${route.destination_city || "Destino"}`;
@@ -145,7 +150,7 @@ function groupPaidTickets(tickets) {
 function groupTicketsByTrip(tickets) {
   const groups = new Map();
   tickets.forEach((ticket) => {
-    const key = ticket.trip_id || `${ticket.trips?.departure_time || ""}-${getRoute(ticket)}`;
+    const key = ticket.trip_id || `${ticketDepartureTime(ticket) || ""}-${getRoute(ticket)}`;
     const existing = groups.get(key) || {
       tripId: ticket.trip_id,
       firstTicket: ticket,
@@ -158,8 +163,8 @@ function groupTicketsByTrip(tickets) {
   });
 
   return Array.from(groups.values()).sort((a, b) => {
-    const aTime = new Date(a.firstTicket.trips?.departure_time || 0).getTime();
-    const bTime = new Date(b.firstTicket.trips?.departure_time || 0).getTime();
+    const aTime = new Date(ticketDepartureTime(a.firstTicket) || 0).getTime();
+    const bTime = new Date(ticketDepartureTime(b.firstTicket) || 0).getTime();
     return aTime - bTime;
   });
 }
@@ -187,7 +192,7 @@ function getLocalDayStart(value) {
 }
 
 function isTicketExpired(ticket, now = new Date()) {
-  const departureDay = getLocalDayStart(ticket?.trips?.departure_time);
+  const departureDay = getLocalDayStart(ticketDepartureTime(ticket));
   if (!departureDay) return false;
 
   const today = new Date(now);
@@ -212,7 +217,7 @@ function buildQrTripPayload(tripGroup, index = 0, total = 1) {
 function getUpcomingRideCount(tickets) {
   const upcomingRideKeys = new Set();
   tickets.forEach((ticket) => {
-    const departureTime = ticket?.trips?.departure_time;
+    const departureTime = ticketDepartureTime(ticket);
     if (!getLocalDayStart(departureTime)) return;
     if (isTicketExpired(ticket)) return;
 
@@ -256,7 +261,7 @@ async function downloadPaidTicketGroup(group, user, payment) {
     doc.setFontSize(10);
     doc.setTextColor(...muted);
     if (tripGroups.length === 1) {
-      doc.text(`Partida: ${formatDate(firstTicket.trips?.departure_time)}`, 24, 90);
+      doc.text(`Partida: ${formatDate(ticketDepartureTime(firstTicket))}`, 24, 90);
       doc.text(`Empresa: ${firstTicket.trips?.buses?.companies?.name || "NawaBus"}`, 24, 101);
     } else {
       doc.text(`${tripGroups.length} viagens nesta compra`, 24, 90);
@@ -293,7 +298,7 @@ async function downloadPaidTicketGroup(group, user, payment) {
       doc.setTextColor(...muted);
       doc.setFont(undefined, "normal");
       doc.setFontSize(9);
-      doc.text(`Partida: ${formatDate(tripGroup.firstTicket.trips?.departure_time)}`, 24, y);
+      doc.text(`Partida: ${formatDate(ticketDepartureTime(tripGroup.firstTicket))}`, 24, y);
       y += 8;
 
       tripGroup.tickets.forEach((ticket, ticketIndex) => {
@@ -369,7 +374,7 @@ async function downloadPaidTicketGroup(group, user, payment) {
         doc.text(getRoute(tripGroup.firstTicket), 26, top + 30, { maxWidth: 100 });
         doc.setFont(undefined, "normal");
         doc.setTextColor(...muted);
-        doc.text(`Partida: ${formatDate(tripGroup.firstTicket.trips?.departure_time)}`, 26, top + 42, { maxWidth: 100 });
+        doc.text(`Partida: ${formatDate(ticketDepartureTime(tripGroup.firstTicket))}`, 26, top + 42, { maxWidth: 100 });
         doc.text(`Lugares: ${tripGroup.tickets.map((ticket) => ticket.seat_number).join(", ")}`, 26, top + 54, { maxWidth: 100 });
         doc.addImage(qrDataUrl, "PNG", 146, top + 16, 38, 38);
         doc.setFontSize(8);
@@ -417,7 +422,7 @@ async function downloadPaidTicketGroup(group, user, payment) {
     doc.setFont(undefined, "normal");
     doc.setFontSize(10);
     doc.setTextColor(...muted);
-    doc.text(`Partida: ${formatDate(ticket.trips?.departure_time)}`, 24, 88);
+    doc.text(`Partida: ${formatDate(ticketDepartureTime(ticket))}`, 24, 88);
     doc.text(`Empresa: ${ticket.trips?.buses?.companies?.name || "NawaBus"}`, 24, 99);
 
     doc.setFillColor(255, 249, 235);
@@ -625,7 +630,9 @@ export function UserTicketHub() {
         `)
         .or(`passenger_id.eq.${userId},booked_by.eq.${userId}`)
         .eq("payment_status", "paid")
-        .in("status", ["active", "used"])
+        // "expired" is a no-show past its validity. The passenger must still see
+        // it — it is the ticket they reprogram (paying the multa) to travel.
+        .in("status", ["active", "used", "expired"])
         .order("created_at", { ascending: false });
 
       if (ticketsError) throw ticketsError;
@@ -827,7 +834,7 @@ export function UserTicketHub() {
 
     doc.setFontSize(10);
     doc.setTextColor(75, 85, 99);
-    doc.text(`Emitido em: ${new Date(transaction.created_at).toLocaleString("pt-PT")}`, 18, 154);
+    doc.text(`Emitido em: ${formatLuandaDateTime(transaction.created_at)}`, 18, 154);
     doc.text(`Expira em: ${formatPendingDeadline(transaction)}`, 18, 166);
     doc.text(`Lugares: ${getPendingSeatText(booking)}`, 18, 178, { maxWidth: 174 });
 
@@ -1237,10 +1244,22 @@ function PaidGroupCard({ group, user, payment, onShowQr }) {
 
     setIsDownloading(true);
     try {
-      await downloadPaidTicketGroup(group, user, payment);
+      const response = await fetch(`/api/tickets/download/${encodeURIComponent(group.reference)}`, {
+        cache: "no-store",
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Bilhete indisponivel para descarga.");
+
+      const securedGroup = {
+        ...group,
+        tickets: payload.tickets,
+        firstTicket: payload.tickets[0],
+        total: payload.tickets.reduce((sum, ticket) => sum + (Number(ticket.price_paid_usd) || 0), 0),
+      };
+      await downloadPaidTicketGroup(securedGroup, user, payload.payment);
     } catch (err) {
       console.error("Paid ticket PDF failed:", err);
-      alert("Nao foi possivel gerar o PDF dos bilhetes. Tente novamente.");
+      alert(err.message || "Nao foi possivel gerar o PDF dos bilhetes. Tente novamente.");
     } finally {
       setIsDownloading(false);
     }
@@ -1259,7 +1278,7 @@ function PaidGroupCard({ group, user, payment, onShowQr }) {
             <p className="mt-1 text-sm text-neutral-400">
               {tripGroups.length > 1
                 ? `${tripGroups.length} viagens nesta compra`
-                : formatDate(ticket.trips?.departure_time)}
+                : formatDate(ticketDepartureTime(ticket))}
             </p>
           </div>
           <div className="rounded-2xl bg-[#FF8C00] px-3 py-2 text-center text-black">
@@ -1299,7 +1318,7 @@ function PaidGroupCard({ group, user, payment, onShowQr }) {
                   </span>
                   <span className="block truncate text-xs text-neutral-400">{getRoute(tripGroup.firstTicket)}</span>
                   <span className="text-xs text-neutral-500">
-                    {formatDate(tripGroup.firstTicket.trips?.departure_time)} | Lugares {tripGroup.tickets.map((item) => item.seat_number).join(", ")}
+                    {formatDate(ticketDepartureTime(tripGroup.firstTicket))} | Lugares {tripGroup.tickets.map((item) => item.seat_number).join(", ")}
                   </span>
                 </span>
                 <QrCode className={`h-5 w-5 ${tripExpired ? "text-red-300" : "text-orange-300"}`} />
