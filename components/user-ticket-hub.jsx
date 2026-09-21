@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
+  CalendarClock,
   CheckCircle2,
   Copy,
   Download,
@@ -20,6 +21,7 @@ import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase-client";
 import { isRestrictedInAppBrowser, openExternalBrowser } from "@/lib/in-app-browser";
 import { formatLuandaDateTime, ticketDepartureTime } from "@/lib/date-time";
+import RebookDialog from "@/components/rebook-dialog";
 
 const BRAND_ORANGE = "#FF8C00";
 const ENTITY = "1219";
@@ -479,6 +481,9 @@ async function downloadPaidTicketGroup(group, user, payment) {
 
 export function UserTicketHub() {
   const supabase = useMemo(() => createClient(), []);
+  // Rebook references waiting to be paid. Kept apart from ticket purchases:
+  // closing the rebook dialog must not lose the reference the customer owes.
+  const [pendingRebooks, setPendingRebooks] = useState([]);
   const [user, setUser] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const [authMode, setAuthMode] = useState("login");
@@ -673,6 +678,22 @@ export function UserTicketHub() {
         setPendingTransactions((pending || []).filter((transaction) => (
           Boolean(getPendingBooking(transaction)) && !isPendingExpired(transaction)
         )));
+      }
+
+      const { data: rebookPending, error: rebookPendingError } = await supabase
+        .from("payment_transactions")
+        .select("id, transaction_id, amount_usd, status, created_at, gateway_response")
+        .eq("status", "pending")
+        .contains("gateway_response", { kind: "rebook", user_id: userId })
+        .order("created_at", { ascending: false });
+      if (rebookPendingError) {
+        console.warn("Pending rebook query failed:", rebookPendingError.message);
+        setPendingRebooks([]);
+      } else {
+        setPendingRebooks((rebookPending || []).filter((transaction) => {
+          const until = transaction.gateway_response?.expires_at;
+          return !until || new Date(until) > new Date();
+        }));
       }
     } catch (err) {
       console.error("User hub data error:", err);
@@ -1021,7 +1042,7 @@ export function UserTicketHub() {
                       </div>
                       <div className="rounded-2xl border border-white/10 bg-white/8 p-3">
                         <p className="text-xs text-neutral-400">Refs pendentes</p>
-                        <p className="mt-1 text-2xl font-semibold text-orange-300">{pendingTransactions.length}</p>
+                        <p className="mt-1 text-2xl font-semibold text-orange-300">{pendingTransactions.length + pendingRebooks.length}</p>
                       </div>
                     </div>
                   </div>
@@ -1083,15 +1104,24 @@ export function UserTicketHub() {
                             user={user}
                             payment={paymentsByReference[group.reference]}
                             onShowQr={setSelectedQrTrip}
+                            supabase={supabase}
+                            onRebooked={() => user && fetchUserData(user.id)}
                           />
                         ))}
                       </div>
                     ) : activeTab === "pending" ? (
                       <div className="space-y-3">
                         {dataLoading && <SkeletonRows />}
-                        {!dataLoading && pendingTransactions.length === 0 && (
+                        {!dataLoading && pendingTransactions.length === 0 && pendingRebooks.length === 0 && (
                           <EmptyState title="Sem pagamentos pendentes" text="As referencias geradas e ainda nao pagas aparecem aqui." />
                         )}
+                        {pendingRebooks.map((transaction) => (
+                          <PendingRebookCard
+                            key={transaction.id}
+                            transaction={transaction}
+                            onCopy={() => copyReference(transaction.transaction_id)}
+                          />
+                        ))}
                         {pendingTransactions.map((transaction) => (
                           <PendingReferenceCard
                             key={transaction.id}
@@ -1216,7 +1246,7 @@ export function UserTicketHub() {
   );
 }
 
-function PaidGroupCard({ group, user, payment, onShowQr }) {
+function PaidGroupCard({ group, user, payment, onShowQr, supabase, onRebooked }) {
   const ticket = group.firstTicket;
   const tripGroups = groupTicketsByTrip(group.tickets);
   const routeSummary = getGroupRouteSummary(group);
@@ -1230,6 +1260,9 @@ function PaidGroupCard({ group, user, payment, onShowQr }) {
     .map((tripGroup, index) => `V${index + 1}: ${tripGroup.tickets.map((item) => item.seat_number).join(", ")}`)
     .join(" | ");
   const [isDownloading, setIsDownloading] = useState(false);
+  // One leg at a time: everyone moved together lands on one new departure.
+  const [rebookTickets, setRebookTickets] = useState(null);
+  const canMove = (tripGroup) => tripGroup.tickets.some((t) => ["active", "expired"].includes(t.status));
 
   async function handleDownload() {
     if (isDownloading) return;
@@ -1327,6 +1360,22 @@ function PaidGroupCard({ group, user, payment, onShowQr }) {
           })}
         </div>
 
+        {tripGroups.some(canMove) && (
+          <div className="flex flex-wrap gap-2">
+            {tripGroups.map((tripGroup, index) => (canMove(tripGroup) ? (
+              <button
+                type="button"
+                key={`rebook-${tripGroup.tripId || index}`}
+                onClick={() => setRebookTickets(tripGroup.tickets)}
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-orange-300/30 px-4 py-2.5 text-sm font-semibold text-orange-200 transition hover:bg-orange-500/10"
+              >
+                <CalendarClock className="h-4 w-4" />
+                {tripGroups.length > 1 ? `Reprogramar ${getTripQrLabel(index, tripGroups.length)}` : "Reprogramar"}
+              </button>
+            ) : null))}
+          </div>
+        )}
+
         <div className="flex gap-2">
           <button
             type="button"
@@ -1347,6 +1396,48 @@ function PaidGroupCard({ group, user, payment, onShowQr }) {
           </button>
         </div>
       </div>
+      <RebookDialog
+        open={Boolean(rebookTickets)}
+        onClose={() => {
+          setRebookTickets(null);
+          onRebooked?.();
+        }}
+        tickets={rebookTickets || []}
+        nameOf={(ticket) => getPassengerName(ticket, user, payment)}
+        supabase={supabase}
+        onDone={onRebooked}
+      />
+    </article>
+  );
+}
+
+function PendingRebookCard({ transaction, onCopy }) {
+  const until = transaction.gateway_response?.expires_at;
+  return (
+    <article className="rounded-3xl border border-orange-300/20 bg-orange-500/[0.06] p-4">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-orange-200">
+        <CalendarClock className="h-4 w-4" />
+        Reprogramacao por pagar
+      </div>
+      <p className="mt-2 text-sm text-neutral-300">
+        Os bilhetes mudam de viagem assim que esta referencia for paga.
+      </p>
+      <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
+        <InfoPill label="Entidade" value={ENTITY} />
+        <InfoPill label="Referencia" value={transaction.transaction_id} />
+        <InfoPill label="Montante" value={formatMoney(transaction.amount_usd)} />
+      </div>
+      {until && (
+        <p className="mt-2 text-xs text-amber-300">Valida ate {formatLuandaDateTime(until)}.</p>
+      )}
+      <button
+        type="button"
+        onClick={onCopy}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
+      >
+        <Copy className="h-4 w-4" />
+        Copiar referencia
+      </button>
     </article>
   );
 }
