@@ -970,6 +970,24 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ============ TERMOS ============ */}
+      <section id="termos" className="py-16 px-4 bg-stone-900 scroll-mt-24">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-black tracking-tight text-white mb-8 text-center">
+            Termos e Políticas
+          </h2>
+          <div role="note" className="rounded-2xl border-2 border-red-500 bg-red-950/40 p-6 md:p-8">
+            <p className="text-2xl md:text-3xl font-black uppercase tracking-wide text-red-400">
+              Não há reembolso
+            </p>
+            <p className="mt-3 text-base md:text-lg text-stone-200 leading-relaxed">
+              Todos os bilhetes pagos são <strong className="text-white">não reembolsáveis</strong>.
+              Antes de pagar, confirme a data, a hora, a rota e os dados dos passageiros.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* ============ FOOTER ============ */}
       <footer className="bg-stone-950 pt-16 pb-8 px-4">
         <div className="max-w-6xl mx-auto">

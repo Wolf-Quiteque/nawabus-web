@@ -1399,6 +1399,17 @@ const handleDownloadPdf = async () => {
               </div>
               )}
 
+              {finalPrice > 0 && reference !== 'CAMPAIGN_FREE' && (
+                <div role="alert" className="mb-4 rounded-xl border-2 border-red-500 bg-red-50 p-4 text-left dark:bg-red-950/40">
+                  <p className="text-base font-black uppercase tracking-wide text-red-700 dark:text-red-300">
+                    ⚠️ Não há reembolso
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-red-800 dark:text-red-200">
+                    Bilhetes pagos não são reembolsáveis. Confirme a data, a hora, a rota e os passageiros antes de pagar.
+                  </p>
+                </div>
+              )}
+
               {reference === 'CAMPAIGN_FREE' ? (
                 <div className="text-center p-6 border-2 border-green-500 border-dashed rounded-lg bg-green-50 dark:bg-green-900/20">
                   <div className="mb-4">
