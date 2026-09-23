@@ -203,6 +203,23 @@ export default function Home() {
               paga por referência Multicaixa e recebe tudo no telemóvel.
             </p>
 
+            <a
+              href="#termos"
+              role="note"
+              className="mb-8 flex max-w-2xl items-start gap-3 rounded-2xl border-2 border-red-500 bg-red-600/90 px-5 py-4 text-white shadow-[0_10px_40px_rgba(220,38,38,0.45)] backdrop-blur-sm animate-fade-in-up"
+              style={{ animationDelay: '0.25s' }}
+            >
+              <span className="text-2xl leading-none" aria-hidden="true">⚠️</span>
+              <span>
+                <span className="block text-lg md:text-xl font-black uppercase tracking-wide">
+                  Não há reembolso
+                </span>
+                <span className="block text-sm md:text-base font-medium text-white/90">
+                  Bilhetes pagos não são reembolsáveis. Confirme a data, a hora e a rota antes de pagar.
+                </span>
+              </span>
+            </a>
+
             {/* Big obvious CTAs */}
             <div className="flex flex-wrap items-center gap-4 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
               <Link
