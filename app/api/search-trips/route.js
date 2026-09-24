@@ -37,6 +37,7 @@ export async function GET(request) {
       .from('trips')
       .select(`
         id, departure_time, arrival_time, created_at, price_usd, online_price_kz, seat_class, status, sales_capacity_limit,
+        boarding_point,
         routes!inner(origin_city, destination_city, origin_province, destination_province, distance_km, estimated_duration_hours),
         buses!inner(make, model, amenities, capacity, is_active, companies!inner(name, logo_url))
       `)

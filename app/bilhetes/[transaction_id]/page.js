@@ -164,13 +164,18 @@ export default function DownloadTicketPage() {
         doc.text('Escaneie aqui', 168.5, 128, { align: 'center' });
         doc.addImage(qrCodeUrl, 'PNG', 147, 135, 43, 43);
 
+        doc.setFontSize(9);
+        const boardingPoint = singleTicket.trips?.boarding_point;
+        const notes = [
+          ...(boardingPoint ? doc.splitTextToSize(`- Embarque: ${boardingPoint}`, 170) : []),
+          '- Apresente este bilhete no embarque',
+          '- Guarde este documento ate ao final da viagem',
+        ];
         doc.setFillColor(255, 248, 240);
         doc.setDrawColor(...orange);
-        doc.roundedRect(15, 210, 180, 30, 3, 3, 'FD');
+        doc.roundedRect(15, 210, 180, 14 + notes.length * 8, 3, 3, 'FD');
         doc.setTextColor(60, 60, 60);
-        doc.setFontSize(9);
-        doc.text('- Apresente este bilhete no embarque', 20, 224);
-        doc.text('- Guarde este documento ate ao final da viagem', 20, 232);
+        notes.forEach((line, noteIndex) => doc.text(line, 20, 222 + noteIndex * 8));
       }
 
       doc.save(`nawabus-confirmed-${payment.transaction_id}.pdf`);
@@ -327,9 +332,17 @@ export default function DownloadTicketPage() {
     doc.addImage(qrCodeUrl, 'PNG', 147, 132, 43, 43);
 
     // Instructions Card
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    const singleBoardingPoint = ticket.trips?.boarding_point;
+    const instructionLines = [
+      ...(singleBoardingPoint ? doc.splitTextToSize(`• Embarque: ${singleBoardingPoint}`, 170) : []),
+      "• Apresente este bilhete no embarque",
+      "• Guarde este documento até ao final da viagem",
+    ];
     doc.setFillColor(255, 248, 240);
     doc.setDrawColor(...orange);
-    doc.roundedRect(15, 200, 180, 30, 3, 3, 'FD');
+    doc.roundedRect(15, 200, 180, 16 + instructionLines.length * 6, 3, 3, 'FD');
 
     doc.setTextColor(...darkOrange);
     doc.setFontSize(11);
@@ -339,8 +352,7 @@ export default function DownloadTicketPage() {
     doc.setTextColor(60, 60, 60);
     doc.setFontSize(9);
     doc.setFont(undefined, 'normal');
-    doc.text("• Apresente este bilhete no embarque", 20, 218);
-    doc.text("• Guarde este documento até ao final da viagem", 20, 224);
+    instructionLines.forEach((line, lineIndex) => doc.text(line, 20, 218 + lineIndex * 6));
 
     // Footer with decorative line
     doc.setDrawColor(...lightOrange);

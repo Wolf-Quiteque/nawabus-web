@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, AlertCircle, Bus, Plug, Wifi, Wind } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Bus, MapPin, Plug, Wifi, Wind } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import SearchForm from '@/components/search-form';
@@ -181,6 +181,17 @@ function SearchResults() {
               </p>
             </div>
           </div>
+
+          {/* Where to board, when it is not the usual agency */}
+          {trip.boarding_point ? (
+            <div className="mt-4 flex items-start gap-2 rounded-lg bg-black/15 px-3 py-2">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-white/90" />
+              <p className="text-left text-xs font-semibold leading-snug text-white/95">
+                <span className="uppercase tracking-widest text-white/70">Embarque: </span>
+                {trip.boarding_point}
+              </p>
+            </div>
+          ) : null}
 
           {/* Amenities */}
           <div className="mt-5 flex items-center gap-3">

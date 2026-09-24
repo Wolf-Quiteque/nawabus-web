@@ -1196,10 +1196,15 @@ const handleDownloadPdf = async () => {
                 </p>
                 <p className="text-sm text-gray-500">
                   {formatLuandaDateTime(outboundTrip.departure_time, {
-                    dateStyle: 'full', 
-                    timeStyle: 'short' 
+                    dateStyle: 'full',
+                    timeStyle: 'short'
                   })}
                 </p>
+                {outboundTrip.boarding_point ? (
+                  <p className="mt-1 text-sm font-medium text-amber-700 dark:text-amber-400">
+                    Embarque: {outboundTrip.boarding_point}
+                  </p>
+                ) : null}
                 <div className="mt-2">
                   <p className="font-semibold text-gray-800 dark:text-white">Passageiros:</p>
                   <div className="space-y-1 mt-1">
@@ -1235,6 +1240,11 @@ const handleDownloadPdf = async () => {
                       timeStyle: 'short'
                     })}
                   </p>
+                  {returnTrip.boarding_point ? (
+                    <p className="mt-1 text-sm font-medium text-amber-700 dark:text-amber-400">
+                      Embarque: {returnTrip.boarding_point}
+                    </p>
+                  ) : null}
                   <div className="mt-2">
                     <p className="font-semibold text-gray-800 dark:text-white">Passageiros:</p>
                     <div className="space-y-1 mt-1">

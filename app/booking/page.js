@@ -69,6 +69,7 @@ function BookingPage() {
             arrival_time,
             price_usd,
             online_price_kz,
+            boarding_point,
             seat_class,
             routes (
               origin_city,
@@ -127,6 +128,7 @@ function BookingPage() {
               arrival_time,
               price_usd,
               online_price_kz,
+              boarding_point,
               seat_class,
               routes (
                 origin_city,

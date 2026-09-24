@@ -378,6 +378,9 @@ async function downloadPaidTicketGroup(group, user, payment) {
         doc.setTextColor(...muted);
         doc.text(`Partida: ${formatDate(ticketDepartureTime(tripGroup.firstTicket))}`, 26, top + 42, { maxWidth: 100 });
         doc.text(`Lugares: ${tripGroup.tickets.map((ticket) => ticket.seat_number).join(", ")}`, 26, top + 54, { maxWidth: 100 });
+        if (tripGroup.firstTicket?.trips?.boarding_point) {
+          doc.text(`Embarque: ${tripGroup.firstTicket.trips.boarding_point}`, 26, top + 64, { maxWidth: 110 });
+        }
         doc.addImage(qrDataUrl, "PNG", 146, top + 16, 38, 38);
         doc.setFontSize(8);
         doc.text("Scan isolado desta viagem", 165, top + 62, { align: "center" });
@@ -425,6 +428,9 @@ async function downloadPaidTicketGroup(group, user, payment) {
     doc.setFontSize(10);
     doc.setTextColor(...muted);
     doc.text(`Partida: ${formatDate(ticketDepartureTime(ticket))}`, 24, 88);
+    if (ticket.trips?.boarding_point) {
+      doc.text(`Embarque: ${ticket.trips.boarding_point}`, 24, 93.5, { maxWidth: 170 });
+    }
     doc.text(`Empresa: ${ticket.trips?.buses?.companies?.name || "NawaBus"}`, 24, 99);
 
     doc.setFillColor(255, 249, 235);
@@ -620,6 +626,7 @@ export function UserTicketHub() {
           trips:trip_id (
             departure_time,
             arrival_time,
+            boarding_point,
             routes:route_id (
               origin_city,
               destination_city,
@@ -1353,6 +1360,11 @@ function PaidGroupCard({ group, user, payment, onShowQr, supabase, onRebooked })
                   <span className="text-xs text-neutral-500">
                     {formatDate(ticketDepartureTime(tripGroup.firstTicket))} | Lugares {tripGroup.tickets.map((item) => item.seat_number).join(", ")}
                   </span>
+                  {tripGroup.firstTicket?.trips?.boarding_point ? (
+                    <span className="mt-0.5 block text-xs font-medium text-orange-200">
+                      Embarque: {tripGroup.firstTicket.trips.boarding_point}
+                    </span>
+                  ) : null}
                 </span>
                 <QrCode className={`h-5 w-5 ${tripExpired ? "text-red-300" : "text-orange-300"}`} />
               </button>
