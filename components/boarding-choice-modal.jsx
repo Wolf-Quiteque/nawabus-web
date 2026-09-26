@@ -14,12 +14,12 @@ import { getMinPurchaseDateKey } from '@/lib/purchase-date';
 // Cuanza Sul.
 const BOARDING_POINTS = [
   {
-    city: 'Sumbe',
+    label: 'no Sumbe',
     province: 'Cuanza Sul',
     detail: 'Escola E15, em frente ao Shoprite',
   },
   {
-    city: 'Benguela',
+    label: 'em Benguela',
     province: 'Benguela',
     detail: 'Terminal da Nawabus em Benguela',
   },
@@ -59,7 +59,7 @@ export default function BoardingChoiceModal({ open, onOpenChange, destination = 
             >
               <span className="min-w-0">
                 <span className="block text-lg font-black text-stone-900 dark:text-white">
-                  Embarco no {point.city}
+                  Embarco {point.label}
                 </span>
                 <span className="block truncate text-sm text-stone-500 dark:text-stone-400">
                   {point.detail}
