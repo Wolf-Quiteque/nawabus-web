@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import SearchForm from '@/components/search-form';
 import FreteModal from '@/components/frete-modal';
+import BoardingChoiceModal from '@/components/boarding-choice-modal';
 import { getMinPurchaseDateKey } from '@/lib/purchase-date';
 
 const HERO_SLIDES = [
@@ -95,6 +96,8 @@ export default function Home() {
   const [heroIndex, setHeroIndex] = useState(0);
   const [currentAdSeries, setCurrentAdSeries] = useState(1);
   const [freteOpen, setFreteOpen] = useState(false);
+  // Buses to Luanda leave from Sumbe and from Benguela, so the passenger says which.
+  const [boardingOpen, setBoardingOpen] = useState(false);
 
   // Hero slideshow
   useEffect(() => {
@@ -218,8 +221,9 @@ export default function Home() {
                 </svg>
               </Link>
 
-              <Link
-                href={buyHref('Benguela', 'Luanda')}
+              <button
+                type="button"
+                onClick={() => setBoardingOpen(true)}
                 className="group inline-flex w-full sm:w-auto justify-center items-center gap-3 rounded-2xl bg-white/95 px-6 sm:px-7 py-4 text-base md:text-lg font-black text-stone-900 shadow-xl hover:bg-white hover:scale-[1.03] transition-all duration-300"
               >
                 <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -229,7 +233,7 @@ export default function Home() {
                 <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
-              </Link>
+              </button>
 
               {/* Searches by province: Sumbe routes are filed under Cuanza Sul. */}
               <Link
@@ -1045,9 +1049,13 @@ export default function Home() {
                   </Link>
                 </li>
                 <li>
-                  <Link href={buyHref('Benguela', 'Luanda')} className="text-stone-400 hover:text-amber-400 transition-colors font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setBoardingOpen(true)}
+                    className="text-stone-400 hover:text-amber-400 transition-colors font-medium"
+                  >
                     Bilhetes para Luanda
-                  </Link>
+                  </button>
                 </li>
                 <li>
                   <Link href={buyHref('Luanda', 'Cuanza Sul')} className="text-stone-400 hover:text-emerald-400 transition-colors font-medium">
@@ -1112,6 +1120,7 @@ export default function Home() {
 
       {/* Frete request modal */}
       <FreteModal open={freteOpen} onOpenChange={setFreteOpen} />
+      <BoardingChoiceModal open={boardingOpen} onOpenChange={setBoardingOpen} />
 
       {/* Floating WhatsApp */}
       <a
