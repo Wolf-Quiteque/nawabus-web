@@ -7,6 +7,13 @@ import SearchForm from '@/components/search-form';
 import FreteModal from '@/components/frete-modal';
 import BoardingChoiceModal from '@/components/boarding-choice-modal';
 import { getMinPurchaseDateKey } from '@/lib/purchase-date';
+import {
+  MANGAIS_EVENT,
+  MANGAIS_POINTS,
+  formatEventKz,
+  isMangaisSaleOpen,
+  mangaisProductPrice,
+} from '@/lib/events/mangais';
 
 const HERO_SLIDES = [
   { src: '/heros/img1.png', alt: 'Autocarro NawaBus na estrada costeira de Angola' },
@@ -250,6 +257,33 @@ export default function Home() {
                 </svg>
               </Link>
             </div>
+
+            {/* Brunch Mangais: event transport, in the poster's green. */}
+            {isMangaisSaleOpen() && (
+              <Link
+                href="/mangais"
+                className="group mt-5 flex w-full max-w-2xl items-center gap-4 rounded-3xl border border-[#e4f46f]/40 bg-[radial-gradient(circle_at_20%_20%,#4fb553_0%,#2a8a3a_55%,#17602a_100%)] p-4 sm:p-5 text-[#fbfbe8] shadow-[0_12px_45px_rgba(33,122,48,0.5)] hover:scale-[1.02] transition-all duration-300 animate-fade-in-up"
+                style={{ animationDelay: '0.35s' }}
+              >
+                <span className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl bg-[#e4f46f] text-[#10321a]">
+                  <span className="text-[0.62rem] font-black uppercase tracking-[0.14em]">{MANGAIS_EVENT.weekday.slice(0, 3)}</span>
+                  <span className="text-2xl font-black leading-none">{MANGAIS_EVENT.dayNumber.padStart(2, '0')}</span>
+                  <span className="text-[0.62rem] font-black uppercase tracking-[0.14em]">{MANGAIS_EVENT.monthShort}</span>
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-lg sm:text-xl font-black">{MANGAIS_EVENT.name}: transporte ida e volta</span>
+                  <span className="mt-0.5 block text-sm font-semibold text-[#fbfbe8]/85">
+                    Recolha: {MANGAIS_POINTS.map((point) => point.place).join(' · ')}
+                  </span>
+                  <span className="mt-0.5 block text-sm font-black text-[#e4f46f]">
+                    {formatEventKz(mangaisProductPrice('ida-e-volta', 1))} · embarque {MANGAIS_EVENT.boardingTime}, regresso {MANGAIS_EVENT.returnTime}
+                  </span>
+                </span>
+                <svg className="w-6 h-6 shrink-0 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </Link>
+            )}
 
             <a
               href="#pesquisar"

@@ -22,6 +22,11 @@ import { getClosedTodayPurchaseMessage, isTripPurchasable } from '@/lib/purchase
 import { formatKz } from '@/lib/currency';
 import { isSellableSeat } from '@/lib/seats';
 import { formatLuandaDateTime } from '@/lib/date-time';
+import { MANGAIS_EVENT, findMangaisPoint, isMangaisBooking, mangaisPointLabel } from '@/lib/events/mangais';
+import { repickMangaisSeats } from '@/lib/events/mangais-booking';
+
+// A seat another buyer took in the same moment (payment-api wording).
+const isSeatConflictMessage = (message) => /seat|lugar/i.test(String(message || ''));
 
 function openTicketHub(tab) {
   if (typeof window === 'undefined') return;
@@ -248,6 +253,12 @@ export default function CheckoutPage() {
     ),
   });
 
+  // Event tickets are not tied to a seat (staff fill the cars on the day), so
+  // they show "Pessoa 1, 2…" where normal tickets show the seat.
+  const passengerLabel = (seat, index) => (
+    isMangaisBooking(bookingDetails) ? `Pessoa ${index + 1}` : `Lugar ${seat}`
+  );
+
   const getSeatPassengerName = (seat, index, companions, passengerName) => {
     const companionName = companions?.[seat]?.name?.trim();
     if (companionName) return companionName;
@@ -452,33 +463,49 @@ export default function CheckoutPage() {
             ?? getTripUnitPrice(returnTrip));
         }
 
-        const response = await fetch('/api/create-payment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amount: finalPrice,
-            passenger_name: user.user_metadata.full_name || 'N/A',
-            passenger_email: user.email,
-            booking_details: {
-              passenger_id: passengerId,
-              booking_source: 'online',
-              payment_method: 'referencia',
-              coupon_code: appliedCoupon?.code || null,
-              attribution_source: appliedCoupon?.source || null,
-              event: bookingDetails.event || null,
-              event_date: bookingDetails.eventDate || null,
-              trip_type: tripType,
-              outbound_trip: buildDeferredTrip(outboundTrip, outboundPerSeat),
-              return_trip: tripType === 'round-trip' && returnTrip
-                ? buildDeferredTrip(returnTrip, returnPerSeat)
-                : null,
-            },
-          }),
-        });
+        const requestReference = async (details) => {
+          const response = await fetch('/api/create-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              amount: finalPrice,
+              passenger_name: user.user_metadata.full_name || 'N/A',
+              passenger_email: user.email,
+              booking_details: {
+                passenger_id: passengerId,
+                booking_source: 'online',
+                payment_method: 'referencia',
+                coupon_code: appliedCoupon?.code || null,
+                attribution_source: appliedCoupon?.source || null,
+                event: details.event || null,
+                event_date: details.eventDate || null,
+                event_point: details.eventPoint || null,
+                trip_type: details.tripType,
+                outbound_trip: buildDeferredTrip(details.outboundTrip, outboundPerSeat),
+                return_trip: details.tripType === 'round-trip' && details.returnTrip
+                  ? buildDeferredTrip(details.returnTrip, returnPerSeat)
+                  : null,
+              },
+            }),
+          });
+          return { response, result: await response.json().catch(() => ({})) };
+        };
 
-        const result = await response.json();
+        let { response, result } = await requestReference(bookingDetails);
+
+        // Event tickets have no seat choice: if someone else took the numbers we
+        // were given, take fresh ones once instead of asking the customer.
+        if (!response.ok && isMangaisBooking(bookingDetails) && isSeatConflictMessage(result.error)) {
+          const fresh = await repickMangaisSeats(bookingDetails);
+          setBookingDetails(fresh);
+          sessionStorage.setItem('bookingDetails', JSON.stringify(fresh));
+          ({ response, result } = await requestReference(fresh));
+        }
 
         if (!response.ok) {
+          if (isMangaisBooking(bookingDetails) && isSeatConflictMessage(result.error)) {
+            throw new Error('Os lugares para este ponto esgotaram neste momento. Volte à página do Brunch Mangais e tente de novo.');
+          }
           throw new Error(result.error || 'Falha ao criar referencia de pagamento.');
         }
 
@@ -834,7 +861,7 @@ const handleDownloadPdf = async () => {
             'Voce'
           }`
         : `Lugar ${seat}: ${outboundCompanions[seat]?.name || '—'}`;
-      renderText(`Lugar ${seat}: ${getSeatPassengerName(seat, idx, outboundCompanions, buyerName)}`, 55, yPos);
+      renderText(`${passengerLabel(seat, idx)}: ${getSeatPassengerName(seat, idx, outboundCompanions, buyerName)}`, 55, yPos);
       yPos += 6;
     });
   } else {
@@ -912,7 +939,7 @@ const handleDownloadPdf = async () => {
               'Voce'
             }`
           : `Lugar ${seat}: ${returnCompanions[seat]?.name || '—'}`;
-        renderText(`Lugar ${seat}: ${getSeatPassengerName(seat, idx, returnCompanions, buyerName)}`, 55, yPos);
+        renderText(`${passengerLabel(seat, idx)}: ${getSeatPassengerName(seat, idx, returnCompanions, buyerName)}`, 55, yPos);
         yPos += 6;
       });
     } else {
@@ -1137,6 +1164,7 @@ const handleDownloadPdf = async () => {
   }
 
   const { tripType, outboundTrip, returnTrip } = bookingDetails;
+  const isEvent = isMangaisBooking(bookingDetails);
   const totalPrice = getComputedTotalPrice(bookingDetails);
   const discountAmount = appliedCoupon ? Number(appliedCoupon.totals.discountAmountKz) : 0;
   const finalPrice = appliedCoupon ? Number(appliedCoupon.totals.amountDueKz) : totalPrice;
@@ -1161,7 +1189,7 @@ const handleDownloadPdf = async () => {
         <span className="w-6 h-0.5 bg-amber-300 dark:bg-amber-700 rounded-full"></span>
         <span className="flex items-center gap-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-3 py-1.5">
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-          Lugares
+          {isEvent ? 'Passageiros' : 'Lugares'}
         </span>
         <span className="w-6 h-0.5 bg-amber-300 dark:bg-amber-700 rounded-full"></span>
         <span className="rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-stone-950 px-3 py-1.5 shadow-md">
@@ -1189,7 +1217,9 @@ const handleDownloadPdf = async () => {
               {/* Outbound Trip */}
               <div className="border-b pb-4">
                 <h3 className="font-semibold text-lg text-gray-800 dark:text-white mb-2">
-                  Viagem de Ida
+                  {isEvent
+                    ? `${MANGAIS_EVENT.name} — ${outboundTrip.eventLeg === 'return' ? 'Regresso' : 'Ida'}`
+                    : 'Viagem de Ida'}
                 </h3>
                 <p className="font-semibold text-gray-800 dark:text-white">
                   {outboundTrip.origin} → {outboundTrip.destination}
@@ -1200,7 +1230,11 @@ const handleDownloadPdf = async () => {
                     timeStyle: 'short'
                   })}
                 </p>
-                {outboundTrip.boarding_point ? (
+                {isEvent ? (
+                  <p className="mt-1 text-sm font-medium text-amber-700 dark:text-amber-400">
+                    Ponto de recolha: {mangaisPointLabel(findMangaisPoint(bookingDetails.eventPoint))}
+                  </p>
+                ) : outboundTrip.boarding_point ? (
                   <p className="mt-1 text-sm font-medium text-amber-700 dark:text-amber-400">
                     Embarque: {outboundTrip.boarding_point}
                   </p>
@@ -1210,7 +1244,7 @@ const handleDownloadPdf = async () => {
                   <div className="space-y-1 mt-1">
                     {[...outboundTrip.selectedSeats].sort((a, b) => a - b).map((seat, i) => (
                       <p key={seat} className="text-sm text-gray-600 dark:text-gray-400">
-                        <span className="font-mono font-bold text-amber-600 dark:text-amber-400">Lugar {seat}</span>
+                        <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{passengerLabel(seat, i)}</span>
                         {' — '}
                         {i === 0
                           ? <span className="font-medium">{getSeatPassengerName(seat, i, outboundTrip.companions || {}, 'Voce')}</span>
@@ -1220,16 +1254,18 @@ const handleDownloadPdf = async () => {
                     ))}
                   </div>
                 </div>
-                <p className="text-sm text-gray-600 mt-1">
-                  {outboundTrip.bus_make} {outboundTrip.bus_model} • {outboundTrip.seat_class}
-                </p>
+                {!isEvent && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    {outboundTrip.bus_make} {outboundTrip.bus_model} • {outboundTrip.seat_class}
+                  </p>
+                )}
               </div>
 
               {/* Return Trip */}
               {tripType === 'round-trip' && returnTrip && (
                 <div className="border-b pb-4">
                   <h3 className="font-semibold text-lg text-gray-800 dark:text-white mb-2">
-                    Viagem de Volta
+                    {isEvent ? `${MANGAIS_EVENT.name} — Regresso` : 'Viagem de Volta'}
                   </h3>
                   <p className="font-semibold text-gray-800 dark:text-white">
                     {returnTrip.origin} → {returnTrip.destination}
@@ -1250,7 +1286,7 @@ const handleDownloadPdf = async () => {
                     <div className="space-y-1 mt-1">
                       {[...returnTrip.selectedSeats].sort((a, b) => a - b).map((seat, i) => (
                         <p key={seat} className="text-sm text-gray-600 dark:text-gray-400">
-                          <span className="font-mono font-bold text-amber-600 dark:text-amber-400">Lugar {seat}</span>
+                          <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{passengerLabel(seat, i)}</span>
                           {' — '}
                           {i === 0
                             ? <span className="font-medium">{getSeatPassengerName(seat, i, returnTrip.companions || {}, 'Voce')}</span>
@@ -1260,9 +1296,11 @@ const handleDownloadPdf = async () => {
                       ))}
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {returnTrip.bus_make} {returnTrip.bus_model} • {returnTrip.seat_class}
-                  </p>
+                  {!isEvent && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      {returnTrip.bus_make} {returnTrip.bus_model} • {returnTrip.seat_class}
+                    </p>
+                  )}
                 </div>
               )}
 
