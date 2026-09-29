@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Check, Copy } from 'lucide-react';
+import { ArrowLeft, Check, Copy, Download, QrCode, Smartphone, User } from 'lucide-react';
 import { createClient } from '@/lib/supabase-client';
+import { signInWithPhone } from '@/lib/phone-login';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -35,10 +36,11 @@ function openTicketHub(tab) {
   }));
 }
 
-function showTicketHubHint(tab) {
+// persist: keep the orange button glowing until the customer opens it.
+function showTicketHubHint(tab, persist = false) {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new CustomEvent('nawabus:show-ticket-hub-hint', {
-    detail: { tab },
+    detail: { tab, persist },
   }));
 }
 
@@ -87,6 +89,21 @@ function TicketHubGuide({ mode }) {
   );
 }
 
+/** One numbered step of the "how to pay" guide, large enough to follow on a phone. */
+function PayStep({ number, title, children }) {
+  return (
+    <li className="relative rounded-2xl border-2 border-stone-200 bg-white p-4 text-left shadow-sm dark:border-stone-700 dark:bg-stone-900 sm:p-5">
+      <div className="flex items-center gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-xl font-black text-stone-950 shadow-md">
+          {number}
+        </span>
+        <h3 className="text-lg font-black leading-tight text-stone-900 dark:text-white sm:text-xl">{title}</h3>
+      </div>
+      <div className="mt-3">{children}</div>
+    </li>
+  );
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const [bookingDetails, setBookingDetails] = useState(null);
@@ -97,6 +114,7 @@ export default function CheckoutPage() {
   const [ticketNumbers, setTicketNumbers] = useState({ outbound: null, return: null });
   const [outboundTicket, setOutboundTicket] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('referencia'); // 'cash' or 'referencia'
+  const paymentGuideRef = useRef(null);
   const supabase = createClient();
 
   // Coupon state
@@ -150,6 +168,12 @@ export default function CheckoutPage() {
     setPaymentMethod('referencia');
     return promotion;
   };
+
+  // On a phone the reference appears below the fold: bring the guide into view.
+  useEffect(() => {
+    if (!reference || reference === 'CASH_PAYMENT' || reference === 'CAMPAIGN_FREE') return;
+    paymentGuideRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [reference]);
 
   useEffect(() => {
     const details = sessionStorage.getItem('bookingDetails');
@@ -512,7 +536,7 @@ export default function CheckoutPage() {
         await clearSavedReferral();
         setReference(result.reference_number);
         setReferenceExpiresAt(result.hold_expires_at || null);
-        showTicketHubHint('pending');
+        showTicketHubHint('pending', true);
         return;
       }
 
@@ -584,10 +608,7 @@ export default function CheckoutPage() {
       const normalizedPhone = normalizePhoneNumber(authPhoneNumber);
 
       if (authMode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password: authPassword,
-        });
+        const { error } = await signInWithPhone(supabase, authPhoneNumber, authPassword);
         if (error) {
           alert('Falha no login. Verifique o telefone e senha.');
           return;
@@ -1448,14 +1469,10 @@ const handleDownloadPdf = async () => {
               )}
 
               {finalPrice > 0 && reference !== 'CAMPAIGN_FREE' && (
-                <div role="alert" className="mb-4 rounded-xl border-2 border-red-500 bg-red-50 p-4 text-left dark:bg-red-950/40">
-                  <p className="text-base font-black uppercase tracking-wide text-red-700 dark:text-red-300">
-                    ⚠️ Não há reembolso
-                  </p>
-                  <p className="mt-1 text-sm font-medium text-red-800 dark:text-red-200">
-                    Bilhetes pagos não são reembolsáveis. Confirme a data, a hora, a rota e os passageiros antes de pagar.
-                  </p>
-                </div>
+                <p role="note" className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-left text-xs leading-snug text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">
+                  <span className="font-black uppercase">⚠️ Não há reembolso.</span>{' '}
+                  Bilhetes pagos não são reembolsáveis. Confirme a data, a hora, a rota e os passageiros antes de pagar.
+                </p>
               )}
 
               {reference === 'CAMPAIGN_FREE' ? (
@@ -1481,64 +1498,112 @@ const handleDownloadPdf = async () => {
                   <TicketHubGuide mode="paid" />
                 </div>
               ) : reference && reference !== 'CASH_PAYMENT' ? (
-                <div className="text-center p-6 border-2 border-green-500 border-dashed rounded-lg bg-green-50 dark:bg-green-900/20">
-                  <div className="mb-4">
-                    <p className="font-semibold text-green-700 dark:text-green-300 mb-2">
-                      Pague com esta referência:
-                    </p>
-                    <div className="mt-4 grid gap-3">
-                      <button
-                        type="button"
-                        onClick={() => copyPaymentText('entity', '1219')}
-                        className="flex items-center justify-between rounded-2xl border border-green-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-green-500 dark:border-green-800 dark:bg-gray-900"
-                      >
-                        <span>
-                          <span className="block text-xs font-bold uppercase tracking-[0.16em] text-gray-500">Entidade</span>
-                          <span className="block text-2xl font-black text-gray-900 dark:text-white">1219</span>
-                        </span>
-                        <span className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-2 text-sm font-bold text-green-800">
-                          {copiedPaymentField === 'entity' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                          {copiedPaymentField === 'entity' ? 'Copiado' : 'Copiar'}
-                        </span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => copyPaymentText('reference', reference)}
-                        className="flex items-center justify-between rounded-2xl border border-green-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-green-500 dark:border-green-800 dark:bg-gray-900"
-                      >
-                        <span>
-                          <span className="block text-xs font-bold uppercase tracking-[0.16em] text-gray-500">Referencia</span>
-                          <span className="block text-3xl font-black tracking-widest text-green-600">{reference}</span>
-                        </span>
-                        <span className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-2 text-sm font-bold text-green-800">
-                          {copiedPaymentField === 'reference' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                          {copiedPaymentField === 'reference' ? 'Copiado' : 'Copiar'}
-                        </span>
-                      </button>
-                    </div>
-                    <p className="text-lg font-semibold text-green-700 dark:text-green-300">
-                      Valor: {formatKz(finalPrice)}
+                <div ref={paymentGuideRef} className="scroll-mt-4 space-y-4">
+                  <div className="rounded-2xl bg-green-600 px-4 py-4 text-center text-white shadow-md">
+                    <p className="text-sm font-bold uppercase tracking-[0.14em] text-green-100">Referência criada</p>
+                    <p className="mt-1 text-xl font-black sm:text-2xl">Falta só pagar</p>
+                    <p className="whitespace-nowrap text-3xl font-black sm:text-4xl">{formatKz(finalPrice)}</p>
+                    <p className="mt-2 text-sm font-semibold text-green-50">
+                      {referenceExpiresAt ? `Pague até ${formatReferenceDeadline(referenceExpiresAt)}.` : 'Pague dentro de 1 hora.'}{' '}
+                      Depois disso a referência deixa de funcionar e os lugares voltam à venda.
                     </p>
                   </div>
-                  <p className="text-sm text-gray-500 mb-4">
-                    Dirija-se a um multicaixa ou utilize o seu home banking.
-                  </p>
-                  <p className="text-sm font-semibold text-red-700 dark:text-red-300 mb-3">
-                    Pague em ate 1 hora. Expira em: {formatReferenceDeadline(referenceExpiresAt)}.
-                  </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
-                    Se nao pagar dentro de 1 hora, a referencia fica inativa e os lugares voltam a ficar disponiveis.
-                  </p>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    O bilhete sera emitido automaticamente apos a confirmacao do pagamento.
-                  </p>
-                  {copiedPaymentField === 'reference' && (
-                    <p className="mt-3 rounded-xl bg-white px-3 py-2 text-sm font-bold text-green-800 dark:bg-gray-900 dark:text-green-300">
-                      Depois de pagar, toque no botao laranja no canto inferior direito e abra Pagos para baixar o bilhete.
-                    </p>
-                  )}
-                  <TicketHubGuide mode="pending" />
+
+                  <ol className="space-y-4">
+                    <PayStep number="1" title="Copie a Entidade e a Referência">
+                      <p className="mb-3 text-base text-stone-700 dark:text-stone-300">
+                        Toque em cada caixa para copiar. Vai precisar dos dois números para pagar.
+                      </p>
+                      <div className="grid gap-3">
+                        <button
+                          type="button"
+                          onClick={() => copyPaymentText('entity', '1219')}
+                          className="flex w-full flex-col gap-3 rounded-2xl border-2 border-green-300 bg-green-50 px-4 py-3 text-left transition active:scale-[0.99] hover:border-green-500 dark:border-green-800 dark:bg-green-950/30 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <span>
+                            <span className="block text-sm font-bold uppercase tracking-[0.14em] text-stone-500">Entidade</span>
+                            <span className="block text-[2rem] font-black leading-tight text-stone-900 dark:text-white">1219</span>
+                          </span>
+                          <span className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-green-600 px-5 py-3 text-base font-bold text-white sm:py-2.5">
+                            {copiedPaymentField === 'entity' ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
+                            {copiedPaymentField === 'entity' ? 'Copiado' : 'Copiar'}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => copyPaymentText('reference', reference)}
+                          className="flex w-full flex-col gap-3 rounded-2xl border-2 border-green-300 bg-green-50 px-4 py-3 text-left transition active:scale-[0.99] hover:border-green-500 dark:border-green-800 dark:bg-green-950/30 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <span className="min-w-0">
+                            <span className="block text-sm font-bold uppercase tracking-[0.14em] text-stone-500">Referência</span>
+                            <span className="block whitespace-nowrap text-[2rem] font-black leading-tight tracking-wider text-green-700 dark:text-green-400 sm:text-4xl">{reference}</span>
+                          </span>
+                          <span className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-green-600 px-5 py-3 text-base font-bold text-white sm:py-2.5">
+                            {copiedPaymentField === 'reference' ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
+                            {copiedPaymentField === 'reference' ? 'Copiado' : 'Copiar'}
+                          </span>
+                        </button>
+
+                        <div className="flex items-center justify-between gap-3 rounded-2xl border-2 border-stone-200 px-4 py-3 dark:border-stone-700">
+                          <span className="text-sm font-bold uppercase tracking-[0.14em] text-stone-500">Montante</span>
+                          <span className="whitespace-nowrap text-xl font-black text-stone-900 dark:text-white sm:text-2xl">{formatKz(finalPrice)}</span>
+                        </div>
+                      </div>
+                    </PayStep>
+
+                    <PayStep number="2" title="Pague no Multicaixa Express ou num ATM">
+                      <div className="mb-3 flex items-center gap-2 text-base font-semibold text-stone-700 dark:text-stone-300">
+                        <Smartphone className="h-5 w-5 shrink-0 text-amber-600" />
+                        Abra o Multicaixa Express no telemóvel, ou vá a um ATM.
+                      </div>
+                      <ol className="space-y-2 text-base text-stone-800 dark:text-stone-200">
+                        {[
+                          <>Entre em <strong>Pagamentos</strong>.</>,
+                          <>Escolha <strong>Pagamento por Referência</strong>.</>,
+                          <>Introduza a Entidade <strong className="text-green-700 dark:text-green-400">1219</strong>.</>,
+                          <>Introduza a Referência <strong className="whitespace-nowrap text-green-700 dark:text-green-400">{reference}</strong>.</>,
+                          <>Confirme o montante <strong className="whitespace-nowrap">{formatKz(finalPrice)}</strong> e pague.</>,
+                        ].map((text, index) => (
+                          <li key={index} className="flex gap-3 rounded-xl bg-stone-100 px-3 py-2.5 dark:bg-stone-800">
+                            <span className="font-black text-amber-600">{String.fromCharCode(97 + index)})</span>
+                            <span>{text}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </PayStep>
+
+                    <PayStep number="3" title="Depois de pagar, toque no botão laranja">
+                      <div className="flex items-center gap-4">
+                        <span className="animate-hub-glow flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[#FF8C00] text-white">
+                          <User className="h-8 w-8" strokeWidth={2.6} />
+                        </span>
+                        <p className="text-base text-stone-700 dark:text-stone-300">
+                          O botão laranja a brilhar está no <strong>canto inferior direito</strong> do ecrã. Abra <strong>Pagos</strong> e:
+                        </p>
+                      </div>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        <div className="flex items-center gap-2 rounded-xl bg-orange-50 px-3 py-3 text-base font-bold text-stone-900 dark:bg-orange-950/30 dark:text-white">
+                          <Download className="h-5 w-5 shrink-0 text-orange-600" />
+                          Baixe o seu bilhete
+                        </div>
+                        <div className="flex items-center gap-2 rounded-xl bg-orange-50 px-3 py-3 text-base font-bold text-stone-900 dark:bg-orange-950/30 dark:text-white">
+                          <QrCode className="h-5 w-5 shrink-0 text-orange-600" />
+                          Ou mostre o QR code no embarque
+                        </div>
+                      </div>
+                      <p className="mt-3 text-sm text-stone-600 dark:text-stone-400">
+                        O bilhete aparece em Pagos assim que o pagamento for confirmado — normalmente em poucos minutos. Também recebe SMS.
+                      </p>
+                      <Button
+                        type="button"
+                        onClick={() => openTicketHub('paid')}
+                        className="mt-4 h-auto min-h-14 w-full whitespace-normal rounded-2xl bg-[#FF8C00] px-4 py-3 text-lg font-black leading-snug text-black hover:bg-orange-400"
+                      >
+                        Já paguei — ver os meus bilhetes
+                      </Button>
+                    </PayStep>
+                  </ol>
                 </div>
               ) : reference === 'CASH_PAYMENT' ? (
                 <div className="text-center p-6 border-2 border-green-500 border-dashed rounded-lg bg-green-50 dark:bg-green-900/20">
@@ -1568,7 +1633,7 @@ const handleDownloadPdf = async () => {
               ) : (
                 <Button
                   onClick={handlePayment}
-                  className="checkout-primary-action w-full bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-stone-950 font-bold shadow-md hover:shadow-amber-500/40"
+                  className="checkout-primary-action h-auto min-h-16 w-full whitespace-normal rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 px-5 py-4 text-lg font-black text-stone-950 shadow-[0_10px_30px_rgba(245,158,11,0.45)] hover:from-amber-500 hover:to-orange-600 hover:shadow-amber-500/60 sm:text-xl"
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -1657,6 +1722,16 @@ const handleDownloadPdf = async () => {
                 required
                 minLength={6}
               />
+              {authMode === 'login' && (
+                <a
+                  href="/recuperar-senha"
+                  target="_blank"
+                  rel="noopener"
+                  className="block text-right text-xs text-orange-600 hover:underline"
+                >
+                  Esqueceste a senha?
+                </a>
+              )}
             </div>
 
             {authMode === 'signup' && (

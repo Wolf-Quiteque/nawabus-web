@@ -19,6 +19,7 @@ import {
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase-client";
+import { signInWithPhone } from "@/lib/phone-login";
 import { isRestrictedInAppBrowser, openExternalBrowser } from "@/lib/in-app-browser";
 import { formatLuandaDateTime, ticketDepartureTime } from "@/lib/date-time";
 import RebookDialog from "@/components/rebook-dialog";
@@ -506,6 +507,8 @@ export function UserTicketHub() {
   const [selectedQrTrip, setSelectedQrTrip] = useState(null);
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [showHubHelper, setShowHubHelper] = useState(false);
+  // Keeps the button glowing (without the bubble) while a reference waits to be paid.
+  const [hubGlow, setHubGlow] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -564,12 +567,16 @@ export function UserTicketHub() {
       setActiveTab(normalizeTab(event.detail?.tab));
       setIsOpen(true);
       setShowHubHelper(false);
+      setHubGlow(false);
       setAuthError("");
     };
 
     const handleShowHint = (event) => {
       setActiveTab(normalizeTab(event.detail?.tab));
       setShowHubHelper(true);
+      // While a reference waits to be paid the button keeps glowing until it
+      // is opened; the bubble always fades, so it never covers the page.
+      if (event.detail?.persist) setHubGlow(true);
       window.clearTimeout(helperTimeout);
       helperTimeout = window.setTimeout(() => {
         setShowHubHelper(false);
@@ -719,10 +726,7 @@ export function UserTicketHub() {
       const email = `${phone.trim()}@nawabus.com`;
 
       if (authMode === "login") {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { error } = await signInWithPhone(supabase, phone, password);
         if (error) throw new Error("Telefone ou senha incorretos.");
       } else {
         const { first_name, last_name } = ensureNames(fullName);
@@ -883,6 +887,7 @@ export function UserTicketHub() {
   function openPanel() {
     setIsOpen(true);
     setShowHubHelper(false);
+    setHubGlow(false);
     setAuthError("");
   }
 
@@ -890,10 +895,12 @@ export function UserTicketHub() {
     <>
       <div className="ticket-hub-launcher fixed bottom-5 right-5 z-40 md:bottom-7 md:right-7">
         {showHubHelper && !isOpen && (
-          <div className="pointer-events-none absolute bottom-16 right-0 w-48 rounded-2xl border border-orange-200 bg-neutral-950 px-4 py-3 text-right text-white shadow-2xl shadow-black/30 md:bottom-20 md:w-56">
-            <p className="text-sm font-bold text-orange-300">Meus bilhetes</p>
-            <p className="mt-1 text-xs leading-snug text-neutral-200">
-              Toque no botao laranja para ver Pagos e Pendentes.
+          <div className="pointer-events-none absolute bottom-[4.75rem] right-0 w-56 rounded-2xl border-2 border-orange-300 bg-neutral-950 px-4 py-3 text-right text-white shadow-2xl shadow-black/30 md:bottom-24 md:w-64">
+            <p className="text-base font-black text-orange-300">Os meus bilhetes</p>
+            <p className="mt-1 text-sm leading-snug text-neutral-100">
+              {activeTab === "pending"
+                ? "Depois de pagar, toque aqui: Pagos → Baixar bilhete ou mostrar o QR."
+                : "Toque aqui para baixar o bilhete ou mostrar o QR."}
             </p>
           </div>
         )}
@@ -907,7 +914,7 @@ export function UserTicketHub() {
           onClick={openPanel}
           aria-label="Abrir area do cliente"
           className={`ticket-hub-launcher-button flex h-14 w-14 items-center justify-center rounded-full border border-white/20 bg-[#FF8C00] text-white shadow-[0_18px_45px_rgba(0,0,0,0.28)] transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-orange-300 md:h-16 md:w-16 ${
-            showHubHelper && !isOpen ? "animate-pulse ring-4 ring-orange-200 ring-offset-2 ring-offset-white" : ""
+            (showHubHelper || hubGlow) && !isOpen ? "animate-hub-glow ring-4 ring-orange-200" : ""
           }`}
         >
           <User className="h-7 w-7" strokeWidth={2.6} />
@@ -993,6 +1000,15 @@ export function UserTicketHub() {
                         placeholder="******"
                       />
                     </label>
+
+                    {authMode === "login" && (
+                      <a
+                        href="/recuperar-senha"
+                        className="-mt-1 block text-right text-sm text-orange-300 underline-offset-4 hover:underline"
+                      >
+                        Esqueceste a senha?
+                      </a>
+                    )}
 
                     {authError && (
                       <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
