@@ -157,6 +157,19 @@
 .animate-fade-in-right { animation: fadeInRight 0.8s ease-out forwards; animation-delay: 0.4s; opacity: 0; }
 .animate-fade-in-up { animation: fadeInUp 0.8s ease-out forwards; animation-delay: 0.2s; opacity: 0; }
 
+/* The orange "my tickets" button, glowing while a reference waits to be paid */
+@keyframes hubGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 140, 0, 0.75), 0 0 18px 4px rgba(255, 140, 0, 0.55);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 14px rgba(255, 140, 0, 0), 0 0 38px 14px rgba(255, 170, 40, 0.85);
+    transform: scale(1.08);
+  }
+}
+.animate-hub-glow { animation: hubGlow 1.6s ease-in-out infinite; }
+
 /* Scroll reveal */
 .reveal {
   opacity: 0;
@@ -238,4 +251,8 @@
     transition: none;
   }
   .tilt-card-inner { transform: none !important; }
+  .animate-hub-glow {
+    animation: none;
+    box-shadow: 0 0 0 4px rgba(255, 140, 0, 0.45), 0 0 30px 10px rgba(255, 170, 40, 0.8);
+  }
 }

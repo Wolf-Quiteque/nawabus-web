@@ -110,6 +110,9 @@ export default function MangaisStaffPage() {
   const [pointFilter, setPointFilter] = useState('all');
   const [query, setQuery] = useState('');
   const [copied, setCopied] = useState(false);
+  const [limitDraft, setLimitDraft] = useState('');
+  const [savingLimit, setSavingLimit] = useState(false);
+  const [limitMessage, setLimitMessage] = useState(null); // { tone, text }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: result }) => setSession(result.session || null));
@@ -174,6 +177,36 @@ export default function MangaisStaffPage() {
   };
 
   const passengers = data?.passengers || [];
+  const isAdmin = data?.viewer_role === 'admin';
+  const places = data?.capacity?.[direction] || null;
+
+  // The draft follows the direction shown until the admin types something.
+  useEffect(() => {
+    setLimitDraft(places ? String(places.limit) : '');
+  }, [direction, places?.limit]);
+  useEffect(() => {
+    setLimitMessage(null);
+  }, [direction]);
+
+  const saveLimit = async () => {
+    setSavingLimit(true);
+    setLimitMessage(null);
+    try {
+      const response = await fetch('/api/events/mangais/limit', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ direction, limit: Number(limitDraft) }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || 'Não foi possível alterar o limite.');
+      setData((current) => ({ ...current, capacity: body.capacity }));
+      setLimitMessage({ tone: 'ok', text: `Limite da ${direction === 'outbound' ? 'ida' : 'volta'} alterado para ${body.capacity?.[direction]?.limit} lugares.` });
+    } catch (err) {
+      setLimitMessage({ tone: 'error', text: err.message });
+    } finally {
+      setSavingLimit(false);
+    }
+  };
   const summary = useMemo(() => summarise(passengers, data?.pending || []), [passengers, data?.pending]);
   const current = summary.find((block) => block.direction.key === direction);
 
@@ -302,9 +335,65 @@ export default function MangaisStaffPage() {
             <span className="block text-xs font-bold opacity-80">
               {block.boarded} embarcados{block.pendingSeats ? ` · ${block.pendingSeats} por pagar` : ''}
             </span>
+            {data?.capacity?.[block.direction.key] && (
+              <span className="mt-1 block text-xs font-black opacity-90">
+                Limite {data.capacity[block.direction.key].limit} · restam {data.capacity[block.direction.key].available}
+              </span>
+            )}
           </button>
         ))}
       </div>
+
+      {places && (
+        <section className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#e4f46f]">
+                Lugares à venda · {direction === 'outbound' ? 'ida' : 'volta'}
+              </p>
+              <p className="mt-1 text-2xl font-black">
+                {places.taken} <span className="text-base font-bold text-neutral-400">de {places.limit}</span>
+              </p>
+              <p className="text-sm text-neutral-400">
+                Vendidos ou reservados a pagar. Restam {places.available}. O limite vale para os três pontos de recolha juntos.
+              </p>
+            </div>
+            {isAdmin ? (
+              <div className="flex items-end gap-2">
+                <label className="text-sm font-bold">
+                  Novo limite
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={places.taken}
+                    max={places.maxLimit}
+                    value={limitDraft}
+                    onChange={(e) => setLimitDraft(e.target.value)}
+                    className="mt-1 block h-11 w-28 rounded-xl border border-white/15 bg-black/30 px-3 text-lg font-black text-white outline-none focus:border-[#e4f46f]"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={saveLimit}
+                  disabled={savingLimit || limitDraft === '' || Number(limitDraft) === places.limit}
+                  className="flex h-11 items-center gap-2 rounded-xl bg-[#e4f46f] px-4 font-black text-[#10321a] disabled:opacity-50"
+                >
+                  {savingLimit && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Guardar
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs text-neutral-500">Só um administrador pode alterar o limite.</p>
+            )}
+          </div>
+          {limitMessage && (
+            <p className={`mt-3 text-sm font-bold ${limitMessage.tone === 'ok' ? 'text-emerald-300' : 'text-red-300'}`}>{limitMessage.text}</p>
+          )}
+          {isAdmin && (
+            <p className="mt-2 text-xs text-neutral-500">Máximo possível: {places.maxLimit}. Não pode ficar abaixo dos lugares já vendidos ou reservados.</p>
+          )}
+        </section>
+      )}
 
       {current && (
         <div className="grid gap-3 sm:grid-cols-3">

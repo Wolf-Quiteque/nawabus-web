@@ -1,38 +1,16 @@
 import { NextResponse } from 'next/server';
-import { createSupabaseAdmin } from '@/lib/supabase-admin';
-import {
-  MANGAIS_EVENT,
-  MANGAIS_ROUTE_IDS,
-  describeMangaisRoute,
-  getMangaisDayRange,
-} from '@/lib/events/mangais';
+import { MANGAIS_EVENT } from '@/lib/events/mangais';
+import { fail, loadMangaisCapacity, loadMangaisTrips, noStore, requireStaff } from '@/lib/events/mangais-server';
 
 // GET /api/events/mangais/passengers   (Authorization: Bearer <staff session>)
 //
 // Everyone with a paid ticket for the event, per direction and pickup point,
-// for staff to organise the cars. Names and phone numbers are personal data, so
-// only admin and agent accounts get an answer.
+// for staff to organise the cars, plus the places left against each
+// direction's limit. Names and phone numbers are personal data, so only admin
+// and agent accounts get an answer.
 
-const STAFF_ROLES = new Set(['admin', 'agent']);
 const PAGE = 1000; // PostgREST returns at most this many rows per request
 const CHUNK = 150; // ids per `.in()` filter, to keep URLs short
-
-const noStore = { 'Cache-Control': 'no-store' };
-const fail = (status, error) => NextResponse.json({ error }, { status, headers: noStore });
-
-async function requireStaff(request) {
-  const admin = createSupabaseAdmin();
-  const token = String(request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
-  if (!token) return { error: fail(401, 'Entre com a sua conta.') };
-
-  const { data, error } = await admin.auth.getUser(token);
-  if (error || !data?.user?.id) return { error: fail(401, 'Sessão expirada. Entre novamente.') };
-
-  const { data: profile } = await admin.from('profiles').select('role').eq('id', data.user.id).maybeSingle();
-  if (!STAFF_ROLES.has(profile?.role)) return { error: fail(403, 'Esta conta não tem acesso à lista de passageiros.') };
-
-  return { admin };
-}
 
 async function allRows(buildQuery) {
   const rows = [];
@@ -57,26 +35,15 @@ const fullName = (profile) => [profile?.first_name, profile?.last_name].filter(B
 export async function GET(request) {
   const auth = await requireStaff(request);
   if (auth.error) return auth.error;
-  const { admin } = auth;
+  const { admin, role } = auth;
 
   try {
-    const range = getMangaisDayRange();
-    const { data: trips, error: tripsError } = await admin
-      .from('trips')
-      .select('id, route_id, departure_time, status')
-      .in('route_id', MANGAIS_ROUTE_IDS)
-      .gte('departure_time', range.start)
-      .lt('departure_time', range.end);
-    if (tripsError) throw tripsError;
-
-    const tripInfo = new Map();
-    for (const trip of trips || []) {
-      const place = describeMangaisRoute(trip.route_id);
-      if (place) tripInfo.set(trip.id, { ...place, departure_time: trip.departure_time });
-    }
+    const trips = await loadMangaisTrips(admin);
+    const tripInfo = new Map(trips.map((trip) => [trip.id, { ...trip.place, departure_time: trip.departure_time }]));
+    const capacity = await loadMangaisCapacity(admin, trips);
     const tripIds = [...tripInfo.keys()];
     if (!tripIds.length) {
-      return NextResponse.json({ event: MANGAIS_EVENT, passengers: [], pending: [] }, { headers: noStore });
+      return NextResponse.json({ event: MANGAIS_EVENT, viewer_role: role, capacity, passengers: [], pending: [] }, { headers: noStore });
     }
 
     // Paid tickets. "expired" (a no-show) was still paid, so it stays listed.
@@ -152,7 +119,7 @@ export async function GET(request) {
     }));
 
     return NextResponse.json(
-      { event: MANGAIS_EVENT, generated_at: new Date().toISOString(), passengers, pending },
+      { event: MANGAIS_EVENT, viewer_role: role, capacity, generated_at: new Date().toISOString(), passengers, pending },
       { headers: noStore }
     );
   } catch (error) {

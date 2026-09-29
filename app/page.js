@@ -213,6 +213,33 @@ export default function Home() {
               paga por referência Multicaixa e recebe tudo no telemóvel.
             </p>
 
+            {/* Brunch Mangais: event transport, in the poster's green. */}
+            {isMangaisSaleOpen() && (
+              <Link
+                href="/mangais"
+                className="group mb-4 flex w-full max-w-2xl items-center gap-4 rounded-3xl border border-[#e4f46f]/40 bg-[radial-gradient(circle_at_20%_20%,#4fb553_0%,#2a8a3a_55%,#17602a_100%)] p-4 sm:p-5 text-[#fbfbe8] shadow-[0_12px_45px_rgba(33,122,48,0.5)] hover:scale-[1.02] transition-all duration-300 animate-fade-in-up"
+                style={{ animationDelay: '0.25s' }}
+              >
+                <span className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl bg-[#e4f46f] text-[#10321a]">
+                  <span className="text-[0.62rem] font-black uppercase tracking-[0.14em]">{MANGAIS_EVENT.weekday.slice(0, 3)}</span>
+                  <span className="text-2xl font-black leading-none">{MANGAIS_EVENT.dayNumber.padStart(2, '0')}</span>
+                  <span className="text-[0.62rem] font-black uppercase tracking-[0.14em]">{MANGAIS_EVENT.monthShort}</span>
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-lg sm:text-xl font-black">{MANGAIS_EVENT.name}: transporte ida e volta</span>
+                  <span className="mt-0.5 block text-sm font-semibold text-[#fbfbe8]/85">
+                    Recolha: {MANGAIS_POINTS.map((point) => point.place).join(' · ')}
+                  </span>
+                  <span className="mt-0.5 block text-sm font-black text-[#e4f46f]">
+                    {formatEventKz(mangaisProductPrice('ida-e-volta', 1))} · embarque {MANGAIS_EVENT.boardingTime}, regresso {MANGAIS_EVENT.returnTime}
+                  </span>
+                </span>
+                <svg className="w-6 h-6 shrink-0 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </Link>
+            )}
+
             {/* Big obvious CTAs */}
             <div className="flex flex-wrap items-center gap-4 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
               <Link
@@ -241,49 +268,7 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </button>
-
-              {/* Searches by province: Sumbe routes are filed under Cuanza Sul. */}
-              <Link
-                href={buyHref('Luanda', 'Cuanza Sul')}
-                className="group inline-flex w-full sm:w-auto justify-center items-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-700 px-6 sm:px-7 py-4 text-base md:text-lg font-black text-white shadow-[0_10px_40px_rgba(5,150,105,0.45)] hover:shadow-[0_14px_50px_rgba(5,150,105,0.65)] hover:scale-[1.03] transition-all duration-300"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                Bilhetes para Sumbe
-                <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </Link>
             </div>
-
-            {/* Brunch Mangais: event transport, in the poster's green. */}
-            {isMangaisSaleOpen() && (
-              <Link
-                href="/mangais"
-                className="group mt-5 flex w-full max-w-2xl items-center gap-4 rounded-3xl border border-[#e4f46f]/40 bg-[radial-gradient(circle_at_20%_20%,#4fb553_0%,#2a8a3a_55%,#17602a_100%)] p-4 sm:p-5 text-[#fbfbe8] shadow-[0_12px_45px_rgba(33,122,48,0.5)] hover:scale-[1.02] transition-all duration-300 animate-fade-in-up"
-                style={{ animationDelay: '0.35s' }}
-              >
-                <span className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl bg-[#e4f46f] text-[#10321a]">
-                  <span className="text-[0.62rem] font-black uppercase tracking-[0.14em]">{MANGAIS_EVENT.weekday.slice(0, 3)}</span>
-                  <span className="text-2xl font-black leading-none">{MANGAIS_EVENT.dayNumber.padStart(2, '0')}</span>
-                  <span className="text-[0.62rem] font-black uppercase tracking-[0.14em]">{MANGAIS_EVENT.monthShort}</span>
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-lg sm:text-xl font-black">{MANGAIS_EVENT.name}: transporte ida e volta</span>
-                  <span className="mt-0.5 block text-sm font-semibold text-[#fbfbe8]/85">
-                    Recolha: {MANGAIS_POINTS.map((point) => point.place).join(' · ')}
-                  </span>
-                  <span className="mt-0.5 block text-sm font-black text-[#e4f46f]">
-                    {formatEventKz(mangaisProductPrice('ida-e-volta', 1))} · embarque {MANGAIS_EVENT.boardingTime}, regresso {MANGAIS_EVENT.returnTime}
-                  </span>
-                </span>
-                <svg className="w-6 h-6 shrink-0 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </Link>
-            )}
 
             <a
               href="#pesquisar"

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Caveat } from 'next/font/google';
@@ -25,6 +25,9 @@ const script = Caveat({ subsets: ['latin'], weight: ['600', '700'] });
 // Poster palette: forest green, the lime-yellow of "Pontos de recolha", cream text.
 const LIME = 'text-[#e4f46f]';
 
+// Below this many places left, the page says how many remain.
+const FEW_PLACES = 40;
+
 function emptyCompanion() {
   return { name: '', phone: '' };
 }
@@ -40,9 +43,26 @@ export default function MangaisPage() {
   const [building, setBuilding] = useState(false);
   const [error, setError] = useState('');
 
+  // Places left per direction (the staff can change the limit in /mang or NAWASOFT).
+  const [availability, setAvailability] = useState(null);
+  useEffect(() => {
+    fetch('/api/events/mangais/availability', { cache: 'no-store' })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body) => body && setAvailability(body))
+      .catch(() => {});
+  }, []);
+
   const saleOpen = isMangaisSaleOpen();
-  const products = useMemo(() => availableMangaisProducts(), []);
+  // Unknown until loaded: nothing is hidden meanwhile, the server checks again anyway.
+  const placesLeft = (leg) => availability?.[leg]?.available ?? Infinity;
+  const placesFor = (item) => Math.min(...item.legs.map(placesLeft));
+  const timeOpenProducts = useMemo(() => availableMangaisProducts(), []);
+  const products = timeOpenProducts.filter((item) => placesFor(item) > 0);
+  const soldOutLegs = ['outbound', 'return'].filter((leg) => placesLeft(leg) <= 0);
   const product = findMangaisProduct(productCode);
+  const maxPassengers = product
+    ? Math.max(1, Math.min(MANGAIS_MAX_PASSENGERS, placesFor(product)))
+    : MANGAIS_MAX_PASSENGERS;
   const point = findMangaisPoint(pointCode);
   const total = mangaisProductPrice(productCode, passengers);
 
@@ -57,7 +77,7 @@ export default function MangaisPage() {
           : 'review';
 
   const setCount = (next) => {
-    const count = Math.max(1, Math.min(MANGAIS_MAX_PASSENGERS, next));
+    const count = Math.max(1, Math.min(maxPassengers, next));
     setPassengers(count);
     setCompanions((current) => Array.from({ length: count - 1 }, (_, i) => current[i] || emptyCompanion()));
   };
@@ -128,12 +148,25 @@ export default function MangaisPage() {
                       <ChoiceButton
                         key={item.code}
                         title={item.title}
-                        detail={item.detail}
+                        detail={
+                          placesFor(item) <= FEW_PLACES
+                            ? `${item.detail} · restam ${placesFor(item)} ${placesFor(item) === 1 ? 'lugar' : 'lugares'}`
+                            : item.detail
+                        }
                         badge={formatEventKz(mangaisProductPrice(item.code, 1))}
-                        onClick={() => setProductCode(item.code)}
+                        onClick={() => {
+                          setProductCode(item.code);
+                          setCount(Math.min(passengers, placesFor(item)));
+                        }}
                       />
                     ))}
-                    {products.length < 3 && (
+                    {products.length === 0 && (
+                      <Notice text="Os lugares para o Brunch Mangais esgotaram. Obrigado pelo interesse!" />
+                    )}
+                    {products.length > 0 && soldOutLegs.length === 1 && (
+                      <Notice text={soldOutLegs[0] === 'outbound' ? 'A ida para Mangais esgotou. Ainda há lugares para a volta.' : 'A volta de Mangais esgotou. Ainda há lugares para a ida.'} />
+                    )}
+                    {products.length > 0 && soldOutLegs.length === 0 && timeOpenProducts.length < 3 && (
                       <Notice text={`Os autocarros de ida já partiram às ${MANGAIS_EVENT.boardingTime}. Ainda podes comprar a volta.`} />
                     )}
                   </div>
@@ -193,13 +226,18 @@ export default function MangaisPage() {
                       type="button"
                       aria-label="Mais uma pessoa"
                       onClick={() => setCount(passengers + 1)}
-                      disabled={passengers >= MANGAIS_MAX_PASSENGERS}
+                      disabled={passengers >= maxPassengers}
                       className="flex h-12 w-12 items-center justify-center rounded-full bg-[#e4f46f] text-[#10321a] transition hover:bg-[#eef8a0] disabled:opacity-40"
                     >
                       <Plus className="h-5 w-5" />
                     </button>
                   </div>
                   <p className="mt-3 text-center text-sm font-bold text-[#fbfbe8]/80">Total: {formatEventKz(total)}</p>
+                  {maxPassengers < MANGAIS_MAX_PASSENGERS && (
+                    <p className={`mt-1 text-center text-xs font-bold ${LIME}`}>
+                      Só {maxPassengers === 1 ? 'resta 1 lugar' : `restam ${maxPassengers} lugares`} para esta opção.
+                    </p>
+                  )}
                   <PrimaryButton onClick={() => setCountConfirmed(true)}>Continuar</PrimaryButton>
                 </Step>
 
