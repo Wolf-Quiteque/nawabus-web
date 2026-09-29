@@ -1130,9 +1130,9 @@ export default function Home() {
 
           <div className="pt-8 border-t border-stone-800 flex flex-col md:flex-row items-center justify-between gap-4 text-stone-500 text-sm">
             <p>&copy; {new Date().getFullYear()} Nawabus. Todos os direitos reservados.</p>
-            <a href="#termos" className="hover:text-amber-400 transition-colors">
-              Termos e Políticas
-            </a>
+            <Link href="/privacidade" className="hover:text-amber-400 transition-colors">
+              Política de Privacidade
+            </Link>
           </div>
         </div>
       </footer>
