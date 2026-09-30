@@ -177,7 +177,7 @@ export default function MangaisPage() {
                     title="Ponto de recolha"
                     description={
                       product?.legs.includes('outbound')
-                        ? `Onde entras no autocarro às ${MANGAIS_EVENT.boardingTime}.${product.legs.includes('return') ? ' O regresso deixa-te no mesmo ponto.' : ''}`
+                        ? `Onde entras no autocarro. Partida às ${MANGAIS_EVENT.boardingTime}.${product.legs.includes('return') ? ' O regresso deixa-te no mesmo ponto.' : ''}`
                         : `Onde queres ficar no regresso das ${MANGAIS_EVENT.returnTime}.`
                     }
                   />
@@ -280,7 +280,7 @@ export default function MangaisPage() {
                     <SummaryRow label="Evento" value={`${MANGAIS_EVENT.name} · ${MANGAIS_EVENT.weekday}, ${MANGAIS_EVENT.dateLabel}`} />
                     <SummaryRow label="Bilhete" value={product?.title || ''} />
                     <SummaryRow label="Ponto de recolha" value={mangaisPointLabel(point)} />
-                    {product?.legs.includes('outbound') && <SummaryRow label="Embarque" value={MANGAIS_EVENT.boardingTime} />}
+                    {product?.legs.includes('outbound') && <SummaryRow label="Partida" value={MANGAIS_EVENT.boardingTime} />}
                     {product?.legs.includes('return') && <SummaryRow label="Regresso" value={MANGAIS_EVENT.returnTime} />}
                     <SummaryRow label="Pessoas" value={String(passengers)} />
                     <div className="border-t border-white/15 pt-3">
@@ -347,7 +347,7 @@ function EventPoster() {
           Brunch <span className="text-[#fbfbe8]/90">mangais</span>
         </p>
         <p className="mt-2 text-xs font-bold uppercase tracking-[0.16em] text-[#fbfbe8]/85">
-          Embarque {MANGAIS_EVENT.boardingTime} · Regresso {MANGAIS_EVENT.returnTime}
+          Partida às {MANGAIS_EVENT.boardingTime} · Regresso {MANGAIS_EVENT.returnTime}
         </p>
       </div>
       </div>
