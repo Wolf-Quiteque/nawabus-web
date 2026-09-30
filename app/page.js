@@ -30,6 +30,10 @@ const WHATSAPP_URL = `https://wa.me/244930533405?text=${encodeURIComponent(
   'Olá NawaBus! Tenho uma questão.'
 )}`;
 
+// Private site for invited partners (passcode at the door). Link to it, but
+// don't advertise returns here: the club itself says it is not a public offer.
+const CLUB_INVESTIDOR_URL = 'https://club.nawabus.co.ao/';
+
 /* Card with 3D mouse-tracking tilt + glare */
 function TiltCard({ children, className = '', maxTilt = 9 }) {
   const ref = useRef(null);
@@ -161,6 +165,27 @@ export default function Home() {
 
         {/* Top nav */}
         <header className="absolute top-0 inset-x-0 z-40">
+          {/* Clube de Investidor: a strip across the very top, on every screen size. */}
+          <a
+            href={CLUB_INVESTIDOR_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center justify-center gap-2 bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-500 px-4 py-2 text-xs sm:text-sm font-bold text-stone-950 shadow-[0_4px_20px_rgba(245,158,11,0.35)] hover:brightness-105 transition-all"
+          >
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+            <span>
+              <span className="font-black">Clube de Investidor Nawabus</span>
+              <span className="hidden sm:inline"> · acesso para parceiros</span>
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-stone-950 px-2.5 py-0.5 text-[0.7rem] sm:text-xs font-black text-amber-300 group-hover:bg-stone-800 transition-colors">
+              Entrar
+              <svg className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+              </svg>
+            </span>
+          </a>
           <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-5">
             <img
               src="/nawabus_logo_white.webp"
@@ -176,6 +201,14 @@ export default function Home() {
               </a>
               <a href="#parceiros" className="hidden md:inline text-sm font-medium text-white/80 hover:text-amber-300 transition-colors">
                 Parceiros
+              </a>
+              <a
+                href={CLUB_INVESTIDOR_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden md:inline text-sm font-bold text-amber-300 hover:text-amber-200 transition-colors"
+              >
+                Investidores
               </a>
               <a
                 href="#frete"
@@ -493,6 +526,48 @@ export default function Home() {
                 </div>
               </TiltCard>
             </div>
+          </Reveal>
+
+          {/* ============ CLUBE DE INVESTIDOR BANNER ============ */}
+          <Reveal delay={150} className="mt-8">
+            <a
+              id="investidores"
+              href={CLUB_INVESTIDOR_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative block scroll-mt-24 overflow-hidden rounded-3xl bg-stone-950 p-8 md:p-12 shadow-2xl border-2 border-amber-400/50 hover:border-amber-400 transition-colors duration-300"
+            >
+              <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-amber-500/25 blur-3xl"></div>
+              <div className="absolute -bottom-28 -left-16 h-72 w-72 rounded-full bg-orange-600/20 blur-3xl"></div>
+              <div className="relative flex flex-col md:flex-row md:items-center gap-8">
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-stone-950 shadow-lg shadow-amber-500/30">
+                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="samakaka-strip w-12 rounded-full"></span>
+                    <span className="text-amber-400 font-bold tracking-[0.25em] text-xs uppercase">
+                      Para parceiros e investidores
+                    </span>
+                  </div>
+                  <h3 className="text-3xl md:text-4xl font-black text-white mb-3">
+                    Clube de <span className="text-amber-400">Investidor</span> Nawabus
+                  </h3>
+                  <p className="text-stone-300 leading-relaxed max-w-2xl">
+                    Acompanhe de perto o crescimento da Nawabus. O clube é um espaço privado
+                    para parceiros convidados: entre com o código de acesso que recebeu.
+                  </p>
+                </div>
+                <span className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 px-7 py-4 font-black text-stone-950 shadow-lg group-hover:shadow-amber-500/50 group-hover:scale-105 transition-all duration-300">
+                  Entrar no Clube
+                  <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </span>
+              </div>
+            </a>
           </Reveal>
         </div>
       </section>
@@ -1084,6 +1159,16 @@ export default function Home() {
                 <li>
                   <a href="#frete" className="text-stone-400 hover:text-amber-400 transition-colors font-medium">
                     Aluguer de Frete
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href={CLUB_INVESTIDOR_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-amber-400 hover:text-amber-300 transition-colors font-bold"
+                  >
+                    Clube de Investidor
                   </a>
                 </li>
                 <li>
