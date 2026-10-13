@@ -77,12 +77,20 @@ export async function GET(request) {
       const taken = new Set((row.occupied_seats || []).map(Number));
       const capacity = Number(one(trip.buses)?.capacity || 0);
       const allocation = Math.min(Number(point.capacity || 0), Math.max(capacity - 1, 0));
+      const [ticketSeats, heldSeats] = await Promise.all([
+        admin.from('tickets').select('seat_number').eq('trip_id', trip.id).in('status', ['active', 'pending', 'used', 'expired']),
+        admin.from('online_bookings').select('seat_number').eq('trip_id', trip.id).gt('expires_at', new Date().toISOString()),
+      ]);
+      if (ticketSeats.error) throw ticketSeats.error;
+      if (heldSeats.error) throw heldSeats.error;
+      const localTaken = new Set([...(ticketSeats.data || []), ...(heldSeats.data || [])].map((seat) => Number(seat.seat_number)));
       const free = [];
       for (let seat = 1; seat <= capacity && free.length < passengers; seat += 1) {
         if (!isCopilotSeat(seat) && !taken.has(seat)) free.push(seat);
       }
-      const allocationAvailable = Math.max(allocation - taken.size, 0);
-      if (free.length < passengers || Number(row.available_seats || 0) < passengers || allocationAvailable < passengers) {
+      const baseline = Number(point.baselineTaken?.[leg] || 0);
+      const allocationAvailable = Math.max(allocation - Math.max(localTaken.size - baseline, 0), 0);
+      if (free.length < passengers || allocationAvailable < passengers) {
         return fail(409, 'Já não há lugares suficientes para este número de passageiros.');
       }
 
