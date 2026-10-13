@@ -43,7 +43,7 @@ export default function MangaisPage() {
   const [building, setBuilding] = useState(false);
   const [error, setError] = useState('');
 
-  // Places left per direction (the staff can change the limit in /mang or NAWASOFT).
+  // Places left at each pickup point. Each point has its own allocation.
   const [availability, setAvailability] = useState(null);
   useEffect(() => {
     fetch('/api/events/mangais/availability', { cache: 'no-store' })
@@ -54,11 +54,13 @@ export default function MangaisPage() {
 
   const saleOpen = isMangaisSaleOpen();
   // Unknown until loaded: nothing is hidden meanwhile, the server checks again anyway.
-  const placesLeft = (leg) => availability?.[leg]?.available ?? Infinity;
-  const placesFor = (item) => Math.min(...item.legs.map(placesLeft));
+  const placesLeft = (point, leg) => availability?.points?.[point]?.[leg]?.available ?? Infinity;
+  const placesFor = (item, point = pointCode) => item && point
+    ? Math.min(...item.legs.map((leg) => placesLeft(point, leg)))
+    : Infinity;
   const timeOpenProducts = useMemo(() => availableMangaisProducts(), []);
   const products = timeOpenProducts.filter((item) => placesFor(item) > 0);
-  const soldOutLegs = ['outbound', 'return'].filter((leg) => placesLeft(leg) <= 0);
+  const soldOutLegs = pointCode ? ['outbound', 'return'].filter((leg) => placesLeft(pointCode, leg) <= 0) : [];
   const product = findMangaisProduct(productCode);
   const maxPassengers = product
     ? Math.max(1, Math.min(MANGAIS_MAX_PASSENGERS, placesFor(product)))
@@ -182,25 +184,31 @@ export default function MangaisPage() {
                     }
                   />
                   <div className="grid gap-3">
-                    {MANGAIS_POINTS.map((item) => (
+                    {MANGAIS_POINTS.map((item) => {
+                      const places = placesFor(product, item.code);
+                      const unavailable = places <= 0;
+                      return (
                       <button
                         key={item.code}
                         type="button"
-                        onClick={() => setPointCode(item.code)}
-                        className="group flex w-full items-center justify-between gap-4 rounded-[1.4rem] border border-white/12 bg-white/10 p-4 text-left transition duration-300 hover:-translate-y-0.5 hover:border-[#e4f46f] hover:bg-[#e4f46f] hover:text-[#10321a]"
+                        onClick={() => !unavailable && setPointCode(item.code)}
+                        disabled={unavailable}
+                        className="group flex w-full items-center justify-between gap-4 rounded-[1.4rem] border border-white/12 bg-white/10 p-4 text-left transition duration-300 hover:-translate-y-0.5 hover:border-[#e4f46f] hover:bg-[#e4f46f] hover:text-[#10321a] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:border-white/12 disabled:hover:bg-white/10 disabled:hover:text-[#fbfbe8]"
                       >
                         <span className="flex items-start gap-3">
                           <MapPin className={`mt-1 h-5 w-5 shrink-0 ${LIME} group-hover:text-[#10321a]`} />
                           <span>
                             <span className={`block text-sm font-black uppercase tracking-[0.14em] ${LIME} group-hover:text-[#10321a]`}>{item.area}</span>
                             <span className="block text-xl font-black">{item.place}</span>
+                            {places !== Infinity && <span className="mt-1 block text-xs font-bold">{unavailable ? 'Esgotado' : `${places} ${places === 1 ? 'lugar disponível' : 'lugares disponíveis'}`}</span>}
                           </span>
                         </span>
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#fbfbe8] text-[#10321a]">
                           <ArrowRight className="h-5 w-5" />
                         </span>
                       </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 </Step>
 

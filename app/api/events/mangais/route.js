@@ -76,11 +76,13 @@ export async function GET(request) {
       const row = one(availability) || {};
       const taken = new Set((row.occupied_seats || []).map(Number));
       const capacity = Number(one(trip.buses)?.capacity || 0);
+      const allocation = Math.min(Number(point.capacity || 0), Math.max(capacity - 1, 0));
       const free = [];
       for (let seat = 1; seat <= capacity && free.length < passengers; seat += 1) {
         if (!isCopilotSeat(seat) && !taken.has(seat)) free.push(seat);
       }
-      if (free.length < passengers || Number(row.available_seats || 0) < passengers) {
+      const allocationAvailable = Math.max(allocation - taken.size, 0);
+      if (free.length < passengers || Number(row.available_seats || 0) < passengers || allocationAvailable < passengers) {
         return fail(409, 'Já não há lugares suficientes para este número de passageiros.');
       }
 
