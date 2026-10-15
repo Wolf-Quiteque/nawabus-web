@@ -7,16 +7,19 @@ import {
   MANGAIS_MAX_PASSENGERS,
   findMangaisPoint,
   findMangaisProduct,
+  findMangaisReturnTime,
   getMangaisDayRange,
 } from '@/lib/events/mangais';
+import { loadMangaisCapacity, loadMangaisTrips } from '@/lib/events/mangais-server';
 
 const fail = (status, error) =>
   NextResponse.json({ error }, { status, headers: { 'Cache-Control': 'no-store' } });
 
 const one = (value) => (Array.isArray(value) ? value[0] : value);
 
-// GET /api/events/mangais?product=ida-e-volta&point=gamek&passengers=3
+// GET /api/events/mangais?product=ida-e-volta&point=gamek&passengers=3&returnTime=18h
 //
+// `returnTime` (18h or 20h) is required when the ticket includes the return.
 // The event trips for one pickup point, each with free seat numbers already
 // chosen. Customers never pick seats for this event; checkout, the hold and the
 // payment webhook still need numbers, so they are assigned here. The counts
@@ -28,6 +31,8 @@ export async function GET(request) {
   const passengers = Number(searchParams.get('passengers'));
 
   if (!product || !point) return fail(400, 'Escolha o tipo de bilhete e o ponto de recolha.');
+  const returnTime = findMangaisReturnTime(searchParams.get('returnTime'));
+  if (product.legs.includes('return') && !returnTime) return fail(400, 'Escolha a hora do regresso.');
   if (!Number.isInteger(passengers) || passengers < 1 || passengers > MANGAIS_MAX_PASSENGERS) {
     return fail(400, `Escolha entre 1 e ${MANGAIS_MAX_PASSENGERS} passageiros.`);
   }
@@ -36,6 +41,9 @@ export async function GET(request) {
     const admin = createSupabaseAdmin();
     const range = getMangaisDayRange();
     const routeByLeg = { outbound: point.outboundRouteId, return: point.returnRouteId };
+    // Each leg is one exact bus: the 08h00 outbound, or the chosen return time.
+    // The 21h30 return still exists for its first buyers but is never chosen here.
+    const departureByLeg = { outbound: MANGAIS_EVENT.outboundDepartureIso, return: returnTime?.departureIso };
     const routeIds = product.legs.map((leg) => routeByLeg[leg]);
 
     const { data: trips, error: tripsError } = await admin
@@ -55,17 +63,19 @@ export async function GET(request) {
     if (tripsError) throw tripsError;
 
     const legs = [];
+    let allocation = null;
     for (const leg of product.legs) {
-      const trip = (trips || []).find((row) => row.route_id === routeByLeg[leg]);
+      const trip = (trips || []).find((row) => row.route_id === routeByLeg[leg]
+        && new Date(row.departure_time).getTime() === new Date(departureByLeg[leg]).getTime());
       if (!trip) {
         return fail(404, leg === 'outbound'
           ? 'A ida para Mangais ainda não está à venda neste ponto.'
-          : 'A volta de Mangais ainda não está à venda neste ponto.');
+          : `O regresso das ${returnTime.label} ainda não está à venda neste ponto.`);
       }
       if (!isTripPurchasable(trip)) {
         return fail(409, leg === 'outbound'
           ? `A ida das ${MANGAIS_EVENT.boardingTime} já partiu. Ainda pode comprar só a volta.`
-          : 'A volta de Mangais já partiu.');
+          : `O regresso das ${returnTime.label} já partiu.`);
       }
 
       const { data: availability, error: availabilityError } = await admin.rpc('get_trip_seat_availability', {
@@ -76,20 +86,13 @@ export async function GET(request) {
       const row = one(availability) || {};
       const taken = new Set((row.occupied_seats || []).map(Number));
       const capacity = Number(one(trip.buses)?.capacity || 0);
-      const allocation = Math.min(Number(point.capacity || 0), Math.max(capacity - 1, 0));
-      const [ticketSeats, heldSeats] = await Promise.all([
-        admin.from('tickets').select('seat_number').eq('trip_id', trip.id).in('status', ['active', 'pending', 'used', 'expired']),
-        admin.from('online_bookings').select('seat_number').eq('trip_id', trip.id).gt('expires_at', new Date().toISOString()),
-      ]);
-      if (ticketSeats.error) throw ticketSeats.error;
-      if (heldSeats.error) throw heldSeats.error;
-      const localTaken = new Set([...(ticketSeats.data || []), ...(heldSeats.data || [])].map((seat) => Number(seat.seat_number)));
       const free = [];
       for (let seat = 1; seat <= capacity && free.length < passengers; seat += 1) {
         if (!isCopilotSeat(seat) && !taken.has(seat)) free.push(seat);
       }
-      const baseline = Number(point.baselineTaken?.[leg] || 0);
-      const allocationAvailable = Math.max(allocation - Math.max(localTaken.size - baseline, 0), 0);
+      // The point's places for this direction, shared by all its buses.
+      allocation ??= await loadMangaisCapacity(admin, await loadMangaisTrips(admin));
+      const allocationAvailable = Number(allocation.points?.[point.code]?.[leg]?.available || 0);
       if (free.length < passengers || allocationAvailable < passengers) {
         return fail(409, 'Já não há lugares suficientes para este número de passageiros.');
       }

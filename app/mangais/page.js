@@ -11,8 +11,10 @@ import {
   MANGAIS_MAX_PASSENGERS,
   MANGAIS_POINTS,
   availableMangaisProducts,
+  availableMangaisReturnTimes,
   findMangaisPoint,
   findMangaisProduct,
+  findMangaisReturnTime,
   formatEventKz,
   isMangaisSaleOpen,
   mangaisPointLabel,
@@ -36,6 +38,7 @@ export default function MangaisPage() {
   const router = useRouter();
   const [productCode, setProductCode] = useState('');
   const [pointCode, setPointCode] = useState('');
+  const [returnTimeCode, setReturnTimeCode] = useState('');
   const [passengers, setPassengers] = useState(1);
   const [countConfirmed, setCountConfirmed] = useState(false);
   const [companions, setCompanions] = useState([]);
@@ -58,7 +61,11 @@ export default function MangaisPage() {
   const placesFor = (item, point = pointCode) => item && point
     ? Math.min(...item.legs.map((leg) => placesLeft(point, leg)))
     : Infinity;
-  const timeOpenProducts = useMemo(() => availableMangaisProducts(), []);
+  const returnTimes = useMemo(() => availableMangaisReturnTimes(), []);
+  const timeOpenProducts = useMemo(
+    () => availableMangaisProducts().filter((item) => !item.legs.includes('return') || returnTimes.length > 0),
+    [returnTimes]
+  );
   const products = timeOpenProducts.filter((item) => placesFor(item) > 0);
   const soldOutLegs = pointCode ? ['outbound', 'return'].filter((leg) => placesLeft(pointCode, leg) <= 0) : [];
   const product = findMangaisProduct(productCode);
@@ -66,13 +73,17 @@ export default function MangaisPage() {
     ? Math.max(1, Math.min(MANGAIS_MAX_PASSENGERS, placesFor(product)))
     : MANGAIS_MAX_PASSENGERS;
   const point = findMangaisPoint(pointCode);
+  const returnTime = findMangaisReturnTime(returnTimeCode);
+  const needsReturnTime = Boolean(product?.legs.includes('return'));
   const total = mangaisProductPrice(productCode, passengers);
 
   const step = !productCode
     ? 'product'
     : !pointCode
       ? 'point'
-      : !countConfirmed
+      : needsReturnTime && !returnTime
+        ? 'returnTime'
+        : !countConfirmed
         ? 'count'
         : passengers > 1 && !namesConfirmed
           ? 'names'
@@ -91,7 +102,11 @@ export default function MangaisPage() {
   const goBack = () => {
     setError('');
     if (step === 'point') setProductCode('');
-    else if (step === 'count') setPointCode('');
+    else if (step === 'returnTime') setPointCode('');
+    else if (step === 'count') {
+      if (needsReturnTime) setReturnTimeCode('');
+      else setPointCode('');
+    }
     else if (step === 'names') setCountConfirmed(false);
     else if (step === 'review') {
       if (passengers > 1) setNamesConfirmed(false);
@@ -103,8 +118,9 @@ export default function MangaisPage() {
     setBuilding(true);
     setError('');
     try {
-      const legs = await fetchMangaisLegs({ product: productCode, point: pointCode, passengers });
-      const details = buildMangaisBookingDetails({ legs, productCode, pointCode, companions });
+      const chosenReturn = needsReturnTime ? returnTimeCode : null;
+      const legs = await fetchMangaisLegs({ product: productCode, point: pointCode, passengers, returnTime: chosenReturn });
+      const details = buildMangaisBookingDetails({ legs, productCode, pointCode, returnTimeCode: chosenReturn, companions });
       sessionStorage.setItem('bookingDetails', JSON.stringify(details));
       router.push('/checkout');
     } catch (err) {
@@ -158,6 +174,7 @@ export default function MangaisPage() {
                         badge={formatEventKz(mangaisProductPrice(item.code, 1))}
                         onClick={() => {
                           setProductCode(item.code);
+                          setReturnTimeCode('');
                           setCount(Math.min(passengers, placesFor(item)));
                         }}
                       />
@@ -180,7 +197,7 @@ export default function MangaisPage() {
                     description={
                       product?.legs.includes('outbound')
                         ? `Onde entras no autocarro. Partida às ${MANGAIS_EVENT.boardingTime}.${product.legs.includes('return') ? ' O regresso deixa-te no mesmo ponto.' : ''}`
-                        : `Onde queres ficar no regresso das ${MANGAIS_EVENT.returnTime}.`
+                        : 'Onde queres ficar no regresso. A seguir escolhes a hora.'
                     }
                   />
                   <div className="grid gap-3">
@@ -209,6 +226,24 @@ export default function MangaisPage() {
                       </button>
                       );
                     })}
+                  </div>
+                </Step>
+
+                <Step active={step === 'returnTime'}>
+                  <QuestionTitle
+                    title="A que horas voltas?"
+                    description={`O autocarro sai do ${MANGAIS_EVENT.venue} e deixa-te no ponto de recolha que escolheste.`}
+                  />
+                  <div className="grid gap-3">
+                    {returnTimes.map((time) => (
+                      <ChoiceButton
+                        key={time.code}
+                        title={`Regresso às ${time.label}`}
+                        detail={`Saída do Mangais às ${time.label}`}
+                        badge={time.label}
+                        onClick={() => setReturnTimeCode(time.code)}
+                      />
+                    ))}
                   </div>
                 </Step>
 
@@ -289,7 +324,7 @@ export default function MangaisPage() {
                     <SummaryRow label="Bilhete" value={product?.title || ''} />
                     <SummaryRow label="Ponto de recolha" value={mangaisPointLabel(point)} />
                     {product?.legs.includes('outbound') && <SummaryRow label="Partida" value={MANGAIS_EVENT.boardingTime} />}
-                    {product?.legs.includes('return') && <SummaryRow label="Regresso" value={MANGAIS_EVENT.returnTime} />}
+                    {product?.legs.includes('return') && <SummaryRow label="Regresso" value={returnTime?.label || ''} />}
                     <SummaryRow label="Pessoas" value={String(passengers)} />
                     <div className="border-t border-white/15 pt-3">
                       <SummaryRow label="Total" value={formatEventKz(total)} strong />
@@ -355,7 +390,7 @@ function EventPoster() {
           Brunch <span className="text-[#fbfbe8]/90">mangais</span>
         </p>
         <p className="mt-2 text-xs font-bold uppercase tracking-[0.16em] text-[#fbfbe8]/85">
-          Partida às {MANGAIS_EVENT.boardingTime} · Regresso {MANGAIS_EVENT.returnTime}
+          Partida às {MANGAIS_EVENT.boardingTime} · Regresso {MANGAIS_EVENT.returnTimesLabel}
         </p>
       </div>
       </div>

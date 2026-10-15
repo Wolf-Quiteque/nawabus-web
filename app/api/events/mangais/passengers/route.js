@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { MANGAIS_EVENT } from '@/lib/events/mangais';
+import { MANGAIS_EVENT, mangaisTimeLabel } from '@/lib/events/mangais';
 import { fail, loadMangaisCapacity, loadMangaisTrips, noStore, requireStaff } from '@/lib/events/mangais-server';
 
 // GET /api/events/mangais/passengers   (Authorization: Bearer <staff session>)
@@ -78,6 +78,7 @@ export async function GET(request) {
         id: ticket.id,
         direction: place.direction,
         point: place.point.code,
+        time: mangaisTimeLabel(place.departure_time),
         ticket_number: ticket.ticket_number,
         name: companion?.name?.trim() || fullName(passenger) || 'Sem nome',
         phone: companion?.phone || passenger?.phone_number || '',

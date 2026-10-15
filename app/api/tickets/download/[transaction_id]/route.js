@@ -73,7 +73,7 @@ export async function GET(request, { params }) {
         trips:trip_id(
           *,
           routes:route_id(*),
-          buses:bus_id(id, make, model, license_plate, companies:company_id(name))
+          buses:bus_id(id, companies:company_id(name))
         )
       `)
       .eq('payment_reference', reference)

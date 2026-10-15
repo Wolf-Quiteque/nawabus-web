@@ -22,6 +22,7 @@ import { createClient } from "@/lib/supabase-client";
 import { signInWithPhone } from "@/lib/phone-login";
 import { isRestrictedInAppBrowser, openExternalBrowser } from "@/lib/in-app-browser";
 import { formatLuandaDateTime, ticketDepartureTime } from "@/lib/date-time";
+import { isMangaisBooking, isMangaisTrip } from "@/lib/events/mangais";
 import RebookDialog from "@/components/rebook-dialog";
 
 const BRAND_ORANGE = "#FF8C00";
@@ -121,8 +122,21 @@ function countPendingSeats(booking) {
   return outbound + inbound;
 }
 
+const peopleText = (count) => `${count} ${count === 1 ? "pessoa" : "pessoas"}`;
+
+/** Seat numbers, or — for event tickets, which have no real seat — how many people. */
+function seatListText(tickets) {
+  return isMangaisTrip(tickets[0]?.trips)
+    ? peopleText(tickets.length)
+    : tickets.map((ticket) => ticket.seat_number).join(", ");
+}
+
 function getPendingSeatText(booking) {
   if (!booking) return "Lugares por confirmar";
+  if (isMangaisBooking(booking)) {
+    const legs = [booking.outbound_trip, booking.return_trip].filter(Boolean);
+    return peopleText(Math.max(...legs.map((leg) => leg.selected_seats?.length || 0), 0));
+  }
   const parts = [];
   if (booking.outbound_trip?.selected_seats?.length) {
     parts.push(`Ida: ${booking.outbound_trip.selected_seats.join(", ")}`);
@@ -323,7 +337,7 @@ async function downloadPaidTicketGroup(group, user, payment) {
         doc.setTextColor(...orange);
         doc.setFont(undefined, "bold");
         doc.setFontSize(9);
-        doc.text(`${ticketIndex + 1}. Lugar ${ticket.seat_number || "N/A"}`, 28, y);
+        doc.text(isMangaisTrip(ticket.trips) ? `${ticketIndex + 1}.` : `${ticketIndex + 1}. Lugar ${ticket.seat_number || "N/A"}`, 28, y);
         doc.setTextColor(...dark);
         doc.setFont(undefined, "normal");
         doc.text(getPassengerName(ticket, user, payment), 72, y, { maxWidth: 70 });
@@ -378,7 +392,7 @@ async function downloadPaidTicketGroup(group, user, payment) {
         doc.setFont(undefined, "normal");
         doc.setTextColor(...muted);
         doc.text(`Partida: ${formatDate(ticketDepartureTime(tripGroup.firstTicket))}`, 26, top + 42, { maxWidth: 100 });
-        doc.text(`Lugares: ${tripGroup.tickets.map((ticket) => ticket.seat_number).join(", ")}`, 26, top + 54, { maxWidth: 100 });
+        doc.text(`${isMangaisTrip(tripGroup.firstTicket?.trips) ? "Passageiros" : "Lugares"}: ${seatListText(tripGroup.tickets)}`, 26, top + 54, { maxWidth: 100 });
         if (tripGroup.firstTicket?.trips?.boarding_point) {
           doc.text(`Embarque: ${tripGroup.firstTicket.trips.boarding_point}`, 26, top + 64, { maxWidth: 110 });
         }
@@ -445,7 +459,7 @@ async function downloadPaidTicketGroup(group, user, payment) {
     const rows = [
       ["Passageiro", passengerName],
       ["Codigo", ticketCode],
-      ["Lugar", String(ticket.seat_number || "N/A")],
+      ...(isMangaisTrip(ticket.trips) ? [] : [["Lugar", String(ticket.seat_number || "N/A")]]),
       ["Classe", ticket.seat_class || "economy"],
       ["Valor", formatMoney(ticket.price_paid_usd)],
     ];
@@ -641,8 +655,6 @@ export function UserTicketHub() {
               destination_province
             ),
             buses:bus_id (
-              make,
-              model,
               companies:company_id (name)
             )
           )
@@ -1255,7 +1267,7 @@ export function UserTicketHub() {
             </div>
             <p className="mt-4 text-sm text-neutral-300">{getRoute(selectedQrTrip.firstTicket)}</p>
             <p className="mt-1 text-xs text-neutral-400">
-              Lugares: {selectedQrTrip.tickets.map((ticket) => ticket.seat_number).join(", ")}
+              {isMangaisTrip(selectedQrTrip.firstTicket?.trips) ? "Passageiros" : "Lugares"}: {seatListText(selectedQrTrip.tickets)}
             </p>
             <p className={`mt-1 text-xs ${selectedQrTrip.expired ? "font-semibold text-red-300" : "text-neutral-500"}`}>
               {selectedQrTrip.expired
@@ -1280,7 +1292,7 @@ function PaidGroupCard({ group, user, payment, onShowQr, supabase, onRebooked })
   const statusLabel = allTripsExpired ? "Expirado" : hasExpiredTrips ? "Parcialmente expirado" : "Pago";
   const statusClass = allTripsExpired ? "text-red-300" : hasExpiredTrips ? "text-amber-300" : "text-emerald-300";
   const seats = tripGroups
-    .map((tripGroup, index) => `V${index + 1}: ${tripGroup.tickets.map((item) => item.seat_number).join(", ")}`)
+    .map((tripGroup, index) => `V${index + 1}: ${seatListText(tripGroup.tickets)}`)
     .join(" | ");
   const [isDownloading, setIsDownloading] = useState(false);
   // One leg at a time: everyone moved together lands on one new departure.
@@ -1338,7 +1350,7 @@ function PaidGroupCard({ group, user, payment, onShowQr, supabase, onRebooked })
             </p>
           </div>
           <div className="rounded-2xl bg-[#FF8C00] px-3 py-2 text-center text-black">
-            <p className="text-[10px] font-semibold uppercase">Lugares</p>
+            <p className="text-[10px] font-semibold uppercase">{isMangaisTrip(ticket.trips) ? "Passageiros" : "Lugares"}</p>
             <p className="max-w-24 text-xs font-bold leading-tight">{seats}</p>
           </div>
         </div>
@@ -1374,7 +1386,7 @@ function PaidGroupCard({ group, user, payment, onShowQr, supabase, onRebooked })
                   </span>
                   <span className="block truncate text-xs text-neutral-400">{getRoute(tripGroup.firstTicket)}</span>
                   <span className="text-xs text-neutral-500">
-                    {formatDate(ticketDepartureTime(tripGroup.firstTicket))} | Lugares {tripGroup.tickets.map((item) => item.seat_number).join(", ")}
+                    {formatDate(ticketDepartureTime(tripGroup.firstTicket))} | {isMangaisTrip(tripGroup.firstTicket?.trips) ? peopleText(tripGroup.tickets.length) : `Lugares ${seatListText(tripGroup.tickets)}`}
                   </span>
                   {tripGroup.firstTicket?.trips?.boarding_point ? (
                     <span className="mt-0.5 block text-xs font-medium text-orange-200">

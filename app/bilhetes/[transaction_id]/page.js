@@ -6,6 +6,7 @@ import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 import { isRestrictedInAppBrowser, openExternalBrowser } from '@/lib/in-app-browser';
 import { formatLuandaDateTime, ticketDepartureTime } from '@/lib/date-time';
+import { isMangaisTrip } from '@/lib/events/mangais';
 
 function getTicketPassengerName(ticket, payment) {
   const companionName = ticket?.ticket_companions?.[0]?.name?.trim();
@@ -138,12 +139,13 @@ export default function DownloadTicketPage() {
         doc.setFontSize(12);
         doc.text(`Bilhete ${index + 1} de ${ticket.length}`, 20, 130);
 
+        // Event tickets have no real seat: staff assign cars on the day.
         const rows = [
           ['Passageiro:', passengerName],
           ['No. Bilhete:', ticketNumber],
           ['Rota:', routeName],
           ['Partida:', departure],
-          ['Assento:', String(singleTicket.seat_number || 'N/A')],
+          ...(isMangaisTrip(singleTicket.trips) ? [] : [['Assento:', String(singleTicket.seat_number || 'N/A')]]),
           ['Valor:', price],
         ];
 
@@ -312,15 +314,19 @@ export default function DownloadTicketPage() {
     doc.setFont(undefined, 'normal');
     doc.text(ticketInfo.departure, 55, detailsY + lineHeight * 3);
 
-    doc.setFont(undefined, 'bold');
-    doc.text("Assentos:", 20, detailsY + lineHeight * 4);
-    doc.setFont(undefined, 'normal');
-    doc.text(ticketInfo.seats.toString(), 55, detailsY + lineHeight * 4);
+    // Event tickets have no real seat: staff assign cars on the day.
+    const showSeat = !isMangaisTrip(ticket.trips);
+    if (showSeat) {
+      doc.setFont(undefined, 'bold');
+      doc.text("Assentos:", 20, detailsY + lineHeight * 4);
+      doc.setFont(undefined, 'normal');
+      doc.text(ticketInfo.seats.toString(), 55, detailsY + lineHeight * 4);
+    }
 
     doc.setFont(undefined, 'bold');
-    doc.text("Valor:", 20, detailsY + lineHeight * 5);
+    doc.text("Valor:", 20, detailsY + lineHeight * (showSeat ? 5 : 4));
     doc.setFont(undefined, 'normal');
-    doc.text(ticketInfo.price, 55, detailsY + lineHeight * 5);
+    doc.text(ticketInfo.price, 55, detailsY + lineHeight * (showSeat ? 5 : 4));
 
     // QR Code box with border
     doc.setDrawColor(...orange);

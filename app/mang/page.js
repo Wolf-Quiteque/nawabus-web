@@ -10,7 +10,7 @@ import { MANGAIS_EVENT, MANGAIS_POINTS, findMangaisPoint, mangaisPointLabel } fr
 
 const DIRECTIONS = [
   { key: 'outbound', title: `Ida · ${MANGAIS_EVENT.boardingTime}`, short: 'Ida' },
-  { key: 'return', title: `Volta · ${MANGAIS_EVENT.returnTime}`, short: 'Volta' },
+  { key: 'return', title: 'Volta · 18h00 / 20h00 / 21h30', short: 'Volta' },
 ];
 
 const LOGIN_DOMAIN = '@nawabus.com';
@@ -42,8 +42,12 @@ function summarise(passengers, pending) {
     const points = MANGAIS_POINTS.map((point) => {
       const list = passengers.filter((p) => p.direction === direction.key && p.point === point.code);
       const held = pending.find((p) => p.direction === direction.key && p.point === point.code);
+      // Returns leave at several times; staff fill each bus separately.
+      const byTime = {};
+      for (const p of list) byTime[p.time] = (byTime[p.time] || 0) + 1;
       return {
         point,
+        byTime,
         paid: list.length,
         boarded: list.filter((p) => p.boarded).length,
         pendingSeats: held?.seats || 0,
@@ -64,7 +68,10 @@ function summaryText(summary) {
   for (const block of summary) {
     lines.push('', block.direction.title, '');
     for (const row of block.points) {
-      lines.push(`${mangaisPointLabel(row.point)} — ${plural(row.paid, 'passageiro', 'passageiros')}`);
+      const times = block.direction.key === 'return'
+        ? Object.entries(row.byTime).sort().map(([time, count]) => `${time}: ${count}`).join(', ')
+        : '';
+      lines.push(`${mangaisPointLabel(row.point)} — ${plural(row.paid, 'passageiro', 'passageiros')}${times ? ` (${times})` : ''}`);
     }
     lines.push('', `Total: ${plural(block.paid, 'passageiro', 'passageiros')} | ${block.boarded} embarcados`);
     if (block.pendingSeats) lines.push(`Por pagar: ${plural(block.pendingSeats, 'lugar', 'lugares')}`);
@@ -73,13 +80,14 @@ function summaryText(summary) {
 }
 
 function toCsv(passengers) {
-  const header = ['Sentido', 'Ponto de recolha', 'Nome', 'Telefone', 'Bilhete', 'Referência', 'Comprador', 'Telefone do comprador', 'Embarcou', 'Comprado em'];
+  const header = ['Sentido', 'Hora', 'Ponto de recolha', 'Nome', 'Telefone', 'Bilhete', 'Referência', 'Comprador', 'Telefone do comprador', 'Embarcou', 'Comprado em'];
   const escape = (value) => {
     const text = String(value ?? '');
     return /[";\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   };
   const rows = passengers.map((p) => [
     DIRECTIONS.find((d) => d.key === p.direction)?.short,
+    p.time,
     mangaisPointLabel(findMangaisPoint(p.point)),
     p.name,
     p.phone,
@@ -450,7 +458,7 @@ export default function MangaisStaffPage() {
                 </span>
                 <span className="text-neutral-300">{p.phone || '—'}</span>
                 <span className="text-neutral-400">
-                  {findMangaisPoint(p.point)?.place} · <span className="font-mono">{p.ticket_number}</span>
+                  {findMangaisPoint(p.point)?.place}{p.direction === 'return' ? ` · ${p.time}` : ''} · <span className="font-mono">{p.ticket_number}</span>
                 </span>
                 <span className={`w-fit rounded-full px-2.5 py-1 text-xs font-black ${p.boarded ? 'bg-emerald-300 text-emerald-950' : 'bg-white/10 text-neutral-200'}`}>
                   {p.boarded ? 'Embarcou' : 'Pago'}
