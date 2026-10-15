@@ -125,10 +125,16 @@ export async function GET(request, { params }) {
     if (revisionError) throw revisionError;
     if (profilesError) throw profilesError;
 
+    // The snapshot also records the bus (plate, make, model). A ticket never
+    // names a vehicle: buses change, and event passengers are put into cars on
+    // the day. Keep the itinerary, drop the bus.
+    const withoutBus = (revision) => Object.fromEntries(
+      Object.entries(revision).filter(([key]) => !key.startsWith('bus_'))
+    );
     const latestRevisionByTicket = new Map();
     for (const revision of revisions || []) {
       if (!latestRevisionByTicket.has(revision.ticket_id)) {
-        latestRevisionByTicket.set(revision.ticket_id, revision);
+        latestRevisionByTicket.set(revision.ticket_id, withoutBus(revision));
       }
     }
     const profileById = new Map((profiles || []).map((profile) => [profile.id, profile]));
