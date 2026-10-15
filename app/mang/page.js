@@ -10,7 +10,7 @@ import { MANGAIS_EVENT, MANGAIS_POINTS, findMangaisPoint, mangaisPointLabel } fr
 
 const DIRECTIONS = [
   { key: 'outbound', title: `Ida · ${MANGAIS_EVENT.boardingTime}`, short: 'Ida' },
-  { key: 'return', title: 'Volta · 18h00 / 20h00 / 21h30', short: 'Volta' },
+  { key: 'return', title: 'Volta · 20h00 / 21h30', short: 'Volta' },
 ];
 
 const LOGIN_DOMAIN = '@nawabus.com';

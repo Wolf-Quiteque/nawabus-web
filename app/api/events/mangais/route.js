@@ -19,7 +19,8 @@ const one = (value) => (Array.isArray(value) ? value[0] : value);
 
 // GET /api/events/mangais?product=ida-e-volta&point=gamek&passengers=3&returnTime=18h
 //
-// `returnTime` (18h or 20h) is required when the ticket includes the return.
+// `returnTime` (a code from MANGAIS_EVENT.returnTimes) picks the return bus; it may
+// be left out while only one return time is on sale.
 // The event trips for one pickup point, each with free seat numbers already
 // chosen. Customers never pick seats for this event; checkout, the hold and the
 // payment webhook still need numbers, so they are assigned here. The counts
@@ -31,7 +32,9 @@ export async function GET(request) {
   const passengers = Number(searchParams.get('passengers'));
 
   if (!product || !point) return fail(400, 'Escolha o tipo de bilhete e o ponto de recolha.');
-  const returnTime = findMangaisReturnTime(searchParams.get('returnTime'));
+  // With a single return time on sale the customer is not asked; use it.
+  const returnTime = findMangaisReturnTime(searchParams.get('returnTime'))
+    || (MANGAIS_EVENT.returnTimes.length === 1 && !searchParams.get('returnTime') ? MANGAIS_EVENT.returnTimes[0] : null);
   if (product.legs.includes('return') && !returnTime) return fail(400, 'Escolha a hora do regresso.');
   if (!Number.isInteger(passengers) || passengers < 1 || passengers > MANGAIS_MAX_PASSENGERS) {
     return fail(400, `Escolha entre 1 e ${MANGAIS_MAX_PASSENGERS} passageiros.`);

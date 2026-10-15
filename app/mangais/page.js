@@ -73,7 +73,9 @@ export default function MangaisPage() {
     ? Math.max(1, Math.min(MANGAIS_MAX_PASSENGERS, placesFor(product)))
     : MANGAIS_MAX_PASSENGERS;
   const point = findMangaisPoint(pointCode);
-  const returnTime = findMangaisReturnTime(returnTimeCode);
+  // With one return time on sale there is nothing to choose.
+  const singleReturnTime = returnTimes.length === 1 ? returnTimes[0] : null;
+  const returnTime = singleReturnTime || findMangaisReturnTime(returnTimeCode);
   const needsReturnTime = Boolean(product?.legs.includes('return'));
   const total = mangaisProductPrice(productCode, passengers);
 
@@ -104,7 +106,7 @@ export default function MangaisPage() {
     if (step === 'point') setProductCode('');
     else if (step === 'returnTime') setPointCode('');
     else if (step === 'count') {
-      if (needsReturnTime) setReturnTimeCode('');
+      if (needsReturnTime && !singleReturnTime) setReturnTimeCode('');
       else setPointCode('');
     }
     else if (step === 'names') setCountConfirmed(false);
@@ -118,7 +120,7 @@ export default function MangaisPage() {
     setBuilding(true);
     setError('');
     try {
-      const chosenReturn = needsReturnTime ? returnTimeCode : null;
+      const chosenReturn = needsReturnTime ? returnTime?.code || null : null;
       const legs = await fetchMangaisLegs({ product: productCode, point: pointCode, passengers, returnTime: chosenReturn });
       const details = buildMangaisBookingDetails({ legs, productCode, pointCode, returnTimeCode: chosenReturn, companions });
       sessionStorage.setItem('bookingDetails', JSON.stringify(details));
@@ -197,7 +199,9 @@ export default function MangaisPage() {
                     description={
                       product?.legs.includes('outbound')
                         ? `Onde entras no autocarro. Partida às ${MANGAIS_EVENT.boardingTime}.${product.legs.includes('return') ? ' O regresso deixa-te no mesmo ponto.' : ''}`
-                        : 'Onde queres ficar no regresso. A seguir escolhes a hora.'
+                        : singleReturnTime
+                          ? `Onde queres ficar no regresso das ${singleReturnTime.label}.`
+                          : 'Onde queres ficar no regresso. A seguir escolhes a hora.'
                     }
                   />
                   <div className="grid gap-3">
