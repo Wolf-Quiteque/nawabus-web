@@ -12,6 +12,7 @@ import {
   MANGAIS_POINTS,
   formatEventKz,
   isMangaisSaleOpen,
+  isMangaisSoldOut,
   mangaisProductPrice,
 } from '@/lib/events/mangais';
 
@@ -264,7 +265,9 @@ export default function Home() {
                     Recolha: {MANGAIS_POINTS.map((point) => point.place).join(' · ')}
                   </span>
                   <span className="mt-0.5 block text-sm font-black text-[#e4f46f]">
-                    {formatEventKz(mangaisProductPrice('ida-e-volta', 1))} · partida às {MANGAIS_EVENT.boardingTime}, regresso às {MANGAIS_EVENT.returnTimesLabel}
+                    {isMangaisSoldOut()
+                      ? 'Esgotado · obrigado a todos!'
+                      : `${formatEventKz(mangaisProductPrice('ida-e-volta', 1))} · partida às ${MANGAIS_EVENT.boardingTime}, regresso às ${MANGAIS_EVENT.returnTimesLabel}`}
                   </span>
                 </span>
                 <svg className="w-6 h-6 shrink-0 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">

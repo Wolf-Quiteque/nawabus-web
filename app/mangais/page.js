@@ -12,6 +12,7 @@ import {
   MANGAIS_POINTS,
   availableMangaisProducts,
   availableMangaisReturnTimes,
+  isMangaisSoldOut,
   findMangaisPoint,
   findMangaisProduct,
   findMangaisReturnTime,
@@ -66,7 +67,7 @@ export default function MangaisPage() {
     () => availableMangaisProducts().filter((item) => !item.legs.includes('return') || returnTimes.length > 0),
     [returnTimes]
   );
-  const products = timeOpenProducts.filter((item) => placesFor(item) > 0);
+  const products = isMangaisSoldOut() ? [] : timeOpenProducts.filter((item) => placesFor(item) > 0);
   const soldOutLegs = pointCode ? ['outbound', 'return'].filter((leg) => placesLeft(pointCode, leg) <= 0) : [];
   const product = findMangaisProduct(productCode);
   const maxPassengers = product
