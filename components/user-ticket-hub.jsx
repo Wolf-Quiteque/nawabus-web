@@ -19,7 +19,7 @@ import {
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase-client";
-import { signInWithPhone } from "@/lib/phone-login";
+import { INVALID_PHONE_MESSAGE, signInWithPhone, signupEmail, signupErrorMessage } from "@/lib/phone-login";
 import { isRestrictedInAppBrowser, openExternalBrowser } from "@/lib/in-app-browser";
 import { formatLuandaDateTime, ticketDepartureTime } from "@/lib/date-time";
 import { isMangaisBooking, isMangaisTrip } from "@/lib/events/mangais";
@@ -735,12 +735,13 @@ export function UserTicketHub() {
 
     try {
       const normalizedPhone = normalizePhoneNumber(phone);
-      const email = `${phone.trim()}@nawabus.com`;
+      const email = signupEmail(phone);
 
       if (authMode === "login") {
         const { error } = await signInWithPhone(supabase, phone, password);
         if (error) throw new Error("Telefone ou senha incorretos.");
       } else {
+        if (!email) throw new Error(INVALID_PHONE_MESSAGE);
         const { first_name, last_name } = ensureNames(fullName);
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -754,7 +755,7 @@ export function UserTicketHub() {
             },
           },
         });
-        if (error) throw error;
+        if (error) throw new Error(signupErrorMessage(error));
 
         if (!data?.session) {
           const { error: signInError } = await supabase.auth.signInWithPassword({

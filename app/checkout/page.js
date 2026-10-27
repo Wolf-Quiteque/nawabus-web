@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Check, Copy, Download, QrCode, Smartphone, User } from 'lucide-react';
 import { createClient } from '@/lib/supabase-client';
-import { signInWithPhone } from '@/lib/phone-login';
+import { INVALID_PHONE_MESSAGE, signInWithPhone, signupEmail, signupErrorMessage } from '@/lib/phone-login';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -604,7 +604,7 @@ export default function CheckoutPage() {
     setAuthSubmitting(true);
 
     try {
-      const email = `${authPhoneNumber}@nawabus.com`;
+      const email = signupEmail(authPhoneNumber);
       const normalizedPhone = normalizePhoneNumber(authPhoneNumber);
 
       if (authMode === 'login') {
@@ -614,6 +614,10 @@ export default function CheckoutPage() {
           return;
         }
       } else {
+        if (!email) {
+          alert(INVALID_PHONE_MESSAGE);
+          return;
+        }
         const { first_name, last_name } = ensureNames(authName);
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -629,7 +633,7 @@ export default function CheckoutPage() {
         });
         
         if (error) {
-          alert('Falha no registo. Verifique os dados e tente novamente.');
+          alert(signupErrorMessage(error));
           return;
         }
 
@@ -768,7 +772,7 @@ const handleDownloadPdf = async () => {
     );
   } else {
     // Referencia payment information
-    doc.text("Entidade: 1219", 25, 107);
+    doc.text("Entidade: 1219 (no ATM: 01219)", 25, 107);
 
     doc.setFontSize(18);
     doc.setFont(undefined, "bold");
@@ -1096,7 +1100,7 @@ const handleDownloadPdf = async () => {
       instructionsY + 24
     );
     doc.text(
-      "• Utilize os dados de pagamento acima (Entidade 1219)",
+      "• Entidade 1219 no Multicaixa Express; no ATM a entidade é 01219",
       20,
       instructionsY + 30
     );
@@ -1523,6 +1527,7 @@ const handleDownloadPdf = async () => {
                           <span>
                             <span className="block text-sm font-bold uppercase tracking-[0.14em] text-stone-500">Entidade</span>
                             <span className="block text-[2rem] font-black leading-tight text-stone-900 dark:text-white">1219</span>
+                            <span className="block text-base font-semibold text-stone-600 dark:text-stone-300">No ATM: <strong className="text-stone-900 dark:text-white">01219</strong></span>
                           </span>
                           <span className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-green-600 px-5 py-3 text-base font-bold text-white sm:py-2.5">
                             {copiedPaymentField === 'entity' ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
@@ -1561,7 +1566,7 @@ const handleDownloadPdf = async () => {
                         {[
                           <>Entre em <strong>Pagamentos</strong>.</>,
                           <>Escolha <strong>Pagamento por Referência</strong>.</>,
-                          <>Introduza a Entidade <strong className="text-green-700 dark:text-green-400">1219</strong>.</>,
+                          <>Introduza a Entidade <strong className="text-green-700 dark:text-green-400">1219</strong> no Multicaixa Express, ou <strong className="text-green-700 dark:text-green-400">01219</strong> no ATM.</>,
                           <>Introduza a Referência <strong className="whitespace-nowrap text-green-700 dark:text-green-400">{reference}</strong>.</>,
                           <>Confirme o montante <strong className="whitespace-nowrap">{formatKz(finalPrice)}</strong> e pague.</>,
                         ].map((text, index) => (
