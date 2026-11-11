@@ -327,11 +327,12 @@ export default function RebookDialog({ open, onClose, tickets, nameOf, supabase,
                   Pague esta referência no Multicaixa Express, ATM ou banco. Os bilhetes mudam de viagem assim que o pagamento for confirmado.
                 </p>
                 {[
-                  ["entity", "Entidade", result.entity],
+                  ["entity", "Entidade", `${result.entity || "1219"} (Express) / ${result.entity_atm || "01219"} (ATM)`],
                   ["ref", "Referência", result.reference_id],
                   ["amount", "Montante", kz(result.amount)],
                 ].map(([field, label, value]) => (
-                  <button key={field} type="button" onClick={() => copy(field, field === "amount" ? result.amount : value)}
+                  <button key={field} type="button"
+                    onClick={() => copy(field, field === "amount" ? result.amount : field === "entity" ? (result.entity || "1219") : value)}
                     className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-3 py-3 text-left">
                     <span>
                       <span className="block text-xs uppercase tracking-[0.14em] text-neutral-500">{label}</span>
@@ -345,6 +346,9 @@ export default function RebookDialog({ open, onClose, tickets, nameOf, supabase,
                     Válida até {formatLuandaDateTime(result.expires_at)}. Depois disso os lugares são libertados.
                   </p>
                 )}
+                <p className="text-xs text-neutral-500">
+                  A referência fica guardada na sua conta, em Pendentes. Se expirar, pode gerar uma nova lá.
+                </p>
               </div>
             )
           )}

@@ -26,7 +26,10 @@ import { isMangaisBooking, isMangaisTrip } from "@/lib/events/mangais";
 import RebookDialog from "@/components/rebook-dialog";
 
 const BRAND_ORANGE = "#FF8C00";
+// Multicaixa shows the entity as 1219 in Express but 01219 at an ATM.
 const ENTITY = "1219";
+const ENTITY_ATM = "01219";
+const ENTITY_TEXT = `${ENTITY} (Express) / ${ENTITY_ATM} (ATM)`;
 
 function normalizePhoneNumber(phone) {
   if (!phone) return "";
@@ -550,6 +553,7 @@ export function UserTicketHub() {
         setTickets([]);
         setPaymentsByReference({});
         setPendingTransactions([]);
+        setPendingRebooks([]);
         setSelectedQrTrip(null);
       }
     });
@@ -706,20 +710,13 @@ export function UserTicketHub() {
         )));
       }
 
-      const { data: rebookPending, error: rebookPendingError } = await supabase
-        .from("payment_transactions")
-        .select("id, transaction_id, amount_usd, status, created_at, gateway_response")
-        .eq("status", "pending")
-        .contains("gateway_response", { kind: "rebook", user_id: userId })
-        .order("created_at", { ascending: false });
-      if (rebookPendingError) {
-        console.warn("Pending rebook query failed:", rebookPendingError.message);
+      // Rebooks still owing money come from the server, which also keeps the
+      // ones whose reference expired so the customer can ask for a new one.
+      try {
+        setPendingRebooks(await loadOwedRebooks());
+      } catch (rebookErr) {
+        console.warn("Pending rebook lookup failed:", rebookErr.message);
         setPendingRebooks([]);
-      } else {
-        setPendingRebooks((rebookPending || []).filter((transaction) => {
-          const until = transaction.gateway_response?.expires_at;
-          return !until || new Date(until) > new Date();
-        }));
       }
     } catch (err) {
       console.error("User hub data error:", err);
@@ -828,6 +825,34 @@ export function UserTicketHub() {
     }
   }
 
+  async function rebookApi(path, init = {}) {
+    const { data } = await supabase.auth.getSession();
+    const token = data?.session?.access_token;
+    if (!token) throw new Error("Sessao expirada. Entre novamente.");
+    const res = await fetch(path, {
+      ...init,
+      headers: { ...(init.headers || {}), Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      cache: "no-store",
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || "Nao foi possivel continuar.");
+    return body;
+  }
+
+  async function loadOwedRebooks() {
+    const body = await rebookApi("/api/rebook/pending");
+    return body.rebooks || [];
+  }
+
+  async function renewRebook(groupId) {
+    const body = await rebookApi("/api/rebook/renew", {
+      method: "POST",
+      body: JSON.stringify({ group_id: groupId }),
+    });
+    if (user) await fetchUserData(user.id);
+    return body;
+  }
+
   async function copyReference(reference) {
     try {
       await navigator.clipboard.writeText(reference);
@@ -869,7 +894,7 @@ export function UserTicketHub() {
     doc.setFont(undefined, "bold");
     doc.text("Pagamento MULTICAIXA", 24, 92);
     doc.setFont(undefined, "normal");
-    doc.text(`Entidade: ${ENTITY}`, 24, 106);
+    doc.text(`Entidade: ${ENTITY_TEXT}`, 24, 106);
     doc.setFont(undefined, "bold");
     doc.setFontSize(18);
     doc.text(`Referencia: ${transaction.transaction_id}`, 24, 120);
@@ -1142,6 +1167,8 @@ export function UserTicketHub() {
                             onShowQr={setSelectedQrTrip}
                             supabase={supabase}
                             onRebooked={() => user && fetchUserData(user.id)}
+                            owedRebooks={pendingRebooks}
+                            onOpenPending={() => setActiveTab("pending")}
                           />
                         ))}
                       </div>
@@ -1151,11 +1178,12 @@ export function UserTicketHub() {
                         {!dataLoading && pendingTransactions.length === 0 && pendingRebooks.length === 0 && (
                           <EmptyState title="Sem pagamentos pendentes" text="As referencias geradas e ainda nao pagas aparecem aqui." />
                         )}
-                        {pendingRebooks.map((transaction) => (
+                        {pendingRebooks.map((rebook) => (
                           <PendingRebookCard
-                            key={transaction.id}
-                            transaction={transaction}
-                            onCopy={() => copyReference(transaction.transaction_id)}
+                            key={rebook.group_id}
+                            rebook={rebook}
+                            onCopy={copyReference}
+                            onRenew={() => renewRebook(rebook.group_id)}
                           />
                         ))}
                         {pendingTransactions.map((transaction) => (
@@ -1282,7 +1310,12 @@ export function UserTicketHub() {
   );
 }
 
-function PaidGroupCard({ group, user, payment, onShowQr, supabase, onRebooked }) {
+function PaidGroupCard({ group, user, payment, onShowQr, supabase, onRebooked, owedRebooks = [], onOpenPending }) {
+  // A rebook of one of these tickets that still owes money: say so on the
+  // ticket itself, not only under "Pendentes".
+  const owedRebook = owedRebooks.find((rebook) =>
+    rebook.lines.some((line) => group.tickets.some((t) => t.id === line.ticket_id))
+  );
   const ticket = group.firstTicket;
   const tripGroups = groupTicketsByTrip(group.tickets);
   const routeSummary = getGroupRouteSummary(group);
@@ -1358,6 +1391,32 @@ function PaidGroupCard({ group, user, payment, onShowQr, supabase, onRebooked })
       </div>
 
       <div className="space-y-3 p-4">
+        {owedRebook && (
+          <button
+            type="button"
+            onClick={onOpenPending}
+            className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-3 py-3 text-left ${
+              owedRebook.status === "pending_payment"
+                ? "border-orange-300/30 bg-orange-500/10"
+                : "border-red-300/30 bg-red-500/10"
+            }`}
+          >
+            <span className="min-w-0">
+              <span className={`block text-xs font-semibold uppercase tracking-[0.14em] ${
+                owedRebook.status === "pending_payment" ? "text-orange-200" : "text-red-200"
+              }`}>
+                {owedRebook.status === "pending_payment" ? "Reprogramacao por pagar" : "Referencia da reprogramacao expirou"}
+              </span>
+              <span className="mt-1 block text-sm text-neutral-200">
+                {owedRebook.status === "pending_payment"
+                  ? `Ref. ${owedRebook.reference_id} | ${formatMoney(owedRebook.amount)}`
+                  : "Toque para gerar uma nova referencia"}
+              </span>
+            </span>
+            <ArrowRight className="h-4 w-4 shrink-0 text-neutral-300" />
+          </button>
+        )}
+
         <div className="grid grid-cols-2 gap-3 text-sm">
           <InfoPill label="Passageiros" value={String(group.tickets.length)} />
           <InfoPill label="Total" value={formatMoney(group.total)} />
@@ -1452,33 +1511,103 @@ function PaidGroupCard({ group, user, payment, onShowQr, supabase, onRebooked })
   );
 }
 
-function PendingRebookCard({ transaction, onCopy }) {
-  const until = transaction.gateway_response?.expires_at;
+function PendingRebookCard({ rebook, onCopy, onRenew }) {
+  const live = rebook.status === "pending_payment";
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+  const first = rebook.lines[0] || {};
+  const route = first.origin_city && first.destination_city
+    ? `${first.origin_city} -> ${first.destination_city}`
+    : "Nova viagem";
+
+  async function renew() {
+    setBusy(true);
+    setError("");
+    try {
+      await onRenew();
+    } catch (err) {
+      setError(err.message || "Nao foi possivel gerar uma nova referencia.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copy() {
+    await onCopy(rebook.reference_id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
   return (
-    <article className="rounded-3xl border border-orange-300/20 bg-orange-500/[0.06] p-4">
-      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-orange-200">
+    <article className={`rounded-3xl border p-4 ${live ? "border-orange-300/20 bg-orange-500/[0.06]" : "border-red-300/20 bg-red-500/10"}`}>
+      <div className={`flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] ${live ? "text-orange-200" : "text-red-200"}`}>
         <CalendarClock className="h-4 w-4" />
-        Reprogramacao por pagar
+        {live ? "Reprogramacao por pagar" : "Referencia expirada"}
       </div>
-      <p className="mt-2 text-sm text-neutral-300">
-        Os bilhetes mudam de viagem assim que esta referencia for paga.
-      </p>
-      <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
-        <InfoPill label="Entidade" value={ENTITY} />
-        <InfoPill label="Referencia" value={transaction.transaction_id} />
-        <InfoPill label="Montante" value={formatMoney(transaction.amount_usd)} />
+
+      <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3 text-sm">
+        <p className="font-semibold text-white">{route}</p>
+        {first.departure_time && (
+          <p className="text-xs text-neutral-400">{formatLuandaDateTime(first.departure_time)}</p>
+        )}
+        <div className="mt-2 space-y-1">
+          {rebook.lines.map((line) => (
+            <div key={line.ticket_id} className="flex justify-between gap-3 text-xs">
+              <span className="truncate text-neutral-300">{line.passenger_name || line.ticket_number || "Passageiro"}</span>
+              <span className="shrink-0 text-neutral-400">lugar {line.new_seat_number}</span>
+            </div>
+          ))}
+        </div>
       </div>
-      {until && (
-        <p className="mt-2 text-xs text-amber-300">Valida ate {formatLuandaDateTime(until)}.</p>
+
+      {live ? (
+        <>
+          <p className="mt-3 text-sm text-neutral-300">
+            Pague no Multicaixa Express, ATM ou banco. Os bilhetes mudam de viagem assim que o pagamento for confirmado.
+          </p>
+          <div className="mt-3 space-y-2 text-sm">
+            <InfoPill label="Entidade" value={ENTITY_TEXT} />
+            <div className="grid grid-cols-2 gap-2">
+              <InfoPill label="Referencia" value={rebook.reference_id} />
+              <InfoPill label="Montante" value={formatMoney(rebook.amount)} />
+            </div>
+          </div>
+          {rebook.expires_at && (
+            <p className="mt-2 text-xs text-amber-300">
+              Valida ate {formatLuandaDateTime(rebook.expires_at)}. Depois disso pode gerar uma nova aqui.
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={copy}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
+          >
+            {copied ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+            {copied ? "Copiada" : "Copiar referencia"}
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="mt-3 text-sm text-neutral-300">
+            {rebook.expired_reference_id ? `A referencia ${rebook.expired_reference_id} ja nao pode ser paga. ` : ""}
+            Gere uma nova para os mesmos lugares. O valor e calculado de novo.
+          </p>
+          <button
+            type="button"
+            onClick={renew}
+            disabled={busy}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#FF8C00] px-4 py-3 text-sm font-semibold text-black transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} />
+            {busy ? "A gerar..." : "Gerar nova referencia"}
+          </button>
+        </>
       )}
-      <button
-        type="button"
-        onClick={onCopy}
-        className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
-      >
-        <Copy className="h-4 w-4" />
-        Copiar referencia
-      </button>
+
+      {error && (
+        <p className="mt-3 rounded-2xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p>
+      )}
     </article>
   );
 }
@@ -1496,7 +1625,7 @@ function PendingReferenceCard({ transaction, onCopy, onDownload }) {
             {expired ? "Expirada" : "Por pagar"}
           </div>
           <h3 className="mt-2 text-2xl font-bold tracking-[0.12em] text-white">{transaction.transaction_id}</h3>
-          <p className="mt-1 text-sm text-neutral-300">Entidade {ENTITY} | {formatMoney(transaction.amount_usd)}</p>
+          <p className="mt-1 text-sm text-neutral-300">Entidade {ENTITY_TEXT} | {formatMoney(transaction.amount_usd)}</p>
         </div>
         <Ticket className={`h-7 w-7 ${expired ? "text-red-300" : "text-orange-300"}`} />
       </div>

@@ -6,7 +6,7 @@ import {
   callRebookGroup,
   rebookFailure,
   shapeQuote,
-  rebookPaymentUrl,
+  requestGroupReference,
 } from '@/lib/rebook-server';
 
 // POST /api/rebook/confirm  { items: [...], idempotency_key }
@@ -42,25 +42,9 @@ export async function POST(request) {
   // Pending: one reference for the group. The amount is decided by payment-api
   // from the database, not sent from here.
   try {
-    const res = await fetch(rebookPaymentUrl(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ group_id: result.group_id }),
-      cache: 'no-store',
-    });
-    const payment = await res.json().catch(() => ({}));
-    if (!res.ok || !payment.reference_id) {
-      throw new Error(payment.error || `payment-api ${res.status}`);
-    }
+    const payment = await requestGroupReference(token, result.group_id);
     return NextResponse.json(
-      {
-        status: 'pending_payment',
-        ...result,
-        reference_id: payment.reference_id,
-        amount: payment.amount,
-        expires_at: payment.expires_at,
-        entity: '1219',
-      },
+      { status: 'pending_payment', ...result, ...payment },
       { headers: { 'Cache-Control': 'no-store' } }
     );
   } catch (err) {
