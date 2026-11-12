@@ -16,10 +16,92 @@ import {
   mangaisProductPrice,
 } from '@/lib/events/mangais';
 
+// Real photos of the fleet. `position` keeps a bus in frame on a tall phone
+// screen, where only a narrow slice of a landscape photo fits.
 const HERO_SLIDES = [
-  { src: '/heros/img1.png', alt: 'Autocarro NawaBus na estrada costeira de Angola' },
-  { src: '/heros/img4.png', alt: 'Autocarro NawaBus ao pôr-do-sol' },
-  { src: '/heros/img6.png', alt: 'Autocarro NawaBus no terminal com passageiros' },
+  {
+    src: '/fotos/frota-traseira-terminal.jpg',
+    alt: 'Autocarros NawaBus estacionados no terminal',
+    position: 'object-[20%_center] md:object-center',
+  },
+  {
+    src: '/fotos/frota-terminal.jpg',
+    alt: 'Quatro autocarros NawaBus alinhados no terminal',
+    position: 'object-[12%_center] md:object-center',
+  },
+  {
+    src: '/fotos/zhong-tong-terminal.jpg',
+    alt: 'Dois autocarros NawaBus lado a lado no terminal',
+    position: 'object-[42%_center] md:object-center',
+  },
+];
+
+// "A nossa frota" gallery. `tile` places each photo in the grid: 2 columns on
+// phones, 4 from md up.
+const FLEET_PHOTOS = [
+  {
+    src: '/fotos/frota-terminal.jpg',
+    alt: 'Frota NawaBus alinhada no terminal',
+    caption: 'Prontos para partir',
+    tile: 'col-span-2 row-span-2',
+    sizes: '(max-width: 768px) 100vw, 50vw',
+    position: 'object-[30%_center]',
+  },
+  {
+    src: '/fotos/higer-v8-pro-frente.jpg',
+    alt: 'Autocarro NawaBus Higer V8 Pro visto de frente',
+    caption: 'Higer V8 Pro',
+    tile: 'row-span-2',
+    sizes: '(max-width: 768px) 50vw, 25vw',
+    position: 'object-center',
+  },
+  {
+    src: '/fotos/higer-v8-pro-traseira.jpg',
+    alt: 'Traseira do autocarro NawaBus com www.nawabus.ao',
+    caption: 'Reconhece-nos pelo amarelo',
+    tile: 'row-span-2',
+    sizes: '(max-width: 768px) 50vw, 25vw',
+    position: 'object-[center_40%]',
+  },
+  {
+    src: '/fotos/frota-traseira-terminal.jpg',
+    alt: 'Autocarros NawaBus estacionados no terminal, vistos de trás',
+    caption: 'Partidas todos os dias',
+    tile: 'col-span-2',
+    sizes: '(max-width: 768px) 100vw, 50vw',
+    position: 'object-[center_60%]',
+  },
+  {
+    src: '/fotos/zhong-tong-terminal.jpg',
+    alt: 'Dois autocarros NawaBus de longo curso no terminal',
+    caption: 'Autocarros de longo curso',
+    tile: 'col-span-2',
+    sizes: '(max-width: 768px) 100vw, 50vw',
+    position: 'object-[center_55%]',
+  },
+];
+
+const TRAVEL_DAY_STEPS = [
+  {
+    title: 'Chega com antecedência',
+    text: 'Os autocarros partem à hora marcada. Chega cedo para arrumar a bagagem com calma.',
+    icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+  },
+  {
+    title: 'Procura o agente NawaBus',
+    text: 'Os nossos agentes de colete amarelo indicam-te o autocarro e ajudam com a bagagem.',
+    icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
+  },
+  {
+    title: 'Mostra o teu bilhete',
+    text: 'Apresenta o código QR do bilhete no telemóvel, ou impresso, para embarcar.',
+    icon: 'M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z',
+  },
+  {
+    title: 'Senta-te no teu lugar',
+    text: 'O lugar que escolheste na compra fica guardado para ti. Boa viagem!',
+    icon: 'M5 13l4 4L19 7',
+  },
 ];
 
 const MARQUEE_STOPS = [
@@ -155,7 +237,7 @@ export default function Home() {
               fill
               priority={i === 0}
               sizes="100vw"
-              className={`object-cover ${i === heroIndex ? 'animate-kenburns' : ''}`}
+              className={`object-cover ${slide.position} ${i === heroIndex ? 'animate-kenburns' : ''}`}
             />
           </div>
         ))}
@@ -193,21 +275,24 @@ export default function Home() {
               alt="NawaBus"
               className="h-8 sm:h-9 md:h-11 w-auto"
             />
-            <nav className="flex items-center gap-6">
-              <a href="#servicos" className="hidden md:inline text-sm font-medium text-white/80 hover:text-amber-300 transition-colors">
+            <nav className="flex items-center gap-4 lg:gap-6">
+              <a href="#servicos" className="hidden md:inline whitespace-nowrap text-sm font-medium text-white/80 hover:text-amber-300 transition-colors">
                 Serviços
               </a>
-              <a href="#sobre" className="hidden md:inline text-sm font-medium text-white/80 hover:text-amber-300 transition-colors">
+              <a href="#frota" className="hidden lg:inline whitespace-nowrap text-sm font-medium text-white/80 hover:text-amber-300 transition-colors">
+                Frota
+              </a>
+              <a href="#sobre" className="hidden md:inline whitespace-nowrap text-sm font-medium text-white/80 hover:text-amber-300 transition-colors">
                 Sobre nós
               </a>
-              <a href="#parceiros" className="hidden md:inline text-sm font-medium text-white/80 hover:text-amber-300 transition-colors">
+              <a href="#parceiros" className="hidden md:inline whitespace-nowrap text-sm font-medium text-white/80 hover:text-amber-300 transition-colors">
                 Parceiros
               </a>
               <a
                 href={CLUB_INVESTIDOR_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hidden md:inline text-sm font-bold text-amber-300 hover:text-amber-200 transition-colors"
+                className="hidden md:inline whitespace-nowrap text-sm font-bold text-amber-300 hover:text-amber-200 transition-colors"
               >
                 Investidores
               </a>
@@ -418,11 +503,11 @@ export default function Home() {
                 <TiltCard className="rounded-3xl h-[440px]">
                   <div className="absolute inset-0 rounded-3xl overflow-hidden shadow-2xl">
                     <Image
-                      src="/heros/img2.png"
-                      alt="Viagem para Benguela ao pôr-do-sol"
+                      src="/fotos/higer-v8-pro-frente.jpg"
+                      alt="Autocarro NawaBus pronto para a viagem a Benguela"
                       fill
                       sizes="(max-width: 768px) 100vw, 50vw"
-                      className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                      className="object-cover object-[center_45%] group-hover:scale-105 transition-transform duration-700 ease-out"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-stone-950/90 via-stone-950/20 to-transparent"></div>
                     <div className="absolute top-5 left-5 rounded-full bg-stone-950/60 backdrop-blur-sm border border-amber-400/40 px-4 py-1.5 text-xs font-bold tracking-widest text-amber-300 uppercase">
@@ -449,11 +534,11 @@ export default function Home() {
                 <TiltCard className="rounded-3xl h-[440px]">
                   <div className="absolute inset-0 rounded-3xl overflow-hidden shadow-2xl">
                     <Image
-                      src="/heros/img5.png"
-                      alt="Viagem para Luanda, a capital"
+                      src="/fotos/higer-v8-pro-traseira.jpg"
+                      alt="Autocarro NawaBus pronto para a viagem a Luanda"
                       fill
                       sizes="(max-width: 768px) 100vw, 50vw"
-                      className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                      className="object-cover object-[center_40%] group-hover:scale-105 transition-transform duration-700 ease-out"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-stone-950/90 via-stone-950/20 to-transparent"></div>
                     <div className="absolute top-5 left-5 rounded-full bg-stone-950/60 backdrop-blur-sm border border-amber-400/40 px-4 py-1.5 text-xs font-bold tracking-widest text-amber-300 uppercase">
@@ -481,13 +566,13 @@ export default function Home() {
               <TiltCard className="rounded-3xl min-h-[340px]" maxTilt={5}>
                 <div className="absolute inset-0 rounded-3xl overflow-hidden shadow-2xl">
                   <Image
-                    src="/heros/img3.png"
-                    alt="Autocarro NawaBus disponível para aluguer de frete"
+                    src="/fotos/zhong-tong-terminal.jpg"
+                    alt="Autocarros NawaBus disponíveis para aluguer de frete"
                     fill
-                    sizes="100vw"
-                    className="object-cover"
+                    sizes="(max-width: 1152px) 100vw, 1152px"
+                    className="object-cover object-[30%_55%]"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-r from-stone-950/30 via-transparent to-amber-50/40"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-stone-950/20 via-transparent to-stone-950/40"></div>
                 </div>
                 <div className="relative min-h-[340px] flex items-center justify-end p-6 md:p-12">
                   <div className="tilt-pop-sm max-w-lg w-full rounded-2xl bg-white/90 dark:bg-stone-900/90 backdrop-blur-md p-8 shadow-2xl border-2 border-amber-400/60">
@@ -629,6 +714,70 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ============ NO DIA DA VIAGEM ============ */}
+      <section id="embarque" className="py-20 md:py-24 px-4 bg-gradient-to-b from-amber-50/70 to-stone-50 dark:from-stone-950 dark:to-stone-900 relative overflow-hidden scroll-mt-24">
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-amber-300/20 rounded-full blur-3xl"></div>
+
+        <div className="max-w-6xl mx-auto relative z-10 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          <Reveal>
+            <div className="relative mx-auto w-full max-w-md lg:max-w-none">
+              <div className="relative aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl border border-amber-200/70 dark:border-stone-700">
+                <Image
+                  src="/fotos/embarque-agente-perto.jpg"
+                  alt="Agente NawaBus de colete amarelo a atender passageiros junto ao autocarro"
+                  fill
+                  sizes="(max-width: 480px) 100vw, (max-width: 1024px) 448px, 560px"
+                  className="object-cover object-[center_60%]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-stone-950/60 via-transparent to-transparent"></div>
+              </div>
+              <div className="absolute -bottom-5 left-4 right-4 sm:left-6 sm:right-auto rounded-2xl bg-white dark:bg-stone-800 shadow-xl border border-amber-100 dark:border-stone-700 px-5 py-4 flex items-center gap-3">
+                <div className="w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <span className="block font-black text-stone-900 dark:text-white leading-tight">Agentes no terminal</span>
+                  <span className="block text-sm text-stone-500 dark:text-stone-400">Para te ajudar no embarque</span>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+
+          <Reveal delay={120} className="pt-4 lg:pt-0">
+            <span className="text-amber-600 dark:text-amber-400 font-bold tracking-[0.3em] text-xs uppercase">
+              No dia da viagem
+            </span>
+            <h2 className="text-4xl md:text-5xl font-black tracking-tight text-stone-900 dark:text-white mt-4 mb-4">
+              Do terminal ao teu <span className="bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">destino</span>
+            </h2>
+            <p className="text-lg text-stone-600 dark:text-stone-300 leading-relaxed mb-8">
+              A nossa equipa está no terminal para que o embarque seja simples, organizado e a horas.
+            </p>
+
+            <ol className="space-y-4">
+              {TRAVEL_DAY_STEPS.map((step, i) => (
+                <li key={step.title} className="flex gap-4 rounded-2xl bg-white dark:bg-stone-800/80 border border-amber-100 dark:border-stone-700 p-4 md:p-5 shadow-sm">
+                  <div className="relative w-11 h-11 shrink-0 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={step.icon} />
+                    </svg>
+                    <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-stone-900 dark:bg-white text-[0.65rem] font-black text-white dark:text-stone-900 flex items-center justify-center">
+                      {i + 1}
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-black text-stone-900 dark:text-white">{step.title}</h3>
+                    <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed mt-0.5">{step.text}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </Reveal>
+        </div>
+      </section>
+
       {/* ============ SERVIÇOS ============ */}
       <section id="servicos" className="py-24 px-4 bg-gradient-to-b from-stone-50 to-amber-50/50 dark:from-stone-950 dark:to-stone-900 relative overflow-hidden scroll-mt-24">
         <div className="absolute inset-0 samakaka-bg opacity-30 dark:opacity-10"></div>
@@ -693,6 +842,93 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ============ A NOSSA FROTA ============ */}
+      <section id="frota" className="py-20 md:py-24 px-4 bg-white dark:bg-stone-900 relative overflow-hidden scroll-mt-24">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-amber-100 dark:bg-amber-900/10 rounded-full blur-3xl opacity-60"></div>
+
+        <div className="max-w-6xl mx-auto relative z-10">
+          <Reveal className="text-center mb-12 md:mb-14">
+            <span className="text-amber-600 dark:text-amber-400 font-bold tracking-[0.3em] text-xs uppercase">
+              A nossa frota
+            </span>
+            <h2 className="text-4xl md:text-5xl font-black tracking-tight text-stone-900 dark:text-white mt-4 mb-4">
+              Os autocarros que vais <span className="bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">encontrar</span>
+            </h2>
+            <p className="text-lg text-stone-600 dark:text-stone-300 max-w-2xl mx-auto">
+              Autocarros amarelos, identificados com o nome NawaBus, nas nossas ligações interprovinciais todos os dias.
+            </p>
+          </Reveal>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 auto-rows-[150px] sm:auto-rows-[190px] md:auto-rows-[200px] lg:auto-rows-[230px] gap-3 md:gap-4">
+            {FLEET_PHOTOS.map((photo, i) => (
+              <Reveal key={photo.src} delay={(i % 4) * 80} className={photo.tile}>
+                <figure className="group relative h-full w-full overflow-hidden rounded-2xl md:rounded-3xl shadow-lg bg-stone-200 dark:bg-stone-800">
+                  <Image
+                    src={photo.src}
+                    alt={photo.alt}
+                    fill
+                    sizes={photo.sizes}
+                    className={`object-cover ${photo.position} group-hover:scale-105 transition-transform duration-700 ease-out`}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-stone-950/70 via-stone-950/0 to-transparent"></div>
+                  <figcaption className="absolute bottom-0 inset-x-0 p-3 md:p-5 text-sm md:text-base font-black text-white leading-tight">
+                    {photo.caption}
+                  </figcaption>
+                </figure>
+              </Reveal>
+            ))}
+          </div>
+
+          <div className="mt-8 md:mt-10 grid lg:grid-cols-3 gap-3 md:gap-4">
+            {[
+              {
+                title: 'Lugares numerados',
+                text: 'Escolhes o teu lugar ao comprar o bilhete.',
+                icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+              },
+              {
+                title: 'Bagageira',
+                text: 'Espaço para as tuas malas por baixo do autocarro.',
+                icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
+              },
+              {
+                title: 'Partidas diárias',
+                text: 'Entre Luanda, Sumbe e Benguela.',
+                icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+              },
+            ].map((feature) => (
+              <div key={feature.title} className="flex items-center gap-4 rounded-2xl bg-amber-50/70 dark:bg-stone-800 border border-amber-100 dark:border-stone-700 p-4 md:p-5">
+                <div className="w-11 h-11 shrink-0 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={feature.icon} />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-black text-stone-900 dark:text-white">{feature.title}</h3>
+                  <p className="text-sm text-stone-600 dark:text-stone-300 leading-snug">{feature.text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 text-center">
+            <span className="text-stone-700 dark:text-stone-200 font-semibold">
+              Precisas de um autocarro só para o teu grupo?
+            </span>
+            <button
+              type="button"
+              onClick={() => setFreteOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 px-6 py-3 font-black text-stone-950 shadow-lg hover:shadow-amber-500/50 hover:scale-105 transition-all duration-300"
+            >
+              Pedir orçamento de frete
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* ============ HISTÓRIA / SOBRE ============ */}
       <section id="sobre" className="relative bg-stone-950 overflow-hidden scroll-mt-24">
         <div className="samakaka-strip opacity-80"></div>
@@ -706,11 +942,11 @@ export default function Home() {
                 <TiltCard className="rounded-3xl h-[420px]" maxTilt={7}>
                   <div className="absolute inset-0 rounded-3xl overflow-hidden shadow-2xl border border-amber-500/30">
                     <Image
-                      src="/nawabusimg.jpg"
-                      alt="NAWABUS Angola"
+                      src="/fotos/embarque-agente.jpg"
+                      alt="Agente NawaBus com passageiros no embarque, junto ao autocarro"
                       fill
                       sizes="(max-width: 768px) 100vw, 50vw"
-                      className="object-cover"
+                      className="object-cover object-[center_62%]"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-stone-950/70 to-transparent"></div>
                   </div>
@@ -1177,6 +1413,11 @@ export default function Home() {
                 <li>
                   <a href="#servicos" className="text-stone-400 hover:text-amber-400 transition-colors font-medium">
                     Nossos Serviços
+                  </a>
+                </li>
+                <li>
+                  <a href="#frota" className="text-stone-400 hover:text-amber-400 transition-colors font-medium">
+                    A Nossa Frota
                   </a>
                 </li>
                 <li>
