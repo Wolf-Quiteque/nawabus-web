@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { getClosedTodayPurchaseMessage, isTripPurchasable } from '@/lib/purchase-date';
+import { inPortuguese } from '@/lib/promotion-messages';
 
 class PurchaseBlockedError extends Error {}
 
@@ -99,7 +100,7 @@ export async function POST(request) {
 
     if (!apiResponse.ok) {
       console.error('Payment API Error:', result);
-      return NextResponse.json({ error: result.error || 'Failed to create payment reference' }, { status: apiResponse.status });
+      return NextResponse.json({ error: inPortuguese(result.error, 'Não foi possível gerar a referência de pagamento. Tente novamente.') }, { status: apiResponse.status });
     }
 
     return NextResponse.json(result, { status: 201 });

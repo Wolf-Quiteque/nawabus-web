@@ -78,7 +78,7 @@ export async function GET(request) {
         for (const seat of seatsByTrip.get(siblingId) || []) occupied.add(seat);
       }
       const capacity = Number(normalizeBus(trip.buses)?.capacity || 0);
-      // Seat 1 is reserved for the co-pilot and is never sellable.
+      // The co-pilot seat is reserved and is never sellable.
       const occupiedPassengerSeats = [...occupied].filter((seat) => !isCopilotSeat(seat));
       const passengerCapacity = Math.max(capacity - 1, 0);
       const effectiveCapacity = trip.sales_capacity_limit == null

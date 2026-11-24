@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase-admin';
 import { onlineFare } from '@/lib/online-price';
+import { inPortuguese } from '@/lib/promotion-messages';
 import { isTripPurchasable } from '@/lib/purchase-date';
 import { isCopilotSeat } from '@/lib/seats';
 
@@ -80,7 +81,7 @@ export async function POST(request) {
         p_base_fare_kz: fare,
         p_passenger_id: passengerId,
       });
-      if (error) return fail(400, error.message || 'Código promocional inválido.');
+      if (error) return fail(400, inPortuguese(error.message, 'Código de desconto inválido.'));
       quote = Array.isArray(data) ? data[0] : data;
       if (!quote) return fail(400, 'Código promocional inválido.');
     }

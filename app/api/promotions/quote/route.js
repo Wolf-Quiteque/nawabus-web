@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase-admin';
 import { onlineFare } from '@/lib/online-price';
+import { inPortuguese } from '@/lib/promotion-messages';
 
 export async function POST(request) {
   try {
@@ -41,7 +42,7 @@ export async function POST(request) {
       if (error) {
         return NextResponse.json({
           valid: false,
-          message: error.message || 'Codigo promocional invalido.',
+          message: inPortuguese(error.message, 'Código de desconto inválido.'),
         }, { status: 400 });
       }
       quoteByTrip.set(tripId, Array.isArray(data) ? data[0] : data);
